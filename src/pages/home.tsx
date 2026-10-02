@@ -12,6 +12,7 @@ import { useContent } from "@/lib/use-content";
 import { FloatingDecor } from "@/components/FloatingDecor";
 import {
   PinterestCard,
+  cardSpanClass,
   type PinterestCardProject,
 } from "@/components/PinterestCard";
 import { RotatingLiveBadge } from "@/components/RotatingLiveBadge";
@@ -19,13 +20,14 @@ import { CoverMedia } from "@/components/CoverMedia";
 import { ArtworkModal, ArtworksSlideshow } from "@/components/ArtworksSlideshow";
 import { useTheme } from "@/context/ThemeContext";
 import { mergeStudio } from "@/lib/studio-content";
-import type { GalleryItem, Studio } from "@/components/admin/types";
+import type { CardLayout, GalleryItem, Studio } from "@/components/admin/types";
 
 type Project = (typeof projectsSeed)[number] & {
   archived?: boolean;
   hoverVideo?: string;
   liveUrl?: string;
   cardDescription?: string;
+  cardLayout?: CardLayout;
 };
 
 const BLUE = "#1F67F1";
@@ -100,6 +102,7 @@ export default function Home() {
         href: `/work/${p.slug}`,
         hoverVideo: p.hoverVideo,
         liveUrl: p.liveUrl,
+        cardLayout: p.cardLayout,
       }));
     const fromStudio: PinterestCardProject[] = galleryData
       .filter((g) => !g.archived && g.featured)
@@ -114,6 +117,7 @@ export default function Home() {
         subtitle: g.description,
         cardDescription: g.description,
         href: `/studio/${g.slug}`,
+        cardLayout: g.cardLayout,
       }));
     return [...fromWork, ...fromStudio].slice(0, 6);
   }, [projectsData, galleryData]);
@@ -289,10 +293,14 @@ export default function Home() {
           initial="hidden"
           whileInView="show"
           viewport={VP}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-stretch"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 grid-flow-row-dense items-stretch [--card-grid-gap:2rem]"
         >
           {featuredProjects.map((project, i) => (
-            <motion.div key={project.id} variants={item} className="h-full">
+            <motion.div
+              key={project.id}
+              variants={item}
+              className={`h-full ${cardSpanClass(project, "md")}`}
+            >
               <PinterestCard project={project} i={i} isDark={isDark} />
             </motion.div>
           ))}

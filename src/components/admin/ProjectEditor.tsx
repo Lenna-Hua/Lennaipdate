@@ -167,6 +167,9 @@ function parseJsonProject(raw: string): ParseResult {
   if (typeof obj.impact === "string") patch.impact = obj.impact;
   if (typeof obj.coverImage === "string") patch.coverImage = obj.coverImage;
   if (typeof obj.logo === "string") patch.logo = obj.logo;
+  if (obj.cardLayout === "vertical" || obj.cardLayout === "horizontal") {
+    patch.cardLayout = obj.cardLayout;
+  }
   if (typeof obj.year === "string") patch.year = obj.year;
   if (typeof obj.period === "string") patch.period = obj.period;
   if (typeof obj.featured === "boolean") patch.featured = obj.featured;
@@ -956,6 +959,41 @@ export function ProjectsEditor({
                     )}
                   </div>
                 )}
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-[#8A8278] text-xs uppercase tracking-widest">Card layout (Work / Home grid)</label>
+                <div className="flex gap-2 flex-wrap">
+                  {(
+                    [
+                      { value: "vertical" as const, label: "Vertical" },
+                      { value: "horizontal" as const, label: "Horizontal" },
+                    ] as const
+                  ).map(({ value, label }) => {
+                    const active = (project.cardLayout ?? "vertical") === value;
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() =>
+                          updateProject(selectedIdx, {
+                            cardLayout: value === "vertical" ? undefined : value,
+                          })
+                        }
+                        className={`text-xs uppercase tracking-widest px-3 py-1.5 border transition-colors ${
+                          active
+                            ? "bg-[#C8A96E] text-[#0A0908] border-[#C8A96E]"
+                            : "text-[#8A8278] border-[#3A3530] hover:border-[#C8A96E]"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-[#4A4540] text-xs leading-relaxed">
+                  Vertical = one 4:5 card. Horizontal = the width of two cards plus the gap between them, same height.
+                </p>
               </div>
 
               {/* Hover preview video + live URL */}

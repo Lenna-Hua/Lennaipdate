@@ -17,6 +17,7 @@ import { useContent } from "@/lib/use-content";
 import { useTheme } from "@/context/ThemeContext";
 import {
   PinterestCard,
+  cardSpanClass,
   type PinterestCardProject,
 } from "@/components/PinterestCard";
 import { LogoMarquee } from "@/components/LogoMarquee";
@@ -50,6 +51,7 @@ function galleryBigToCard(g: GalleryItem): PinterestCardProject {
     subtitle: g.description,
     cardDescription: g.description,
     href: `/studio/${g.slug}`,
+    cardLayout: g.cardLayout,
   };
 }
 
@@ -67,6 +69,7 @@ function workToCard(p: Project): PinterestCardProject {
     href: `/work/${p.slug}`,
     hoverVideo: (p as { hoverVideo?: string }).hoverVideo,
     liveUrl: (p as { liveUrl?: string }).liveUrl,
+    cardLayout: (p as { cardLayout?: ProjectType["cardLayout"] }).cardLayout,
   };
 }
 
@@ -269,7 +272,7 @@ export default function WorkIndex() {
           {filtered.length} project{filtered.length !== 1 ? "s" : ""} shown
           {filter !== "All" ? ` in ${filter}` : ""}
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 items-stretch">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 grid-flow-row-dense items-stretch [--card-grid-gap:2rem]">
           <AnimatePresence mode="popLayout">
             {filtered.map((project, gi) => {
               const i = projectIndexMap.get(project.id) ?? 0;
@@ -285,7 +288,7 @@ export default function WorkIndex() {
                     delay: (gi % 6) * 0.07,
                     ease: BRAND_EASE,
                   }}
-                  className="h-full"
+                  className={`h-full ${cardSpanClass(project)}`}
                 >
                   <PinterestCard project={project} i={i} isDark={isDark} />
                 </motion.div>

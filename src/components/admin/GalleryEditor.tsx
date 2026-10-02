@@ -280,6 +280,46 @@ export function GalleryEditor({
             </span>
           </div>
 
+          {(item.kind ?? "big") === "big" && (
+            <div className="flex flex-col gap-2">
+              <label className="text-[#8A8278] text-xs uppercase tracking-widest">
+                Card layout (Work / Home grid)
+              </label>
+              <div className="flex gap-2 flex-wrap">
+                {(
+                  [
+                    { value: "vertical" as const, label: "Vertical" },
+                    { value: "horizontal" as const, label: "Horizontal" },
+                  ] as const
+                ).map(({ value, label }) => {
+                  const active = (item.cardLayout ?? "vertical") === value;
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() =>
+                        update(selectedIdx, {
+                          cardLayout: value === "vertical" ? undefined : value,
+                        })
+                      }
+                      className={`text-xs uppercase tracking-widest px-3 py-1.5 border transition-colors ${
+                        active
+                          ? "bg-[#C8A96E] text-[#0A0908] border-[#C8A96E]"
+                          : "text-[#8A8278] border-[#3A3530] hover:border-[#C8A96E]"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+              <span className="text-[#4A4540] text-[11px] font-sans">
+                Vertical = one 4:5 card. Horizontal = the width of two cards plus
+                the gap between them, same height.
+              </span>
+            </div>
+          )}
+
           {(item.kind ?? "big") === "small" && (
             <div className="flex flex-col gap-2">
               <label className="text-[#8A8278] text-xs uppercase tracking-widest">

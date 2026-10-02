@@ -43,6 +43,12 @@ export type Section = {
   height?: number;
 };
 
+/**
+ * Work/Home grid card shape. "horizontal" spans two columns
+ * (two cards + the gap between them) at the same height as a vertical card.
+ */
+export type CardLayout = "vertical" | "horizontal";
+
 export type Project = {
   id: string;
   slug: string;
@@ -77,6 +83,8 @@ export type Project = {
   liveUrl?: string;
   /** Square mark for the studio logo marquee. */
   logo?: string;
+  /** Card shape on Work/Home grids. Defaults to "vertical". */
+  cardLayout?: CardLayout;
   year: string;
   period?: string;
   featured: boolean;
@@ -167,6 +175,8 @@ export type GalleryItem = {
   folderColor?: string;
   /** Square mark used in the studio logo marquee. */
   logo?: string;
+  /** Big projects only: card shape on Work/Home grids. Defaults to "vertical". */
+  cardLayout?: CardLayout;
   /** When true, appears in homepage Selected Work (same as Work case studies). */
   featured?: boolean;
   /** When true, hidden from public studio + homepage (kept in admin). */

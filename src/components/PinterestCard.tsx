@@ -1,6 +1,7 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { CoverMedia } from "@/components/CoverMedia";
 import { BRAND_DECK, BRAND_RGB } from "@/lib/brand";
+import type { CardLayout } from "@/components/admin/types";
 
 const ACCENTS = BRAND_DECK;
 const ACCENT_RGB = BRAND_RGB;
@@ -38,7 +39,21 @@ export type PinterestCardProject = {
   /** Short muted loop after a long hover on the cover. */
   hoverVideo?: string;
   liveUrl?: string;
+  /** "horizontal" fills two grid columns plus the gap between them. */
+  cardLayout?: CardLayout;
 };
+
+/**
+ * Grid item class so a horizontal card spans two columns.
+ * `from` must match the breakpoint where the parent grid first has 2 columns.
+ */
+export function cardSpanClass(
+  project: Pick<PinterestCardProject, "cardLayout">,
+  from: "sm" | "md" = "sm",
+) {
+  if (project.cardLayout !== "horizontal") return "";
+  return from === "md" ? "md:col-span-2" : "sm:col-span-2";
+}
 
 function glowSeed(slug: string, i: number) {
   let h = i * 2654435761;
@@ -108,8 +123,19 @@ export const PinterestCard = memo(function PinterestCard({
 
   useEffect(() => () => clearHoverTimer(), [clearHoverTimer]);
 
+  const horizontal = project.cardLayout === "horizontal";
+
   return (
-    <div className="group relative">
+    <div
+      className={
+        horizontal
+          ? "group relative grid grid-cols-2 gap-x-[var(--card-grid-gap,2rem)]"
+          : "group relative"
+      }
+    >
+      {horizontal ? (
+        <div aria-hidden="true" className="col-start-1 row-start-1 aspect-[4/5]" />
+      ) : null}
       {/* Dual-tone floating grain glow — high-feather gradient blur under card */}
       <div
         aria-hidden="true"
@@ -145,7 +171,9 @@ export const PinterestCard = memo(function PinterestCard({
 
       <a
         href={href}
-        className="group/card relative z-10 flex flex-col rounded-2xl overflow-hidden cursor-pointer aspect-[4/5] focus-visible:outline-2 focus-visible:outline-offset-2"
+        className={`group/card relative z-10 flex flex-col rounded-2xl overflow-hidden cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 ${
+          horizontal ? "col-start-1 col-span-2 row-start-1" : "aspect-[4/5]"
+        }`}
         style={{
           outlineColor: accent,
           boxShadow: isDark
@@ -245,7 +273,11 @@ export const PinterestCard = memo(function PinterestCard({
         </div>
 
         {/* ── Unified type block: title → description → tags ── */}
-        <div className="absolute inset-x-0 bottom-0 z-20 flex flex-col justify-end gap-2 px-4 sm:px-5 pb-5 sm:pb-6 pt-24 pointer-events-none">
+        <div
+          className={`absolute inset-x-0 bottom-0 z-20 flex flex-col justify-end gap-2 px-4 sm:px-5 pb-5 sm:pb-6 pt-24 pointer-events-none ${
+            horizontal ? "sm:max-w-[60%]" : ""
+          }`}
+        >
           <h3 className="font-display font-black uppercase text-sm sm:text-base md:text-lg leading-[1.15] tracking-[0.03em] text-white line-clamp-3 break-words [overflow-wrap:anywhere]">
             {project.title}
           </h3>
