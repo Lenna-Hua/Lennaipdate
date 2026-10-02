@@ -1,0 +1,186 @@
+{
+  "_readme": {
+    "purpose": "Upload this file in portfolio Admin → Work → create/select Cotriply → Upload JSON / TXT, then Save to sync Neon.",
+    "nda": "Assets are public cotriply.ai / Ivory Luxe marketing only. Feature-level internship copy is resume-level; get written OK from Cotriply before expanding with internal UI.",
+    "publicSources": [
+      "https://cotriply.ai/",
+      "https://ivoryluxejourneys.com/cotriply/",
+      "https://innovationfactory.ca/clients/cotriply/"
+    ],
+    "seeMore": "Sections with visibility \"detail\" stay hidden until \"See more detail\".",
+    "skimCount": 8,
+    "detailOnlyCount": 2,
+    "totalSections": 10,
+    "skimTitles": [
+      "Context",
+      "Public product",
+      "Problem vs. Design Goal",
+      "My role",
+      "Booking & account workflows",
+      "Travel Essentials",
+      "Access controls & ops touchpoints",
+      "Impact & reflection"
+    ],
+    "detailOnlyTitles": [
+      "NDA & source notes",
+      "Public site visuals"
+    ],
+    "assets": "public/case-studies/cotriply/ — cover.png from public cotriply.ai hero; other files from public marketing assets.",
+    "localPreview": "http://localhost:5173/work/cotriply",
+    "draft": "case-study-drafts/cotriply-full-case-study.md"
+  },
+  "id": "9",
+  "slug": "cotriply",
+  "title": "Cotriply — Streamlining Group Travel Management",
+  "subtitle": "Internship as UX & Product Designer — booking flows, Travel Essentials navigation, permission-based access, and operational touchpoints for a B2B group-travel platform.",
+  "type": "UX & Product Designer (Internship)",
+  "users": "Organizations, travel planners, and groups coordinating multi-stakeholder trips",
+  "methods": "Figma user flows & UI, information architecture, permission UX, transactional email redesign, form refinement",
+  "period": "April 2026 · 224 hours",
+  "tags": [
+    "UX Design",
+    "Product Design",
+    "Internship",
+    "Travel Tech",
+    "Access Control"
+  ],
+  "description": "As a UX & Product Designer intern at Cotriply, I refined booking and account flows in Figma, introduced Travel Essentials navigation for participants, helped implement permission-based editing controls, and improved operational touchpoints including flight confirmation email and the Request Access path.",
+  "cardDescription": "Internship case study: UX & product design for Cotriply — flows, navigation, access controls, and ops touchpoints on a B2B group-travel platform.",
+  "bullets": [
+    "Designed account-creation and booking workflows in Figma to reduce friction across multi-step travel selections.",
+    "Introduced Travel Essentials navigation so participants could reach critical trip resources without digging through dense menus.",
+    "Designed permission-based access controls and refined operational touchpoints (flight confirmation email, Request Access)."
+  ],
+  "challenge": "Participants needed clearer access to critical trip details, while administrators needed stricter controls against unauthorized edits. Operational touchpoints — transactional email and access requests — also needed clearer structure and hierarchy.",
+  "solution": "Designed booking and account workflows in Figma, introduced a Travel Essentials navigation hub, implemented permission-based editing locks for participants, redesigned the flight confirmation email, and refined Request Access intake (including required name fields).",
+  "impact": "Over 224 hours in April 2026, contributions improved both the participant-facing experience and operational workflows — clearer navigation, stronger access integrity, and more legible transactional communication.",
+  "coverImage": "/case-studies/cotriply/cover.png",
+  "year": "2026",
+  "featured": true,
+  "archived": false,
+  "sections": [
+    {
+      "id": "nda-notes",
+      "type": "text",
+      "visibility": "detail",
+      "title": "NDA & source notes",
+      "summary": "Public framing only; no internal customer data",
+      "body": "This case study uses public Cotriply positioning (cotriply.ai and related public pages) plus a high-level summary of internship focus areas. Screenshots are from the public marketing site. Internal dashboards, customer data, proprietary code, and unreleased product specs are intentionally omitted under NDA.",
+      "bullets": [
+        "Public product: AI concierge for corporate and group travel — centralizing decisions, communication, and plans",
+        "Visuals: public cotriply.ai hero and marketing assets only",
+        "Live: https://cotriply.ai/"
+      ]
+    },
+    {
+      "id": "context",
+      "type": "text",
+      "visibility": "always",
+      "title": "Context",
+      "summary": "UX & product design internship on a group-travel platform",
+      "body": "Cotriply is a B2B platform for planning group travel without the usual coordination chaos — centralizing decisions, communication, and plans for teams and groups. During my internship I worked as a UX & Product Designer across interface design and technical operations: refining core flows in Figma, clarifying how participants find trip-critical information, tightening who can edit what, and improving key operational touchpoints.",
+      "bullets": [
+        "Role: UX & Product Designer (Internship)",
+        "Timeline: April 2026 · 224 hours",
+        "Tools: Figma and frontend development tools",
+        "Public site: cotriply.ai"
+      ]
+    },
+    {
+      "id": "public-product",
+      "type": "image",
+      "visibility": "always",
+      "src": "/case-studies/cotriply/cover.png",
+      "title": "Public product",
+      "caption": "Public cotriply.ai hero — AI concierge for corporate and group travel. Source: cotriply.ai (public marketing page).",
+      "href": "https://cotriply.ai/",
+      "linkLabel": "Visit cotriply.ai"
+    },
+    {
+      "id": "problem-goal",
+      "type": "problem-solution",
+      "visibility": "always",
+      "title": "Problem vs. Design Goal",
+      "problem": "Participants needed faster access to critical travel details, while admins needed stronger guardrails against unauthorized itinerary and profile edits. Operational moments like confirmation emails and access requests needed clearer hierarchy and verification fields.",
+      "solution": "Clarify participant navigation (Travel Essentials), lock editing behind permissions, and redesign key operational touchpoints for hierarchy, required fields, and mobile readability — without sharing proprietary internals or unpublished metrics."
+    },
+    {
+      "id": "role",
+      "type": "text",
+      "visibility": "always",
+      "title": "My role",
+      "summary": "Design ownership plus operational delivery",
+      "body": "I owned UX work in Figma for booking and account journeys, proposed IA for Travel Essentials, and carried permission and form/email improvements into implementation and ops workflows. The internship value was closing the loop between interface decisions and how the platform runs day to day.",
+      "bullets": [
+        "Figma: account creation and booking user flows / UI",
+        "IA: Travel Essentials as a dedicated participant hub",
+        "Access: permission-based edit locks for participants",
+        "Ops: flight confirmation email template + Request Access refinement"
+      ]
+    },
+    {
+      "id": "booking-flows",
+      "type": "text",
+      "visibility": "always",
+      "title": "Booking & account workflows",
+      "summary": "Step-by-step journeys designed to reduce friction",
+      "body": "A large share of the internship went into architecting user-centric workflows in Figma. Account creation was refined to lower first-run friction. Booking interfaces were structured as clearer step-by-step journeys so travelers could move through complex travel selections with less cognitive load.",
+      "bullets": [
+        "Account creation: reduce onboarding friction for new users",
+        "Booking: guided steps for complex travel selections",
+        "Goal: minimize confusion and drop-off without oversimplifying real trip constraints"
+      ]
+    },
+    {
+      "id": "travel-essentials",
+      "type": "text",
+      "visibility": "always",
+      "title": "Travel Essentials",
+      "summary": "One place for critical trip resources",
+      "body": "Participants needed faster access to trip-critical information before and during travel. I introduced a dedicated Travel Essentials navigation section that centralizes essential resources and documents, so people can find what they need without digging through dense menus.",
+      "bullets": [
+        "Problem: critical details buried in complex navigation",
+        "Solution: dedicated Travel Essentials hub",
+        "Outcome intent: effortless findability pre-trip and on the go"
+      ]
+    },
+    {
+      "id": "access-ops",
+      "type": "text",
+      "visibility": "always",
+      "title": "Access controls & ops touchpoints",
+      "summary": "Security for admins, clarity for everyone else",
+      "body": "Group travel systems need integrity. I designed and helped implement permission-based access controls so only authorized administrators can alter critical itinerary or profile details, while standard participants keep a frictionless read-only view. On the operations side, I redesigned the flight confirmation email for legibility, hierarchy, and mobile scanning, and refined Request Access intake — including required name fields — so admins could verify and process requests more reliably. Request Access is also a public entry point on cotriply.ai.",
+      "bullets": [
+        "Permissions: lock participant edit rights on protected fields",
+        "Email: flight confirmation template with clearer hierarchy",
+        "Form: Request Access + required name fields for verification",
+        "Public CTA: Request Access on cotriply.ai"
+      ]
+    },
+    {
+      "id": "impact",
+      "type": "text",
+      "visibility": "always",
+      "title": "Impact & reflection",
+      "summary": "One product, two user types — design for both",
+      "body": "Across 224 hours, the work improved both the participant experience and operational workflows. The lasting lesson was designing for multiple roles in one ecosystem: participants need simple navigation like Travel Essentials; administrators need strict permissions and efficient data collection. Holistic product design treats both as first-class.",
+      "bullets": [
+        "Clearer participant paths to trip-critical information",
+        "Stronger integrity around who can edit what",
+        "More legible transactional and intake communications",
+        "Learning: balance traveler autonomy with operator control"
+      ]
+    },
+    {
+      "id": "public-visuals",
+      "type": "image",
+      "visibility": "detail",
+      "src": "/case-studies/cotriply/marketing-1.png",
+      "title": "Public site visuals",
+      "caption": "Public marketing imagery from cotriply.ai — used only as brand/context visuals, not as claims about internal product UI.",
+      "href": "https://cotriply.ai/",
+      "linkLabel": "Open cotriply.ai"
+    }
+  ]
+}

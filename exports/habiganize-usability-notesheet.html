@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Habiganize usability — session notes</title>
+  <style>
+    :root {
+      --ink: #1a1410;
+      --rule: #c4b8ae;
+      --fill: #f6f1ea;
+      --accent: #9b2d3a;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      color: var(--ink);
+      font: 10.5px/1.3 "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      background: #e8e0d6;
+    }
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      padding: 12px 16px;
+      background: var(--ink);
+      color: #fff;
+    }
+    .toolbar strong { font-size: 13px; margin-right: 8px; }
+    .toolbar span { opacity: 0.8; font-size: 12px; }
+    .toolbar a, .toolbar button {
+      appearance: none;
+      border: 0;
+      background: #fff;
+      color: var(--ink);
+      font: 600 12px/1 "Segoe UI", sans-serif;
+      padding: 8px 12px;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .toolbar button.ghost {
+      background: transparent;
+      color: #fff;
+      border: 1px solid #fff;
+    }
+    .pack { padding: 16px 0 48px; }
+    .participant {
+      width: 8.5in;
+      margin: 0 auto 24px;
+      background: #fff;
+    }
+    .page {
+      width: 8.5in;
+      min-height: 11in;
+      padding: 0.48in;
+      display: block;
+    }
+    .page > * + * { margin-top: 6px; }
+    h1 {
+      margin: 0;
+      font-size: 16px;
+      letter-spacing: -0.02em;
+      text-transform: uppercase;
+    }
+    .kicker {
+      font-size: 9px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      font-weight: 700;
+    }
+    .row { display: flex; gap: 8px; align-items: end; flex-wrap: wrap; }
+    .grow { flex: 1; min-width: 120px; }
+    label.field {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    input[type="text"], textarea {
+      width: 100%;
+      border: 0;
+      border-bottom: 1px solid var(--ink);
+      background: transparent;
+      font: 12px/1.3 "Segoe UI", sans-serif;
+      padding: 2px 0;
+      color: var(--ink);
+    }
+    textarea {
+      border: 1px solid var(--rule);
+      min-height: 28px;
+      height: 28px;
+      padding: 3px 5px;
+      resize: vertical;
+    }
+    .checks { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+    .checks label, .codes label {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: none;
+      letter-spacing: 0;
+      cursor: pointer;
+    }
+    .task {
+      border: 1px solid var(--ink);
+      padding: 6px 7px 7px;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    .task header {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: baseline;
+      margin-bottom: 6px;
+    }
+    .task h2 {
+      margin: 0;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+    .task .prompt {
+      margin: 0 0 6px;
+      font-size: 10px;
+      color: #4a4038;
+    }
+    .codes {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px 8px;
+      margin-top: 4px;
+      padding-top: 4px;
+      border-top: 1px dotted var(--rule);
+    }
+    .legend {
+      background: var(--fill);
+      border: 1px solid var(--rule);
+      padding: 6px 8px;
+      font-size: 10px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      border: 1px solid var(--ink);
+      padding: 5px 6px;
+      vertical-align: top;
+      text-align: left;
+    }
+    th {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      background: var(--fill);
+      width: 28%;
+    }
+    td textarea { min-height: 22px; height: 22px; border: 0; padding: 0; }
+    .issues input { border-bottom: 1px solid var(--rule); }
+    .issues td { padding: 4px 6px; }
+    .page-break {
+      break-after: page;
+      page-break-after: always;
+      height: 0;
+      margin: 0;
+      border: 0;
+    }
+    footer.meta {
+      font-size: 9px;
+      color: #6b5e54;
+    }
+    @media print {
+      html, body { background: #fff; }
+      .toolbar { display: none; }
+      .pack { padding: 0; }
+      .participant { margin: 0; width: auto; }
+      .page {
+        display: block;
+        width: auto;
+        min-height: 0;
+        padding: 0;
+      }
+      .page + .page {
+        break-before: page;
+        page-break-before: always;
+      }
+      input, textarea { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+    }
+    @page { size: letter; margin: 0.48in; }
+  </style>
+</head>
+<body>
+  <div class="toolbar no-print">
+    <strong>Habiganize session notes</strong>
+    <span>One sheet = one participant. Download PDF and print 5 copies, or fill on screen.</span>
+    <a id="pdf-link" href="habiganize-usability-notesheet.pdf" download="habiganize-usability-notesheet.pdf">Download PDF</a>
+    <button type="button" onclick="window.print()">Print this sheet</button>
+    <button type="button" class="ghost" id="pack-btn">Show P1–P5 packet</button>
+  </div>
+  <div class="pack" id="pack"></div>
+
+  <template id="sheet">
+    <article class="participant">
+      <section class="page">
+        <div class="kicker">Habiganize · moderated usability · 25 min</div>
+        <div class="row">
+          <h1 class="grow">Session notes</h1>
+          <label class="field" style="width:72px"><span>P#</span><input type="text" data-pn /></label>
+          <label class="field" style="width:110px"><span>Date</span><input type="text" /></label>
+          <label class="field" style="width:90px"><span>Duration</span><input type="text" placeholder="min" /></label>
+        </div>
+        <div class="row">
+          <label class="field grow"><span>Recruit source</span><input type="text" /></label>
+          <div class="field">
+            <span>Platform</span>
+            <div class="checks">
+              <label><input type="checkbox" /> Desktop</label>
+              <label><input type="checkbox" /> Phone</label>
+            </div>
+          </div>
+          <div class="field">
+            <span>Recording</span>
+            <div class="checks">
+              <label><input type="checkbox" /> Screen</label>
+              <label><input type="checkbox" /> Audio</label>
+              <label><input type="checkbox" /> Notes only</label>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <label class="field grow"><span>Prior habit / streak apps</span><input type="text" /></label>
+          <label class="field grow"><span>Why they quit</span><input type="text" /></label>
+        </div>
+        <div class="field">
+          <span>Streaks</span>
+          <div class="checks">
+            <label><input type="checkbox" /> Motivates</label>
+            <label><input type="checkbox" /> Punishes</label>
+            <label><input type="checkbox" /> Ignore</label>
+          </div>
+        </div>
+        <label class="field"><span>Background quotes</span><textarea></textarea></label>
+        <div class="legend">
+          Result: <strong>C</strong> complete · <strong>CS</strong> struggle · <strong>F</strong> fail · <strong>A</strong> assisted
+          · SEQ 1 very hard – 7 very easy
+          · Do not say Pups, Shop, coins, Care Loop, or tab names.
+        </div>
+
+        <div class="task">
+          <header>
+            <h2>S1 · Get in</h2>
+            <div class="row" style="gap:12px">
+              <label class="field" style="width:70px"><span>Start</span><input type="text" /></label>
+              <label class="field" style="width:70px"><span>End</span><input type="text" /></label>
+            </div>
+          </header>
+          <p class="prompt">“Get yourself set up so you can start tracking something today.” Success: signed-in main screen.</p>
+          <div class="checks">
+            <span>Result</span>
+            <label><input type="checkbox" /> C</label>
+            <label><input type="checkbox" /> CS</label>
+            <label><input type="checkbox" /> F</label>
+            <label><input type="checkbox" /> A</label>
+            <span>SEQ</span>
+            <label><input type="checkbox" /> 1</label><label><input type="checkbox" /> 2</label><label><input type="checkbox" /> 3</label><label><input type="checkbox" /> 4</label><label><input type="checkbox" /> 5</label><label><input type="checkbox" /> 6</label><label><input type="checkbox" /> 7</label>
+          </div>
+          <label class="field"><span>Path</span><input type="text" placeholder="screens in order" /></label>
+          <label class="field"><span>Quote / errors / help given</span><textarea></textarea></label>
+          <div class="codes">
+            <label><input type="checkbox" /> HES</label>
+            <label><input type="checkbox" /> BACK</label>
+            <label><input type="checkbox" /> IA</label>
+            <label><input type="checkbox" /> MISS</label>
+            <label><input type="checkbox" /> AUTH</label>
+            <label><input type="checkbox" /> A11Y</label>
+            <label><input type="checkbox" /> ASK</label>
+          </div>
+        </div>
+
+        <div class="task">
+          <header>
+            <h2>S2 · Add a real habit</h2>
+            <div class="row" style="gap:12px">
+              <label class="field" style="width:70px"><span>Start</span><input type="text" /></label>
+              <label class="field" style="width:70px"><span>End</span><input type="text" /></label>
+            </div>
+          </header>
+          <p class="prompt">“You want to drink more water this week. Set that up in whatever way makes sense.”</p>
+          <div class="checks">
+            <span>Result</span>
+            <label><input type="checkbox" /> C</label>
+            <label><input type="checkbox" /> CS</label>
+            <label><input type="checkbox" /> F</label>
+            <label><input type="checkbox" /> A</label>
+            <span>SEQ</span>
+            <label><input type="checkbox" /> 1</label><label><input type="checkbox" /> 2</label><label><input type="checkbox" /> 3</label><label><input type="checkbox" /> 4</label><label><input type="checkbox" /> 5</label><label><input type="checkbox" /> 6</label><label><input type="checkbox" /> 7</label>
+          </div>
+          <label class="field"><span>Path</span><input type="text" /></label>
+          <label class="field"><span>Quote / errors / help given</span><textarea></textarea></label>
+          <div class="codes">
+            <label><input type="checkbox" /> HES</label>
+            <label><input type="checkbox" /> BACK</label>
+            <label><input type="checkbox" /> IA</label>
+            <label><input type="checkbox" /> ASK</label>
+            <label><input type="checkbox" /> A11Y</label>
+          </div>
+        </div>
+
+        <div class="task">
+          <header>
+            <h2>S3 · Check in</h2>
+            <div class="row" style="gap:12px">
+              <label class="field" style="width:70px"><span>Start</span><input type="text" /></label>
+              <label class="field" style="width:70px"><span>End</span><input type="text" /></label>
+            </div>
+          </header>
+          <p class="prompt">“You just drank a glass of water. Log that you did it today.” If they miss the reward: “Did anything happen when you checked that off?”</p>
+          <div class="checks">
+            <span>Result</span>
+            <label><input type="checkbox" /> C</label>
+            <label><input type="checkbox" /> CS</label>
+            <label><input type="checkbox" /> F</label>
+            <label><input type="checkbox" /> A</label>
+            <span>Noticed reward?</span>
+            <label><input type="checkbox" /> Y</label>
+            <label><input type="checkbox" /> N</label>
+            <span>SEQ</span>
+            <label><input type="checkbox" /> 1</label><label><input type="checkbox" /> 2</label><label><input type="checkbox" /> 3</label><label><input type="checkbox" /> 4</label><label><input type="checkbox" /> 5</label><label><input type="checkbox" /> 6</label><label><input type="checkbox" /> 7</label>
+          </div>
+          <label class="field"><span>What they thought the reward was for</span><input type="text" /></label>
+          <label class="field"><span>Quote</span><textarea></textarea></label>
+          <div class="codes">
+            <label><input type="checkbox" /> HES</label>
+            <label><input type="checkbox" /> MISS</label>
+            <label><input type="checkbox" /> LOOP+</label>
+            <label><input type="checkbox" /> LOOP-</label>
+            <label><input type="checkbox" /> ASK</label>
+            <label><input type="checkbox" /> A11Y</label>
+          </div>
+        </div>
+        <footer class="meta">Page 1 of 2 · habitganizer.tech · do not coach tab names</footer>
+        <div class="page-break" aria-hidden="true"></div>
+      </section>
+
+      <section class="page">
+        <div class="task">
+          <header>
+            <h2>S4 · Discover the loop (critical)</h2>
+            <div class="row" style="gap:12px">
+              <label class="field" style="width:70px"><span>Start</span><input type="text" /></label>
+              <label class="field" style="width:70px"><span>End</span><input type="text" /></label>
+            </div>
+          </header>
+          <p class="prompt">“You earned something. Figure out what it is for, and what this app wants you to do next.” Do not name Pups / Shop.</p>
+          <div class="checks">
+            <span>Result</span>
+            <label><input type="checkbox" /> C</label>
+            <label><input type="checkbox" /> CS</label>
+            <label><input type="checkbox" /> F</label>
+            <label><input type="checkbox" /> A</label>
+            <span>Found pets/care unprompted?</span>
+            <label><input type="checkbox" /> Y</label>
+            <label><input type="checkbox" /> N</label>
+            <span>SEQ</span>
+            <label><input type="checkbox" /> 1</label><label><input type="checkbox" /> 2</label><label><input type="checkbox" /> 3</label><label><input type="checkbox" /> 4</label><label><input type="checkbox" /> 5</label><label><input type="checkbox" /> 6</label><label><input type="checkbox" /> 7</label>
+          </div>
+          <label class="field"><span>Quote</span><textarea></textarea></label>
+          <div class="codes">
+            <label><input type="checkbox" /> HES</label>
+            <label><input type="checkbox" /> BACK</label>
+            <label><input type="checkbox" /> IA</label>
+            <label><input type="checkbox" /> LOOP+</label>
+            <label><input type="checkbox" /> LOOP-</label>
+            <label><input type="checkbox" /> ASK</label>
+          </div>
+        </div>
+
+        <div class="task">
+          <header>
+            <h2>S5 · Get a companion</h2>
+            <div class="row" style="gap:12px">
+              <label class="field" style="width:70px"><span>Start</span><input type="text" /></label>
+              <label class="field" style="width:70px"><span>End</span><input type="text" /></label>
+            </div>
+          </header>
+          <p class="prompt">“You want something in the app to take care of, not just a list. Get one.” Coin-short: they may add more small habits and check them off. Do not name Toby or 50 coins.</p>
+          <div class="checks">
+            <span>Result</span>
+            <label><input type="checkbox" /> C</label>
+            <label><input type="checkbox" /> CS</label>
+            <label><input type="checkbox" /> F</label>
+            <label><input type="checkbox" /> A</label>
+            <span>Extra check-ins?</span>
+            <label><input type="checkbox" /> Y</label>
+            <label><input type="checkbox" /> N</label>
+            <span>SEQ</span>
+            <label><input type="checkbox" /> 1</label><label><input type="checkbox" /> 2</label><label><input type="checkbox" /> 3</label><label><input type="checkbox" /> 4</label><label><input type="checkbox" /> 5</label><label><input type="checkbox" /> 6</label><label><input type="checkbox" /> 7</label>
+          </div>
+          <label class="field"><span>Pet chosen / path</span><input type="text" /></label>
+          <label class="field"><span>Quote / errors / help given</span><textarea></textarea></label>
+          <div class="codes">
+            <label><input type="checkbox" /> HES</label>
+            <label><input type="checkbox" /> BACK</label>
+            <label><input type="checkbox" /> IA</label>
+            <label><input type="checkbox" /> ASK</label>
+            <label><input type="checkbox" /> AUTH</label>
+            <label><input type="checkbox" /> A11Y</label>
+          </div>
+        </div>
+
+        <div class="task">
+          <header>
+            <h2>S6 · Care</h2>
+            <div class="row" style="gap:12px">
+              <label class="field" style="width:70px"><span>Start</span><input type="text" /></label>
+              <label class="field" style="width:70px"><span>End</span><input type="text" /></label>
+            </div>
+          </header>
+          <p class="prompt">“Your companion looks like it needs something. Take care of it the way the app seems to want.”</p>
+          <div class="checks">
+            <span>Result</span>
+            <label><input type="checkbox" /> C</label>
+            <label><input type="checkbox" /> CS</label>
+            <label><input type="checkbox" /> F</label>
+            <label><input type="checkbox" /> A</label>
+            <span>Action</span>
+            <label><input type="checkbox" /> Feed</label>
+            <label><input type="checkbox" /> Water</label>
+            <label><input type="checkbox" /> Play</label>
+            <label><input type="checkbox" /> Walk</label>
+            <label><input type="checkbox" /> Bath</label>
+            <span>SEQ</span>
+            <label><input type="checkbox" /> 1</label><label><input type="checkbox" /> 2</label><label><input type="checkbox" /> 3</label><label><input type="checkbox" /> 4</label><label><input type="checkbox" /> 5</label><label><input type="checkbox" /> 6</label><label><input type="checkbox" /> 7</label>
+          </div>
+          <label class="field"><span>Meter they noticed</span><input type="text" /></label>
+          <label class="field"><span>Quote</span><textarea></textarea></label>
+          <div class="codes">
+            <label><input type="checkbox" /> HES</label>
+            <label><input type="checkbox" /> MISS</label>
+            <label><input type="checkbox" /> CARE</label>
+            <label><input type="checkbox" /> GUILT</label>
+            <label><input type="checkbox" /> ASK</label>
+            <label><input type="checkbox" /> A11Y</label>
+          </div>
+        </div>
+
+        <h2 style="margin:4px 0 0;font-size:12px;text-transform:uppercase">Debrief (their words)</h2>
+        <table>
+          <tr><th>1. What is this app?</th><td><textarea></textarea></td></tr>
+          <tr><th>2. Open it tomorrow because?</th><td><textarea></textarea></td></tr>
+          <tr><th>3. Skip tomorrow — what happens, how it feels</th><td><textarea></textarea></td></tr>
+          <tr><th>4. Confusing / hard to tap or read</th><td><textarea></textarea></td></tr>
+          <tr><th>5. Keep this companion? Why?</th><td><textarea></textarea></td></tr>
+        </table>
+        <div class="checks">
+          <span>LOOP unprompted (S4)</span>
+          <label><input type="checkbox" /> Y</label>
+          <label><input type="checkbox" /> N</label>
+          <span>Skip-day</span>
+          <label><input type="checkbox" /> CARE</label>
+          <label><input type="checkbox" /> GUILT</label>
+          <label><input type="checkbox" /> Neither</label>
+          <span>Signup a wall?</span>
+          <label><input type="checkbox" /> Y</label>
+          <label><input type="checkbox" /> N</label>
+        </div>
+        <label class="field"><span>Same-day recap — loop completed? / quote / one change</span><textarea style="min-height:36px;height:36px"></textarea></label>
+        <table class="issues">
+          <thead>
+            <tr><th style="width:12%">Sev 0–4</th><th style="width:18%">Task</th><th>Issue</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><input type="text" /></td><td><input type="text" /></td><td><input type="text" /></td></tr>
+            <tr><td><input type="text" /></td><td><input type="text" /></td><td><input type="text" /></td></tr>
+            <tr><td><input type="text" /></td><td><input type="text" /></td><td><input type="text" /></td></tr>
+          </tbody>
+        </table>
+        <footer class="meta">Page 2 of 2 · Severity after the session: 0 cosmetic · 1 minor · 2 major · 3 critical · 4 blocker</footer>
+      </section>
+    </article>
+  </template>
+
+  <script>
+    const pack = document.getElementById("pack");
+    const tpl = document.getElementById("sheet");
+    function addSheet(label) {
+      const node = tpl.content.cloneNode(true);
+      const pn = node.querySelector("[data-pn]");
+      pn.value = label || "";
+      pack.appendChild(node);
+    }
+    addSheet("");
+    document.getElementById("pack-btn").addEventListener("click", function () {
+      pack.innerHTML = "";
+      for (let i = 1; i <= 5; i++) addSheet("P" + i);
+      this.disabled = true;
+      this.textContent = "P1–P5 ready — use Print";
+    });
+  </script>
+</body>
+</html>
