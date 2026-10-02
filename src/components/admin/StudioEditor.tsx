@@ -1,5 +1,5 @@
 /**
- * Studio page copy, artwork card treatment, and the logo marquee.
+ * Studio page copy (hero, artworks slideshow, Play section) plus the logo marquee shown on Work.
  */
 import { SafeImage } from "@/components/SafeImage";
 import type { Studio, StudioLogo } from "./types";
@@ -32,8 +32,8 @@ export function StudioEditor({
         <div>
           <h2 className="font-serif text-2xl text-[#F2EDE5]">Studio page</h2>
           <p className="text-[#8A8278] text-sm mt-1">
-            Copy, card size, and the looping logo strip on /studio.
-            Gallery items themselves are still edited under Gallery.
+            Order on /studio: Hero → Artworks slideshow → Play (Kern game). Artworks themselves are
+            edited under Gallery. The logo marquee at the bottom is shown on the Work page.
           </p>
         </div>
         {onPreview && (
@@ -67,14 +67,11 @@ export function StudioEditor({
       </section>
 
       <section className="flex flex-col gap-4 border border-[#272421] p-4">
-        <h3 className="text-[#C8A96E] text-sm uppercase tracking-widest">Big projects band</h3>
-        <TextInput label="Eyebrow" value={data.bigEyebrow} onChange={(v) => patch({ bigEyebrow: v })} />
-        <TextInput label="Heading" value={data.bigHeading} onChange={(v) => patch({ bigHeading: v })} />
-        <TextareaInput label="Blurb" value={data.bigBlurb} onChange={(v) => patch({ bigBlurb: v })} rows={2} />
-      </section>
-
-      <section className="flex flex-col gap-4 border border-[#272421] p-4">
-        <h3 className="text-[#C8A96E] text-sm uppercase tracking-widest">Artworks band (below big projects)</h3>
+        <h3 className="text-[#C8A96E] text-sm uppercase tracking-widest">Artworks slideshow</h3>
+        <p className="text-[#8A8278] text-sm">
+          Gallery items set to “Artwork” show in this slideshow, here and on Home. Gallery items set to
+          “Big Project” appear as cards on the Work page instead.
+        </p>
         <TextInput
           label="Eyebrow"
           value={data.artworksEyebrow}
@@ -114,9 +111,37 @@ export function StudioEditor({
       </section>
 
       <section className="flex flex-col gap-4 border border-[#272421] p-4">
-        <h3 className="text-[#C8A96E] text-sm uppercase tracking-widest">Logo marquee</h3>
+        <h3 className="text-[#C8A96E] text-sm uppercase tracking-widest">Play (Kern game)</h3>
         <p className="text-[#8A8278] text-sm">
-          Infinite horizontal strip. Add marks here, and/or upload a Logo on each Gallery or Work project.
+          The interactive kerning game under the slideshow. Old /play links land here.
+        </p>
+        <CheckboxInput
+          label="Show the Play section"
+          checked={data.showPlay}
+          onChange={(v) => patch({ showPlay: v })}
+        />
+        <TextInput
+          label="Eyebrow"
+          value={data.playEyebrow}
+          onChange={(v) => patch({ playEyebrow: v })}
+        />
+        <TextInput
+          label="Heading"
+          value={data.playHeading}
+          onChange={(v) => patch({ playHeading: v })}
+        />
+        <TextareaInput
+          label="Blurb (optional)"
+          value={data.playBlurb}
+          onChange={(v) => patch({ playBlurb: v })}
+          rows={2}
+        />
+      </section>
+
+      <section className="flex flex-col gap-4 border border-[#272421] p-4">
+        <h3 className="text-[#C8A96E] text-sm uppercase tracking-widest">Logo marquee — Work page</h3>
+        <p className="text-[#8A8278] text-sm">
+          Infinite horizontal strip at the bottom of the Work page. Add marks here, and/or upload a Logo on each Gallery or Work project.
         </p>
         <CheckboxInput
           label="Show marquee"

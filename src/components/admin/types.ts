@@ -68,6 +68,13 @@ export type Project = {
   /** "Impact" block on the case study page. */
   impact: string;
   coverImage: string;
+  /**
+   * Short muted loop shown on Work/Home cards after a long hover.
+   * Leave empty to keep the static cover image.
+   */
+  hoverVideo?: string;
+  /** Live product / site URL — powers the rotating VIEW LIVE badge. */
+  liveUrl?: string;
   /** Square mark for the studio logo marquee. */
   logo?: string;
   year: string;
@@ -94,7 +101,21 @@ export type About = {
   photo?: string;
   /** Display value for years of experience, e.g. "3+" or "4+" */
   yearsExperience?: string;
+  /** Intro paragraph for the Community & Volunteer section. */
   community?: string;
+  communityItems?: CommunityItem[];
+};
+
+export type CommunityItem = {
+  id: string;
+  title: string;
+  organization?: string;
+  period?: string;
+  description?: string;
+  /** Photos shown on the card; the first is the cover. */
+  images?: string[];
+  linkUrl?: string;
+  linkLabel?: string;
 };
 
 export type ExperienceItem = {
@@ -111,6 +132,10 @@ export type EducationItem = {
   degree: string;
   institution: string;
   year: string;
+  summary?: string;
+  /** Free text so any scale works, e.g. "3.8 / 4.0" or "Distinction". */
+  gpa?: string;
+  honors?: string[];
 };
 
 export type GalleryItem = {
@@ -132,9 +157,9 @@ export type GalleryItem = {
   order?: number;
   linkUrl?: string;
   linkLabel?: string;
-  /** Slideshow card shape. When omitted, public studio page detects from the cover image. */
+  /** Slideshow card shape. When omitted, the slideshow detects it from the cover image. */
   orientation?: "portrait" | "landscape";
-  /** Artwork card treatment. When omitted, Studio Page default applies. */
+  /** @deprecated Artworks always render as slideshow cards. */
   cardStyle?: "slideshow" | "tag" | "folder";
   /** Optional stamp image (legacy folder field). */
   stampImage?: string;
@@ -142,6 +167,10 @@ export type GalleryItem = {
   folderColor?: string;
   /** Square mark used in the studio logo marquee. */
   logo?: string;
+  /** When true, appears in homepage Selected Work (same as Work case studies). */
+  featured?: boolean;
+  /** When true, hidden from public studio + homepage (kept in admin). */
+  archived?: boolean;
 };
 
 export type Identity = {
@@ -202,6 +231,11 @@ export type Homepage = {
     secondaryCtaHref: string;
     selectedWorkHeading: string;
     selectedWorkLinkLabel: string;
+    /** Rotating flower sticker in the hero; links to primaryCtaHref. */
+    badgeLabel?: string;
+    showStudioBand?: boolean;
+    studioHeading?: string;
+    studioLinkLabel?: string;
     aboutEyebrow: string;
     aboutHeading: string;
     aboutCtaLabel: string;
@@ -227,6 +261,11 @@ export type Studio = {
   artworksBlurb: string;
   artworksCardSize: "md" | "lg" | "xl";
   artworksDefaultStyle: "slideshow" | "tag" | "folder";
+  /** Kern game section (/play redirects here). */
+  showPlay: boolean;
+  playEyebrow: string;
+  playHeading: string;
+  playBlurb: string;
   showGrid: boolean;
   showDecor: boolean;
   showLogoMarquee: boolean;

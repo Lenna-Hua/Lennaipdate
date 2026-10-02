@@ -71,7 +71,7 @@ export function IdentityContactEditor({
       <section className="flex flex-col gap-4 border-t border-[#272421] pt-8">
         <h2 className="font-serif text-2xl text-[#F2EDE5]">Contact</h2>
         <p className="text-[#8A8278] text-sm">
-          Used by the contact page, footer, and case-study sidebar. Empty fields hide automatically.
+          Used by the Let&apos;s Talk section at the bottom of About, the footer, and the case-study sidebar. Empty fields hide automatically.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="flex flex-col gap-2">

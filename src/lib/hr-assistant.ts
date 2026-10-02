@@ -287,7 +287,7 @@ export function buildHrResponse(action: HrAction, ctx: HrContext): HrResponse {
         text,
         thinkMs: thinkFor(text),
         links: [
-          { label: "Open contact form", href: "/contact" },
+          { label: "Open contact form", href: "/about#contact" },
           ...(ctx.contact.linkedin
             ? [{ label: "LinkedIn profile", href: ctx.contact.linkedin }]
             : []),

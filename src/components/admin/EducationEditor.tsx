@@ -2,7 +2,7 @@
  * Education section editor — sortable list of degrees.
  */
 import type { EducationItem } from "./types";
-import { TextInput } from "./shared";
+import { TextInput, TextareaInput } from "./shared";
 import { AdminSortableList } from "@/pages/admin-sortable";
 
 export function EducationEditor({
@@ -58,6 +58,23 @@ export function EducationEditor({
               label="Year"
               value={item.year}
               onChange={(v) => update(idx, { year: v })}
+            />
+            <TextareaInput
+              label="Summary (optional)"
+              value={item.summary ?? ""}
+              onChange={(v) => update(idx, { summary: v })}
+              rows={3}
+            />
+            <TextInput
+              label="GPA / score (optional — e.g. 3.8 / 4.0)"
+              value={item.gpa ?? ""}
+              onChange={(v) => update(idx, { gpa: v })}
+            />
+            <TextareaInput
+              label="Honors & awards (one per line)"
+              value={(item.honors ?? []).join("\n")}
+              onChange={(v) => update(idx, { honors: v.split("\n") })}
+              rows={3}
             />
           </div>
         )}

@@ -11,9 +11,21 @@ import {
   Diamond,
 } from "lucide-react";
 import projectsSeed from "@/data/projects.json";
+import gallerySeed from "@/data/gallery.json";
+import studioSeed from "@/data/studio.json";
 import { useContent } from "@/lib/use-content";
 import { useTheme } from "@/context/ThemeContext";
-import { PinterestCard } from "@/components/PinterestCard";
+import {
+  PinterestCard,
+  type PinterestCardProject,
+} from "@/components/PinterestCard";
+import { LogoMarquee } from "@/components/LogoMarquee";
+import { collectMarqueeLogos, mergeStudio } from "@/lib/studio-content";
+import type {
+  GalleryItem,
+  Project as ProjectType,
+  Studio,
+} from "@/components/admin/types";
 import {
   BRAND,
   BRAND_DECK,
@@ -22,29 +34,55 @@ import {
 } from "@/lib/brand";
 
 const ACCENTS = BRAND_DECK;
-const FILTERS = ["All", "UX Research", "Product Design", "Analysis"];
+const FILTERS = ["All", "UX Research", "Product Design", "Analysis", "Studio"];
 
 type Project = (typeof projectsSeed)[number] & { archived?: boolean };
 
+function galleryBigToCard(g: GalleryItem): PinterestCardProject {
+  return {
+    id: g.id,
+    slug: g.slug,
+    title: g.title,
+    coverImage: g.coverImage,
+    year: g.year ?? "",
+    tags: g.tags ?? [],
+    type: g.role || "Studio",
+    subtitle: g.description,
+    cardDescription: g.description,
+    href: `/studio/${g.slug}`,
+  };
+}
+
+function workToCard(p: Project): PinterestCardProject {
+  return {
+    id: p.id,
+    slug: p.slug,
+    title: p.title,
+    coverImage: p.coverImage,
+    year: p.year,
+    tags: p.tags ?? [],
+    type: p.type,
+    subtitle: p.subtitle,
+    cardDescription: (p as { cardDescription?: string }).cardDescription,
+    href: `/work/${p.slug}`,
+    hoverVideo: (p as { hoverVideo?: string }).hoverVideo,
+    liveUrl: (p as { liveUrl?: string }).liveUrl,
+  };
+}
+
 /* ───────────────────── Cursor-following floating icons ───────────────── */
-/* A handful of small decorative icons scattered across the page that
-   drift slightly toward the cursor (parallax-style). Each icon has its
-   own depth multiplier so they react at different rates, and a subtle
-   idle float so the page feels alive even when the cursor is still. */
 const FLOAT_ICONS = [
-  { Icon: Sparkles, x: "8%",  y: "12%", size: 28, depth: 22, color: BRAND.coral },
-  { Icon: Star,     x: "88%", y: "18%", size: 22, depth: 14, color: BRAND.pink  },
-  { Icon: Flower2,  x: "92%", y: "62%", size: 26, depth: 30, color: BRAND.teal  },
-  { Icon: Heart,    x: "5%",  y: "70%", size: 20, depth: 18, color: BRAND.coral },
-  { Icon: Sun,      x: "78%", y: "88%", size: 24, depth: 26, color: BRAND.pink  },
-  { Icon: Cloud,    x: "12%", y: "92%", size: 30, depth: 12, color: BRAND.blue  },
-  { Icon: Zap,      x: "60%", y: "8%",  size: 22, depth: 20, color: BRAND.blue  },
-  { Icon: Diamond,  x: "45%", y: "96%", size: 18, depth: 16, color: BRAND.teal  },
+  { Icon: Sparkles, x: "8%", y: "12%", size: 28, depth: 22, color: BRAND.coral },
+  { Icon: Star, x: "88%", y: "18%", size: 22, depth: 14, color: BRAND.pink },
+  { Icon: Flower2, x: "92%", y: "62%", size: 26, depth: 30, color: BRAND.teal },
+  { Icon: Heart, x: "5%", y: "70%", size: 20, depth: 18, color: BRAND.coral },
+  { Icon: Sun, x: "78%", y: "88%", size: 24, depth: 26, color: BRAND.pink },
+  { Icon: Cloud, x: "12%", y: "92%", size: 30, depth: 12, color: BRAND.blue },
+  { Icon: Zap, x: "60%", y: "8%", size: 22, depth: 20, color: BRAND.blue },
+  { Icon: Diamond, x: "45%", y: "96%", size: 18, depth: 16, color: BRAND.teal },
 ];
 
 function CursorFollowIcons() {
-  // Stored in a ref + manual transform updates so we don't trigger a
-  // React re-render on every mousemove (cheap, smooth).
   const containerRef = useRef<HTMLDivElement>(null);
   const targetRef = useRef({ x: 0.5, y: 0.5 });
   const currentRef = useRef({ x: 0.5, y: 0.5 });
@@ -63,17 +101,15 @@ function CursorFollowIcons() {
   useEffect(() => {
     let raf = 0;
     const tick = (t: number) => {
-      // Lerp current toward target for a smooth follow.
       currentRef.current.x += (targetRef.current.x - currentRef.current.x) * 0.06;
       currentRef.current.y += (targetRef.current.y - currentRef.current.y) * 0.06;
-      const cx = currentRef.current.x - 0.5; // -0.5..+0.5
+      const cx = currentRef.current.x - 0.5;
       const cy = currentRef.current.y - 0.5;
       const root = containerRef.current;
       if (root) {
         const nodes = root.querySelectorAll<HTMLElement>("[data-float]");
         nodes.forEach((node, idx) => {
           const depth = Number(node.dataset.depth ?? 16);
-          // Subtle idle float so it never freezes when the cursor is still.
           const idle = Math.sin(t / 1200 + idx) * 3;
           const tx = cx * depth + idle;
           const ty = cy * depth + Math.cos(t / 1400 + idx) * 3;
@@ -119,21 +155,41 @@ function CursorFollowIcons() {
 /* ════════════════════════════════════════════════════════════════════════ */
 export default function WorkIndex() {
   const projectsData = useContent("projects", projectsSeed) as Project[];
+  const galleryData = useContent("gallery", gallerySeed) as GalleryItem[];
+  const studioRaw = useContent("studio", studioSeed as Studio);
+  const studio = useMemo(() => mergeStudio(studioRaw), [studioRaw]);
+  const marqueeItems = useMemo(
+    () =>
+      collectMarqueeLogos(
+        studio,
+        galleryData.filter((g) => !g.archived),
+        projectsData as unknown as ProjectType[],
+      ),
+    [studio, galleryData, projectsData],
+  );
   const [filter, setFilter] = useState("All");
   const { theme } = useTheme();
   const isDark = theme === "dark";
 
-  const visible = useMemo(() => projectsData.filter((p) => !p.archived), [projectsData]);
-  const filtered = useMemo(
-    () => filter === "All"
-      ? visible
-      : visible.filter((p) => p.type === filter || p.tags.includes(filter)),
-    [visible, filter]
-  );
-  // Pre-compute index map for O(1) lookups instead of O(n) findIndex per card
+  const visible = useMemo((): PinterestCardProject[] => {
+    const fromWork = projectsData.filter((p) => !p.archived).map(workToCard);
+    const fromStudio = galleryData
+      .filter((g) => !g.archived && (g.kind ?? "big") === "big")
+      .map(galleryBigToCard);
+    return [...fromWork, ...fromStudio];
+  }, [projectsData, galleryData]);
+
+  const filtered = useMemo(() => {
+    if (filter === "All") return visible;
+    if (filter === "Studio") {
+      return visible.filter((p) => p.href?.startsWith("/studio/"));
+    }
+    return visible.filter((p) => p.type === filter || p.tags.includes(filter));
+  }, [visible, filter]);
+
   const projectIndexMap = useMemo(
-    () => new Map(projectsData.map((p, i) => [p.id, i])),
-    [projectsData]
+    () => new Map(visible.map((p, i) => [p.id, i])),
+    [visible],
   );
 
   return (
@@ -149,26 +205,20 @@ export default function WorkIndex() {
         animate={{ opacity: 1 }}
         transition={{ duration: 0.4, ease: BRAND_EASE }}
       >
-        {/* Slim caption row — replaces the old dark grain band */}
         <motion.div
           className="flex items-baseline justify-between gap-6 flex-wrap pb-3"
           initial={{ opacity: 0, y: -6 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45, ease: BRAND_EASE }}
         >
-          <span
-            className="text-xs uppercase tracking-[0.42em] font-sans text-muted-foreground"
-          >
+          <span className="text-xs uppercase tracking-[0.42em] font-sans text-muted-foreground">
             Lenna Hua · Selected Works
           </span>
-          <span
-            className="text-[11px] font-mono uppercase tracking-[0.3em] text-muted-foreground/70"
-          >
+          <span className="text-[11px] font-mono uppercase tracking-[0.3em] text-muted-foreground/70">
             {visible.length} projects
           </span>
         </motion.div>
 
-        {/* Header */}
         <section
           className="flex flex-col gap-5 pb-8"
           style={{ borderBottom: `2px solid ${BRAND.coral}44` }}
@@ -185,7 +235,6 @@ export default function WorkIndex() {
             <span style={{ color: BRAND_TEXT.blue }}>Works</span>
           </motion.h1>
 
-          {/* Filter pills */}
           <motion.div
             className="flex flex-wrap gap-2"
             role="group"
@@ -216,7 +265,6 @@ export default function WorkIndex() {
           </motion.div>
         </section>
 
-        {/* Card grid */}
         <div aria-live="polite" className="sr-only">
           {filtered.length} project{filtered.length !== 1 ? "s" : ""} shown
           {filter !== "All" ? ` in ${filter}` : ""}
@@ -248,8 +296,18 @@ export default function WorkIndex() {
 
         {filtered.length === 0 && (
           <div className="py-24 text-center">
-            <p className="text-muted-foreground text-sm font-sans">No projects in this category.</p>
+            <p className="text-muted-foreground text-sm font-sans">
+              No projects in this category.
+            </p>
           </div>
+        )}
+
+        {studio.showLogoMarquee && marqueeItems.length > 0 && (
+          <LogoMarquee
+            items={marqueeItems}
+            speed={studio.logoMarqueeSpeed}
+            label={studio.logoMarqueeLabel}
+          />
         )}
       </motion.div>
     </div>

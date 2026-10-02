@@ -79,8 +79,7 @@ export function DinoFallback({
       aria-label={ariaLabel}
       className={className}
       style={{
-        ...style,
-        aspectRatio: aspect ?? style?.aspectRatio ?? "16 / 5",
+        aspectRatio: aspect ?? "16 / 5",
         background:
           "linear-gradient(135deg, var(--color-card, #1c1a18) 0%, var(--color-background, #0d0c0b) 100%)",
         display: "flex",
@@ -88,6 +87,7 @@ export function DinoFallback({
         justifyContent: "center",
         position: "relative",
         overflow: "hidden",
+        ...style,
       }}
     >
       {/* Soft grid texture */}

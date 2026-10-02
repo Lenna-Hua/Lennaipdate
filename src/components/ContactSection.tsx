@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
-import { FloatingDecor } from "@/components/FloatingDecor";
 import contactSeed from "@/data/contact.json";
 import { useContent } from "@/lib/use-content";
 
@@ -16,7 +15,7 @@ const VP = { once: true, margin: "-60px" };
 
 type Status = "idle" | "sending" | "success" | "error";
 
-export default function Contact() {
+export function ContactSection() {
   const contactData = useContent("contact", contactSeed) as typeof contactSeed;
   const [form, setForm] = useState({ name: "", email: "", message: "" });
   const [status, setStatus] = useState<Status>("idle");
@@ -65,32 +64,28 @@ export default function Contact() {
   }
 
   return (
-    <div className="w-full flex flex-col gap-16 pt-12 md:pt-24 pb-24">
-
-      {/* ── Header ── */}
-      <section className="relative overflow-hidden">
-        <FloatingDecor opacity={0.4} />
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-          className="flex flex-col gap-4 relative z-10"
+    <section
+      id="contact"
+      className="w-full flex flex-col gap-12 pt-12 scroll-mt-28"
+      style={{ borderTop: `2px solid ${BLUE}` }}
+    >
+      <motion.div
+        variants={fadeUp} initial="hidden" whileInView="show" viewport={VP}
+        className="flex flex-col gap-4"
+      >
+        <span
+          className="text-sm uppercase tracking-[0.5em] font-sans font-bold w-max px-3 py-1 rounded-full"
+          style={{ color: BLUE, background: BLUE + "22", border: `1px solid ${BLUE}44` }}
         >
-          <span
-            className="text-sm uppercase tracking-[0.5em] font-sans font-bold w-max px-3 py-1 rounded-full"
-            style={{ color: BLUE, background: BLUE + "22", border: `1px solid ${BLUE}44` }}
-          >
-            Get in Touch
-          </span>
-          <h1
-            className="font-display font-black uppercase leading-[0.88] tracking-tight"
-            style={{ fontSize: "clamp(3.5rem,10vw,9rem)" }}
-          >
-            <span style={{ color: BLUE }}>Let's</span>{" "}
-            <span style={{ color: BLUE }}>Talk</span>
-          </h1>
-        </motion.div>
-      </section>
+          Get in Touch
+        </span>
+        <h2
+          className="font-display font-black uppercase leading-[0.88] tracking-tight"
+          style={{ fontSize: "clamp(2.75rem,8vw,6.5rem)", color: BLUE }}
+        >
+          Let's Talk
+        </h2>
+      </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24">
 
@@ -106,12 +101,12 @@ export default function Contact() {
               className="flex flex-col gap-3 p-6 rounded-xl"
               style={{ background: BLUE + "14", border: `1.5px solid ${BLUE}40` }}
             >
-              <h2
+              <h3
                 className="uppercase tracking-widest text-sm font-sans font-bold"
                 style={{ color: BLUE }}
               >
                 General Inquiries
-              </h2>
+              </h3>
               <a
                 href={`mailto:${contactData.email}`}
                 className="font-display font-black uppercase text-2xl md:text-3xl text-foreground hover:opacity-75 transition-opacity leading-tight tracking-tight"
@@ -128,12 +123,12 @@ export default function Contact() {
               className="flex flex-col gap-3 p-6 rounded-xl"
               style={{ background: BLUE + "14", border: `1.5px solid ${BLUE}40` }}
             >
-              <h2
+              <h3
                 className="uppercase tracking-widest text-sm font-sans font-bold"
                 style={{ color: BLUE }}
               >
                 Phone
-              </h2>
+              </h3>
               <a
                 href={`tel:${contactData.phone.replace(/[^+\d]/g, "")}`}
                 className="font-display font-black uppercase text-2xl md:text-3xl text-foreground hover:opacity-75 transition-opacity leading-tight tracking-tight"
@@ -150,12 +145,12 @@ export default function Contact() {
               className="flex flex-col gap-3 p-6 rounded-xl"
               style={{ background: BLUE + "14", border: `1.5px solid ${BLUE}40` }}
             >
-              <h2
+              <h3
                 className="uppercase tracking-widest text-sm font-sans font-bold"
                 style={{ color: BLUE }}
               >
                 Location
-              </h2>
+              </h3>
               <p className="text-foreground text-lg font-sans font-medium">
                 {contactData.location}
                 <span className="block text-muted-foreground text-sm font-normal mt-0.5">EST Timezone · Open to Remote</span>
@@ -171,12 +166,12 @@ export default function Contact() {
             if (validSocials.length === 0) return null;
             return (
               <motion.div variants={fadeUp} className="flex flex-col gap-4">
-                <h2
+                <h3
                   className="uppercase tracking-widest text-sm font-sans font-bold"
                   style={{ color: BLUE }}
                 >
                   Find Me
-                </h2>
+                </h3>
                 <div className="flex flex-wrap gap-3">
                   {validSocials.map(({ label, href }) => (
                     <a
@@ -316,6 +311,6 @@ export default function Contact() {
           )}
         </motion.div>
       </div>
-    </div>
+    </section>
   );
 }

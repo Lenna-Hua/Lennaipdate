@@ -63,12 +63,17 @@ import { FilesEditor } from "@/components/admin/FilesEditor";
 import { HomepageEditor } from "@/components/admin/HomepageEditor";
 import { StudioEditor } from "@/components/admin/StudioEditor";
 import { AppearanceEditor } from "@/components/admin/AppearanceEditor";
+import {
+  LivePreviewPane,
+  type PreviewPage,
+} from "@/components/admin/LivePreviewPane";
 import { mergeStudio } from "@/lib/studio-content";
 import { mergeAppearance } from "@/lib/fonts";
 
 // ── Constants ──────────────────────────────────────────────────────────
 
 const STORAGE_KEY = "lenna_admin_draft";
+const LIVE_PREVIEW_KEY = "lenna_admin_live_preview";
 const AUTH_KEY = "lenna_admin_auth";
 const TOKEN_KEY = "lenna_admin_token";
 /** Legacy key that used to store the raw password — never store passwords client-side. */
@@ -296,6 +301,44 @@ function findInlineMediaInGallery(items: GalleryItem[]): {
   return null;
 }
 
+// ── Live preview routing ───────────────────────────────────────────────
+
+type AdminTab = keyof ContentData | "inbox" | "assets" | "tags";
+
+/** Page the live preview jumps to when a tab opens. Tabs not listed keep the current page. */
+const PREVIEW_PATH_FOR_TAB: Partial<Record<AdminTab, string>> = {
+  projects: "/work",
+  tags: "/work",
+  about: "/about",
+  experience: "/about",
+  education: "/about",
+  gallery: "/studio",
+  studio: "/studio",
+  homepage: "/",
+  identity: "/about",
+};
+
+/** Tabs whose edits never show on the public site. */
+const TABS_WITHOUT_PREVIEW = new Set<AdminTab>(["assets", "inbox"]);
+
+function buildPreviewPages(data: ContentData): PreviewPage[] {
+  const pages: PreviewPage[] = [
+    { group: "Pages", label: "Home", path: "/" },
+    { group: "Pages", label: "Work", path: "/work" },
+    { group: "Pages", label: "About", path: "/about" },
+    { group: "Pages", label: "Studio", path: "/studio" },
+  ];
+  for (const p of data.projects) {
+    if (p.archived || !p.slug) continue;
+    pages.push({ group: "Case studies", label: p.title || p.slug, path: `/work/${p.slug}` });
+  }
+  for (const g of data.gallery) {
+    if (g.archived || !g.slug) continue;
+    pages.push({ group: "Studio pieces", label: g.title || g.slug, path: `/studio/${g.slug}` });
+  }
+  return pages;
+}
+
 // ── Main Admin component ───────────────────────────────────────────────
 
 export default function Admin() {
@@ -305,10 +348,14 @@ export default function Admin() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const isAuthenticated = Boolean(sessionToken);
-  const [activeTab, setActiveTab] = useState<
-    keyof ContentData | "inbox" | "assets" | "tags"
-  >("projects");
+  const [activeTab, setActiveTab] = useState<AdminTab>("projects");
   const [data, setData] = useState<ContentData>(() => loadDraft());
+  const [livePreview, setLivePreview] = useState(
+    () => safeStorage.getItem(LIVE_PREVIEW_KEY) === "1",
+  );
+  const [previewPath, setPreviewPath] = useState(
+    () => PREVIEW_PATH_FOR_TAB.projects ?? "/",
+  );
   const [savedMsg, setSavedMsg] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isMigratingInlineMedia, setIsMigratingInlineMedia] = useState(false);
@@ -853,6 +900,19 @@ export default function Admin() {
     setTimeout(() => setSavedMsg(""), 4000);
   };
 
+  const toggleLivePreview = () => {
+    setLivePreview((on) => {
+      safeStorage.setItem(LIVE_PREVIEW_KEY, on ? "0" : "1");
+      return !on;
+    });
+  };
+
+  const selectTab = (tab: AdminTab) => {
+    setActiveTab(tab);
+    const path = PREVIEW_PATH_FOR_TAB[tab];
+    if (path) setPreviewPath(path);
+  };
+
   if (!isAuthenticated) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
@@ -883,7 +943,7 @@ export default function Admin() {
     );
   }
 
-  const tabs: (keyof ContentData | "inbox" | "assets" | "tags")[] = [
+  const tabs: AdminTab[] = [
     "projects",
     "about",
     "experience",
@@ -899,9 +959,7 @@ export default function Admin() {
     "inbox",
   ];
 
-  const tabLabel = (
-    tab: keyof ContentData | "inbox" | "assets" | "tags",
-  ): string => {
+  const tabLabel = (tab: AdminTab): string => {
     if (tab === "identity") return "Identity & Contact";
     if (tab === "files") return "Files";
     if (tab === "homepage") return "Home & Entry";
@@ -916,6 +974,8 @@ export default function Admin() {
   const allTagSuggestions = Array.from(
     deriveTagStats(data.projects, data.gallery).keys(),
   ).sort((a, b) => a.localeCompare(b));
+
+  const showLivePreview = livePreview && !TABS_WITHOUT_PREVIEW.has(activeTab);
 
   return (
     <div className="w-full flex flex-col gap-8 pt-12 pb-24">
@@ -932,6 +992,18 @@ export default function Admin() {
               {savedMsg}
             </span>
           )}
+          <button
+            type="button"
+            onClick={toggleLivePreview}
+            aria-pressed={livePreview}
+            className={`hidden lg:inline-block border px-4 py-2 transition-colors text-sm uppercase tracking-widest ${
+              livePreview
+                ? "border-[#C8A96E] text-[#C8A96E] bg-[#C8A96E]/10"
+                : "border-[#3A3530] text-[#8A8278] hover:border-[#C8A96E] hover:text-[#C8A96E]"
+            }`}
+          >
+            {livePreview ? "Hide Live Preview" : "Live Preview"}
+          </button>
           <button
             onClick={handleSaveDraft}
             disabled={isSaving || isMigratingInlineMedia}
@@ -1040,7 +1112,7 @@ export default function Admin() {
         {tabs.map((tab) => (
           <button
             key={tab}
-            onClick={() => setActiveTab(tab)}
+            onClick={() => selectTab(tab)}
             className={`px-4 py-2 uppercase tracking-widest text-sm transition-colors capitalize whitespace-nowrap inline-flex items-center gap-2 ${
               activeTab === tab
                 ? "text-[#C8A96E] border-b-2 border-[#C8A96E]"
@@ -1100,7 +1172,14 @@ export default function Admin() {
           }
         }}
       />
-      <div className="bg-[#141210] border border-[#272421] p-6 md:p-8 min-h-[500px]">
+      <div
+        className={
+          showLivePreview
+            ? "grid grid-cols-1 lg:grid-cols-[minmax(0,1.1fr)_minmax(420px,0.9fr)] gap-4 items-start"
+            : undefined
+        }
+      >
+      <div className="bg-[#141210] border border-[#272421] p-6 md:p-8 min-h-[500px] min-w-0">
         {activeTab === "projects" && (
           <ProjectsEditor
             data={data.projects}
@@ -1120,7 +1199,7 @@ export default function Admin() {
           <AboutEditor
             data={data.about}
             onChange={(d) => updateSection("about", d)}
-            onPreviewHome={(about) => openDraftPreview("/home", about)}
+            onPreviewHome={(about) => openDraftPreview("/", about)}
             onPreviewAbout={(about) => openDraftPreview("/about", about)}
           />
         )}
@@ -1162,7 +1241,7 @@ export default function Admin() {
           <HomepageEditor
             data={data.homepage}
             onChange={(d) => updateSection("homepage", d)}
-            onPreview={() => openDraftPreview("/home")}
+            onPreview={() => openDraftPreview("/")}
           />
         )}
         {activeTab === "studio" && (
@@ -1216,6 +1295,19 @@ export default function Admin() {
             }
           />
         )}
+      </div>
+      {showLivePreview && (
+        <aside className="hidden lg:block sticky top-[112px] h-[calc(100vh-128px)]">
+          <LivePreviewPane
+            draft={data}
+            path={previewPath}
+            onPathChange={setPreviewPath}
+            pages={buildPreviewPages(data)}
+            onOpenTab={(path) => openDraftPreview(path)}
+            onClose={toggleLivePreview}
+          />
+        </aside>
+      )}
       </div>
       </AssetUploadContext.Provider>
       </AssetPickerContext.Provider>

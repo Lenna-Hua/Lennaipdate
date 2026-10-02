@@ -1,119 +1,18 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Link } from "wouter";
 import gallerySeed from "@/data/gallery.json";
 import studioSeed from "@/data/studio.json";
-import projectsSeed from "@/data/projects.json";
 import { useContent } from "@/lib/use-content";
 import { FloatingDecor } from "@/components/FloatingDecor";
-import { SafeImage } from "@/components/SafeImage";
-import { LogoMarquee } from "@/components/LogoMarquee";
 import { StudioDecor } from "@/components/StudioDecor";
-import {
-  collectMarqueeLogos,
-  mergeStudio,
-} from "@/lib/studio-content";
-import type { GalleryImageEntry } from "@/lib/gallery-image";
-import { galleryImageSrc } from "@/lib/gallery-image";
-import type { Project, Studio } from "@/components/admin/types";
+import { ArtworkModal, ArtworksSlideshow } from "@/components/ArtworksSlideshow";
+import { KernGame } from "@/components/KernGame";
+import { mergeStudio } from "@/lib/studio-content";
+import type { GalleryItem, Studio } from "@/components/admin/types";
 
 const BLUE = "#1F67F1";
 
-const VP = { once: true, margin: "-60px" };
-
-const SLIDE_SIZE = {
-  md: "h-[22rem] sm:h-[28rem] md:h-[32rem]",
-  lg: "h-[28rem] sm:h-[36rem] md:h-[42rem]",
-  xl: "h-[32rem] sm:h-[42rem] md:h-[50rem]",
-} as const;
-
-type ArtworkOrientation = "portrait" | "landscape";
-
-type GalleryItem = {
-  id: string;
-  kind?: "big" | "small";
-  slug: string;
-  title: string;
-  role: string;
-  year?: string;
-  description?: string;
-  tags?: string[];
-  coverImage: string;
-  images?: GalleryImageEntry[];
-  order?: number;
-  linkUrl?: string;
-  linkLabel?: string;
-  /** Optional override for slideshow card shape. Auto-detected from the cover when omitted. */
-  orientation?: ArtworkOrientation;
-  cardStyle?: "slideshow" | "tag" | "folder";
-  stampImage?: string;
-  /** Accent behind the clipped image tag. Hex, e.g. #E07B39. */
-  folderColor?: string;
-  logo?: string;
-};
-
-function artworkImageSources(
-  coverImage: string,
-  images?: GalleryImageEntry[],
-): string[] {
-  const all = [coverImage, ...(images ?? []).map(galleryImageSrc)].filter(Boolean);
-  const unique: string[] = [];
-  for (const src of all) {
-    if (!unique.includes(src)) unique.push(src);
-  }
-  return unique;
-}
-
-/** Read width/height query params from CDN URLs (e.g. Framer) when present. */
-function orientationFromUrl(src: string): ArtworkOrientation | null {
-  try {
-    const u = new URL(src, "https://example.com");
-    const w = Number(u.searchParams.get("width"));
-    const h = Number(u.searchParams.get("height"));
-    if (w > 0 && h > 0) return w >= h ? "landscape" : "portrait";
-  } catch {
-    /* ignore malformed URLs */
-  }
-  return null;
-}
-
-function useCoverOrientation(
-  src: string,
-  override?: ArtworkOrientation,
-): ArtworkOrientation {
-  const [orientation, setOrientation] = useState<ArtworkOrientation>(
-    () => override ?? orientationFromUrl(src) ?? "portrait",
-  );
-
-  useEffect(() => {
-    if (override) {
-      setOrientation(override);
-      return;
-    }
-    const fromUrl = orientationFromUrl(src);
-    if (fromUrl) {
-      setOrientation(fromUrl);
-      return;
-    }
-    if (!src) return;
-    let cancelled = false;
-    const img = new Image();
-    img.onload = () => {
-      if (cancelled) return;
-      setOrientation(
-        img.naturalWidth >= img.naturalHeight ? "landscape" : "portrait",
-      );
-    };
-    img.src = src;
-    return () => {
-      cancelled = true;
-    };
-  }, [src, override]);
-
-  return orientation;
-}
-
-/* Studio is a long-scroll page; we boost wheel scrolling so the masonry
+/* Studio is a long-scroll page; we boost wheel scrolling so the page
    feels notably snappier than the default browser rate (~2.5x). We
    attach a single passive wheel listener while the page is mounted.
    Trackpad pinch-zoom (ctrlKey) and any element opted-out via
@@ -137,389 +36,47 @@ function useFastScroll(multiplier = 2.5) {
   }, [multiplier]);
 }
 
-/* ── Modal for small artworks ───────────────────────────── */
-function ArtworkModal({
-  item,
-  onClose,
+function SectionHeader({
+  eyebrow,
+  heading,
+  blurb,
 }: {
-  item: GalleryItem;
-  onClose: () => void;
+  eyebrow: string;
+  heading: string;
+  blurb?: string;
 }) {
-  const closeRef = useRef<HTMLButtonElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    closeRef.current?.focus();
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-      if (e.key === "Tab" && containerRef.current) {
-        const focusable = containerRef.current.querySelectorAll<HTMLElement>(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-        );
-        const first = focusable[0];
-        const last = focusable[focusable.length - 1];
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault();
-          last?.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault();
-          first?.focus();
-        }
-      }
-    };
-    document.addEventListener("keydown", onKey);
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
-    };
-  }, [onClose]);
-
-  const imageSources = artworkImageSources(item.coverImage, item.images);
-
   return (
-    <motion.div
-      ref={containerRef}
-      role="dialog"
-      aria-modal="true"
-      aria-label={item.title}
-      data-fast-scroll-skip
-      className="fixed inset-0 z-[200] flex items-center justify-center p-4 md:p-10"
-      style={{ background: "rgba(8,8,10,0.85)", backdropFilter: "blur(8px)" }}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      onClick={onClose}
-    >
-      <motion.div
-        onClick={(e) => e.stopPropagation()}
-        initial={{ y: 30, opacity: 0, scale: 0.97 }}
-        animate={{ y: 0, opacity: 1, scale: 1 }}
-        exit={{ y: 20, opacity: 0, scale: 0.97 }}
-        transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
-        className="relative bg-background rounded-2xl overflow-hidden shadow-2xl w-full max-w-6xl grid grid-cols-1 md:grid-cols-2 max-h-[90vh]"
-        style={{ border: `1px solid ${BLUE}55` }}
-      >
-        {/* Close button */}
-        <button
-          ref={closeRef}
-          onClick={onClose}
-          aria-label="Close"
-          className="absolute top-3 right-3 z-10 w-9 h-9 rounded-full bg-black/50 hover:bg-black/80 text-white flex items-center justify-center transition-colors text-base"
-        >
-          ✕
-        </button>
-
-        {/* Left — image gallery */}
-        <div className="bg-card flex flex-col gap-3 overflow-y-auto md:max-h-[90vh] p-3 md:p-4">
-          {imageSources.map((src, i) => (
-            <SafeImage
-              key={`${src}-${i}`}
-              src={src}
-              alt={i === 0 ? item.title : `${item.title} — image ${i + 1}`}
-              className="w-full h-auto object-contain rounded-lg"
-              fallbackAspect="4 / 5"
-            />
-          ))}
-        </div>
-
-        {/* Right — info */}
-        <div className="flex flex-col gap-5 p-6 md:p-10 overflow-y-auto">
-          <span
-            className="text-xs uppercase tracking-[0.4em] font-sans font-bold w-max px-3 py-1 rounded-full"
-            style={{
-              color: BLUE,
-              background: BLUE + "22",
-              border: `1px solid ${BLUE}44`,
-            }}
-          >
-            Artwork
-          </span>
-          <h2
-            className="font-display font-black leading-tight tracking-tight"
-            style={{ color: BLUE, fontSize: "clamp(1.6rem, 3vw, 2.6rem)" }}
-          >
-            {item.title}
-          </h2>
-
-          {item.description && (
-            <p className="text-foreground/85 text-base md:text-lg font-sans leading-relaxed">
-              {item.description}
-            </p>
-          )}
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 pt-4 border-t border-border mt-auto">
-            <div className="flex flex-col gap-1">
-              <span className="text-muted-foreground text-xs uppercase tracking-[0.3em] font-sans">
-                Role
-              </span>
-              <span className="text-foreground font-sans text-sm">
-                {item.role}
-              </span>
-            </div>
-            {item.year && (
-              <div className="flex flex-col gap-1">
-                <span className="text-muted-foreground text-xs uppercase tracking-[0.3em] font-sans">
-                  Year
-                </span>
-                <span className="text-foreground font-sans text-sm">
-                  {item.year}
-                </span>
-              </div>
-            )}
-            {item.tags && item.tags.length > 0 && (
-              <div className="flex flex-col gap-2 sm:col-span-2">
-                <span className="text-muted-foreground text-xs uppercase tracking-[0.3em] font-sans">
-                  Tags
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {item.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="text-[11px] uppercase tracking-wider font-sans font-medium px-2 py-0.5 rounded-full"
-                      style={{
-                        background: BLUE + "20",
-                        color: BLUE,
-                        border: `1px solid ${BLUE}44`,
-                      }}
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {item.linkUrl && (
-            <a
-              href={item.linkUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-2 inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-sans font-bold uppercase tracking-widest w-max transition-transform hover:scale-[1.03]"
-              style={{ background: BLUE, color: "#FFFFFF" }}
-            >
-              {item.linkLabel || "View project"} ↗
-            </a>
-          )}
-        </div>
-      </motion.div>
-    </motion.div>
-  );
-}
-
-/* ── Single artwork slide (portrait or landscape) ───── */
-function ArtworkSlide({
-  item,
-  idx,
-  onOpen,
-  sizeClass,
-}: {
-  item: GalleryItem;
-  idx: number;
-  onOpen: (item: GalleryItem) => void;
-  sizeClass: string;
-}) {
-  const orientation = useCoverOrientation(item.coverImage, item.orientation);
-  const isLandscape = orientation === "landscape";
-
-  return (
-    <motion.button
-      onClick={() => onOpen(item)}
-      initial={{ opacity: 0, x: 20 }}
-      whileInView={{ opacity: 1, x: 0 }}
-      viewport={VP}
-      transition={{ delay: idx * 0.05, duration: 0.5 }}
-      // Shared height; width follows portrait (4/5) or landscape (16/10).
-      className={`snap-start flex-shrink-0 ${sizeClass} group cursor-pointer text-left rounded-xl overflow-hidden relative bg-card ${
-        isLandscape ? "aspect-[16/10]" : "aspect-[4/5]"
-      }`}
-      style={{
-        border: `2px solid ${BLUE}00`,
-        transition: "border-color 0.3s",
-      }}
-      onMouseEnter={(e) =>
-        (e.currentTarget.style.borderColor = BLUE + "aa")
-      }
-      onMouseLeave={(e) =>
-        (e.currentTarget.style.borderColor = BLUE + "00")
-      }
-    >
-      <div className="absolute inset-0 overflow-hidden">
-        <SafeImage
-          src={item.coverImage}
-          alt={item.title}
-          loading="lazy"
-          className="w-full h-full object-cover opacity-90 group-hover:opacity-100 group-hover:scale-[1.04] transition-all duration-700"
-          fallbackAspect={isLandscape ? "16 / 10" : "4 / 5"}
-        />
-      </div>
-      <div
-        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-5"
-        style={{
-          background: `linear-gradient(to top, ${BLUE}dd 0%, transparent 60%)`,
-        }}
-      >
-        <h3 className="font-display font-black uppercase text-lg text-white leading-tight">
-          {item.title}
-        </h3>
+    <div className="flex items-end justify-between gap-6 flex-wrap">
+      <div className="flex flex-col gap-2">
         <span
-          className="text-xs uppercase tracking-widest font-sans mt-1 px-2 py-0.5 rounded-full w-max"
-          style={{ background: "rgba(0,0,0,0.4)", color: "white" }}
+          className="text-xs uppercase tracking-[0.4em] font-sans font-bold w-max"
+          style={{ color: BLUE }}
         >
-          {item.role}
+          {eyebrow}
         </span>
+        <h2 className="font-display font-black uppercase tracking-tight text-3xl md:text-5xl">
+          {heading}
+        </h2>
       </div>
-      <div
-        className="absolute top-3 left-3 w-7 h-7 rounded-full flex items-center justify-center text-xs font-display font-black"
-        style={{ background: BLUE, color: "#FFFFFF" }}
-      >
-        {String(idx + 1).padStart(2, "0")}
-      </div>
-    </motion.button>
-  );
-}
-
-/* ── Horizontal slideshow row ─────────────────────────── */
-function ArtworksSlideshow({
-  items,
-  onOpen,
-  cardSize,
-}: {
-  items: GalleryItem[];
-  onOpen: (item: GalleryItem) => void;
-  cardSize: Studio["artworksCardSize"];
-}) {
-  const scrollerRef = useRef<HTMLDivElement>(null);
-  const [progress, setProgress] = useState(0); // 0..1
-
-  // Track horizontal scroll progress
-  useEffect(() => {
-    const el = scrollerRef.current;
-    if (!el) return;
-    const update = () => {
-      const max = el.scrollWidth - el.clientWidth;
-      setProgress(max > 0 ? el.scrollLeft / max : 0);
-    };
-    update();
-    el.addEventListener("scroll", update, { passive: true });
-    // Observe the row and each slide so portrait→landscape size swaps
-    // recalculate scroll progress.
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    for (const child of Array.from(el.children)) ro.observe(child);
-    return () => {
-      el.removeEventListener("scroll", update);
-      ro.disconnect();
-    };
-  }, [items.length]);
-
-  // Wheel: convert vertical scroll to horizontal scroll over the row.
-  // Marked data-fast-scroll-skip so the page-level useFastScroll does
-  // not also intercept and fight the horizontal motion.
-  useEffect(() => {
-    const el = scrollerRef.current;
-    if (!el) return;
-    const onWheel = (e: WheelEvent) => {
-      if (e.ctrlKey) return;
-      // Use whichever delta is larger so true horizontal wheel still works.
-      const delta =
-        Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
-      if (delta === 0) return;
-      // Only intercept if we actually have room to scroll horizontally,
-      // otherwise let the page scroll vertically as normal.
-      const canScrollLeft = el.scrollLeft > 0;
-      const canScrollRight =
-        el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
-      const goingRight = delta > 0;
-      if ((goingRight && !canScrollRight) || (!goingRight && !canScrollLeft)) {
-        return;
-      }
-      e.preventDefault();
-      el.scrollLeft += delta * 1.5;
-    };
-    el.addEventListener("wheel", onWheel, { passive: false });
-    return () => el.removeEventListener("wheel", onWheel);
-  }, []);
-
-  const scrollBy = (dir: -1 | 1) => {
-    const el = scrollerRef.current;
-    if (!el) return;
-    el.scrollBy({ left: dir * Math.round(el.clientWidth * 0.85), behavior: "smooth" });
-  };
-
-  return (
-    <div className="relative">
-      {/* Arrow controls */}
-      <div className="absolute -top-14 right-0 flex gap-2 z-10">
-        <button
-          onClick={() => scrollBy(-1)}
-          aria-label="Scroll left"
-          className="w-10 h-10 rounded-full border border-border hover:border-primary transition-colors flex items-center justify-center text-foreground hover:text-primary"
-        >
-          ←
-        </button>
-        <button
-          onClick={() => scrollBy(1)}
-          aria-label="Scroll right"
-          className="w-10 h-10 rounded-full border border-border hover:border-primary transition-colors flex items-center justify-center text-foreground hover:text-primary"
-        >
-          →
-        </button>
-      </div>
-
-      <div
-        ref={scrollerRef}
-        data-fast-scroll-skip
-        className="flex gap-6 md:gap-8 overflow-x-auto overflow-y-hidden pb-2 pt-2 snap-x snap-mandatory scroll-smooth scrollbar-none items-stretch"
-        style={{
-          scrollbarWidth: "none",
-          msOverflowStyle: "none",
-        }}
-      >
-        {items.map((item, idx) => (
-          <ArtworkSlide
-            key={item.id}
-            item={item}
-            idx={idx}
-            onOpen={onOpen}
-            sizeClass={SLIDE_SIZE[cardSize]}
-          />
-        ))}
-      </div>
-
-      {/* Thin progress bar tracking horizontal scroll position */}
-      <div
-        className="relative w-full mt-3 rounded-full overflow-hidden"
-        style={{ height: "2px", background: "rgba(127,127,127,0.18)" }}
-        aria-hidden
-      >
-        <div
-          className="absolute top-0 left-0 h-full rounded-full transition-[width] duration-100"
-          style={{
-            background: BLUE,
-            width: `${Math.max(8, progress * 100)}%`,
-          }}
-        />
-      </div>
-
-      <p className="text-muted-foreground text-xs font-sans mt-3">
-        Scroll horizontally or click an artwork to view it.
-      </p>
+      {blurb ? (
+        <p className="text-muted-foreground font-sans text-sm md:text-base max-w-md">
+          {blurb}
+        </p>
+      ) : null}
     </div>
   );
 }
 
 /* ── Page ───────────────────────────────────────── */
-export default function Studio() {
+export default function StudioPage() {
   useFastScroll(1);
-  const galleryData = useContent("gallery", gallerySeed);
+  const galleryData = useContent("gallery", gallerySeed) as GalleryItem[];
   const studio = mergeStudio(useContent("studio", studioSeed as Studio));
-  const projects = useContent("projects", projectsSeed) as Project[];
-  const all = galleryData as GalleryItem[];
-  const bigItems = all.filter((i) => (i.kind ?? "big") === "big");
-  const smallItems = all.filter((i) => i.kind === "small");
-  const marqueeItems = collectMarqueeLogos(studio, all, projects);
+
+  const artworks = useMemo(
+    () => galleryData.filter((i) => !i.archived && i.kind === "small"),
+    [galleryData],
+  );
 
   const [modalItem, setModalItem] = useState<GalleryItem | null>(null);
 
@@ -571,135 +128,31 @@ export default function Studio() {
         </motion.div>
       </section>
 
-      {studio.showLogoMarquee && marqueeItems.length > 0 && (
-        <LogoMarquee
-          items={marqueeItems}
-          speed={studio.logoMarqueeSpeed}
-          label={studio.logoMarqueeLabel}
-        />
-      )}
-
-      {/* ── Big Projects (masonry) ── */}
-      {bigItems.length > 0 && (
-        <section className="flex flex-col gap-6">
-          <div className="flex items-end justify-between gap-6 flex-wrap">
-            <div className="flex flex-col gap-2">
-              <span
-                className="text-xs uppercase tracking-[0.4em] font-sans font-bold w-max"
-                style={{ color: BLUE }}
-              >
-                {studio.bigEyebrow}
-              </span>
-              <h2 className="font-display font-black uppercase tracking-tight text-3xl md:text-5xl">
-                {studio.bigHeading}
-              </h2>
-            </div>
-            <p className="text-muted-foreground font-sans text-sm md:text-base max-w-md">
-              {studio.bigBlurb}
-            </p>
-          </div>
-
-          <div className="columns-1 md:columns-2 lg:columns-3 gap-6 space-y-6 mt-2">
-            {bigItems.map((item, index) => (
-              <motion.div
-                key={item.id}
-                initial={{ opacity: 0, y: 24 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={VP}
-                transition={{
-                  delay: (index % 3) * 0.08,
-                  duration: 0.6,
-                  ease: [0.16, 1, 0.3, 1],
-                }}
-                className="break-inside-avoid"
-              >
-                <Link
-                  href={`/studio/${item.slug}`}
-                  className="block relative group cursor-pointer rounded-xl overflow-hidden"
-                  style={{
-                    border: `2px solid ${BLUE}00`,
-                    transition: "border-color 0.3s",
-                  }}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.borderColor = BLUE + "aa")
-                  }
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.borderColor = BLUE + "00")
-                  }
-                >
-                  <div className="overflow-hidden bg-card">
-                    <SafeImage
-                      src={item.coverImage}
-                      alt={item.title}
-                      loading="lazy"
-                      className="w-full h-auto object-cover opacity-85 group-hover:opacity-100 group-hover:scale-[1.04] transition-all duration-700"
-                      fallbackAspect="16 / 5"
-                    />
-                  </div>
-                  <div
-                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end gap-3 p-5"
-                    style={{
-                      background: `linear-gradient(to top, ${BLUE}dd 0%, transparent 60%)`,
-                    }}
-                  >
-                    <h3 className="font-display font-black uppercase text-lg text-white leading-tight pr-2">
-                      {item.title}
-                    </h3>
-                    {item.role &&
-                      item.role.trim().toLowerCase() !==
-                        item.title.trim().toLowerCase() && (
-                        <span
-                          className="text-[11px] uppercase tracking-widest font-sans px-2 py-0.5 rounded-full w-max max-w-full truncate"
-                          style={{ background: "rgba(0,0,0,0.4)", color: "white" }}
-                        >
-                          {item.role}
-                        </span>
-                      )}
-                    <span
-                      className="text-[10px] uppercase tracking-[0.3em] font-sans font-bold px-3 py-1.5 rounded-full w-max"
-                      style={{ background: "white", color: BLUE }}
-                    >
-                      Read more →
-                    </span>
-                  </div>
-                  <div
-                    className="absolute top-3 left-3 w-7 h-7 rounded-full flex items-center justify-center text-sm font-display font-black"
-                    style={{ background: BLUE, color: "#FFFFFF" }}
-                  >
-                    {String(index + 1).padStart(2, "0")}
-                  </div>
-                </Link>
-              </motion.div>
-            ))}
-          </div>
-        </section>
-      )}
-
       {/* ── Small Artworks (horizontal slideshow) ── */}
-      {smallItems.length > 0 && (
+      {artworks.length > 0 && (
         <section className="flex flex-col gap-6 pt-4">
-          <div className="flex items-end justify-between gap-6 flex-wrap">
-            <div className="flex flex-col gap-2">
-              <span
-                className="text-xs uppercase tracking-[0.4em] font-sans font-bold w-max"
-                style={{ color: BLUE }}
-              >
-                {studio.artworksEyebrow}
-              </span>
-              <h2 className="font-display font-black uppercase tracking-tight text-3xl md:text-5xl">
-                {studio.artworksHeading}
-              </h2>
-            </div>
-            <p className="text-muted-foreground font-sans text-sm md:text-base max-w-md">
-              {studio.artworksBlurb}
-            </p>
-          </div>
-
+          <SectionHeader
+            eyebrow={studio.artworksEyebrow}
+            heading={studio.artworksHeading}
+            blurb={studio.artworksBlurb}
+          />
           <ArtworksSlideshow
-            items={smallItems}
+            items={artworks}
             onOpen={setModalItem}
             cardSize={studio.artworksCardSize}
           />
+        </section>
+      )}
+
+      {/* ── Play ── */}
+      {studio.showPlay && (
+        <section id="play" className="flex flex-col gap-10 scroll-mt-28">
+          <SectionHeader
+            eyebrow={studio.playEyebrow}
+            heading={studio.playHeading}
+            blurb={studio.playBlurb?.trim() || undefined}
+          />
+          <KernGame />
         </section>
       )}
     </div>

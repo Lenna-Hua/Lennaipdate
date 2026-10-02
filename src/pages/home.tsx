@@ -1,18 +1,32 @@
-import { useMemo } from "react";
-import { motion } from "framer-motion";
+import { useMemo, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
 import projectsSeed from "@/data/projects.json";
+import gallerySeed from "@/data/gallery.json";
 import aboutSeed from "@/data/about.json";
 import identitySeed from "@/data/identity.json";
 import contactSeed from "@/data/contact.json";
 import homepageSeed from "@/data/homepage.json";
+import studioSeed from "@/data/studio.json";
 import { useContent } from "@/lib/use-content";
 import { FloatingDecor } from "@/components/FloatingDecor";
-import { PinterestCard } from "@/components/PinterestCard";
+import {
+  PinterestCard,
+  type PinterestCardProject,
+} from "@/components/PinterestCard";
+import { RotatingLiveBadge } from "@/components/RotatingLiveBadge";
 import { CoverMedia } from "@/components/CoverMedia";
+import { ArtworkModal, ArtworksSlideshow } from "@/components/ArtworksSlideshow";
 import { useTheme } from "@/context/ThemeContext";
+import { mergeStudio } from "@/lib/studio-content";
+import type { GalleryItem, Studio } from "@/components/admin/types";
 
-type Project = (typeof projectsSeed)[number] & { archived?: boolean };
+type Project = (typeof projectsSeed)[number] & {
+  archived?: boolean;
+  hoverVideo?: string;
+  liveUrl?: string;
+  cardDescription?: string;
+};
 
 const BLUE = "#1F67F1";
 
@@ -26,9 +40,9 @@ function splitName(full: string): [string, string] {
 function buildStats(location: string, yearsExperience = "3+") {
   const years = (yearsExperience || "3+").trim() || "3+";
   const stats = [
-    { label: years, sub: "Years",    color: BLUE },
+    { label: years, sub: "Years", color: BLUE },
     { label: "20+", sub: "Projects", color: BLUE },
-    { label: "8+",  sub: "Studies",  color: BLUE },
+    { label: "8+", sub: "Studies", color: BLUE },
   ];
   const trimmed = (location ?? "").trim();
   if (trimmed) {
@@ -40,47 +54,95 @@ function buildStats(location: string, yearsExperience = "3+") {
 
 const item = {
   hidden: { opacity: 0, y: 32 },
-  show:   { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] } },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] },
+  },
 };
 const container = {
   hidden: { opacity: 0 },
-  show:   { opacity: 1, transition: { staggerChildren: 0.1 } },
+  show: { opacity: 1, transition: { staggerChildren: 0.1 } },
 };
 const VP = { once: true, margin: "-80px" };
 
 export default function Home() {
   const projectsData = useContent("projects", projectsSeed) as Project[];
+  const galleryData = useContent("gallery", gallerySeed) as GalleryItem[];
   const aboutData = useContent("about", aboutSeed) as typeof aboutSeed;
   const identityData = useContent("identity", identitySeed) as typeof identitySeed;
   const contactData = useContent("contact", contactSeed) as typeof contactSeed;
   const homepageData = useContent("homepage", homepageSeed) as typeof homepageSeed;
+  const studio = mergeStudio(useContent("studio", studioSeed as Studio));
+  const artworks = useMemo(
+    () => galleryData.filter((g) => !g.archived && g.kind === "small"),
+    [galleryData],
+  );
+  const [modalItem, setModalItem] = useState<GalleryItem | null>(null);
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const hp = homepageData.home;
   const heroMedia = hp.heroMedia?.trim() ?? "";
 
-  const featuredProjects = useMemo(
-    () => projectsData.filter((p) => !p.archived && p.featured).slice(0, 3),
-    [projectsData]
+  const featuredProjects = useMemo((): PinterestCardProject[] => {
+    const fromWork: PinterestCardProject[] = projectsData
+      .filter((p) => !p.archived && p.featured)
+      .map((p) => ({
+        id: p.id,
+        slug: p.slug,
+        title: p.title,
+        coverImage: p.coverImage,
+        year: p.year,
+        tags: p.tags ?? [],
+        type: p.type,
+        subtitle: p.subtitle,
+        cardDescription: p.cardDescription,
+        href: `/work/${p.slug}`,
+        hoverVideo: p.hoverVideo,
+        liveUrl: p.liveUrl,
+      }));
+    const fromStudio: PinterestCardProject[] = galleryData
+      .filter((g) => !g.archived && g.featured)
+      .map((g) => ({
+        id: g.id,
+        slug: g.slug,
+        title: g.title,
+        coverImage: g.coverImage,
+        year: g.year ?? "",
+        tags: g.tags ?? [],
+        type: g.role || "Studio",
+        subtitle: g.description,
+        cardDescription: g.description,
+        href: `/studio/${g.slug}`,
+      }));
+    return [...fromWork, ...fromStudio].slice(0, 6);
+  }, [projectsData, galleryData]);
+  const [firstName, lastName] = useMemo(
+    () => splitName(identityData.name),
+    [identityData.name],
   );
-  const projectIndexMap = useMemo(
-    () => new Map(projectsData.map((p, i) => [p.id, i])),
-    [projectsData]
-  );
-  const [firstName, lastName] = useMemo(() => splitName(identityData.name), [identityData.name]);
   const yearsExperience = aboutData.yearsExperience ?? "3+";
   const STATS = useMemo(
     () => buildStats(contactData.location, yearsExperience),
-    [contactData.location, yearsExperience]
+    [contactData.location, yearsExperience],
   );
 
   return (
     <div className="w-full flex flex-col gap-32 md:gap-48 pt-12 md:pt-24 pb-20">
-
       {/* ── Hero ── */}
       <section className="relative flex flex-col gap-8 md:gap-10">
         <div className="absolute inset-0 z-0 pointer-events-none">
           <FloatingDecor opacity={0.4} />
+        </div>
+
+        <div className="absolute right-0 bottom-0 md:right-4 md:bottom-8 z-20 hidden sm:block">
+          <RotatingLiveBadge
+            href={hp.primaryCtaHref || "/work"}
+            label={hp.badgeLabel?.trim() || "VIEW WORK • VIEW WORK •"}
+            size={176}
+            fill="#FFFFFF"
+            textColor="#1A5BD4"
+          />
         </div>
 
         <motion.span
@@ -93,7 +155,6 @@ export default function Home() {
           {hp.heroEyebrow}
         </motion.span>
 
-        {/* LENNA / Hua — simple word reveal */}
         <h1
           className="relative z-10 font-display font-black uppercase leading-[0.9] tracking-tight"
           style={{ fontSize: "clamp(4rem,13vw,12rem)" }}
@@ -146,7 +207,6 @@ export default function Home() {
           </motion.div>
         ) : null}
 
-        {/* Stat pills */}
         <motion.div
           className="relative z-10 flex flex-wrap gap-3"
           initial={{ opacity: 0, y: 12 }}
@@ -159,13 +219,19 @@ export default function Home() {
               className="flex flex-col px-4 py-2.5 rounded-xl"
               style={{ background: color + "1a", border: `1.5px solid ${color}50` }}
             >
-              <span className="font-display font-black uppercase text-lg leading-none" style={{ color }}>{label}</span>
-              <span className="text-muted-foreground text-sm uppercase tracking-widest font-sans mt-0.5">{sub}</span>
+              <span
+                className="font-display font-black uppercase text-lg leading-none"
+                style={{ color }}
+              >
+                {label}
+              </span>
+              <span className="text-muted-foreground text-sm uppercase tracking-widest font-sans mt-0.5">
+                {sub}
+              </span>
             </div>
           ))}
         </motion.div>
 
-        {/* CTA buttons */}
         <motion.div
           className="relative z-10 flex flex-wrap gap-4"
           initial={{ opacity: 0 }}
@@ -199,7 +265,10 @@ export default function Home() {
 
       {/* ── Featured Projects ── */}
       <section className="flex flex-col gap-12">
-        <div className="flex justify-between items-end pb-6" style={{ borderBottom: `2px solid ${BLUE}55` }}>
+        <div
+          className="flex justify-between items-end pb-6"
+          style={{ borderBottom: `2px solid ${BLUE}55` }}
+        >
           <h2
             className="font-display font-black uppercase text-3xl md:text-4xl tracking-tight"
             style={{ color: BLUE }}
@@ -222,20 +291,47 @@ export default function Home() {
           viewport={VP}
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-stretch"
         >
-          {featuredProjects.map((project) => {
-            const i = projectIndexMap.get(project.id) ?? 0;
-            return (
-              <motion.div
-                key={project.id}
-                variants={item}
-                className="h-full"
-              >
-                <PinterestCard project={project} i={i} isDark={isDark} />
-              </motion.div>
-            );
-          })}
+          {featuredProjects.map((project, i) => (
+            <motion.div key={project.id} variants={item} className="h-full">
+              <PinterestCard project={project} i={i} isDark={isDark} />
+            </motion.div>
+          ))}
         </motion.div>
       </section>
+
+      {/* ── Studio slideshow ── */}
+      {hp.showStudioBand !== false && artworks.length > 0 && (
+        <section className="flex flex-col gap-12">
+          <AnimatePresence>
+            {modalItem && (
+              <ArtworkModal item={modalItem} onClose={() => setModalItem(null)} />
+            )}
+          </AnimatePresence>
+          <div
+            className="flex items-end gap-6 pb-6 flex-wrap"
+            style={{ borderBottom: `2px solid ${BLUE}55` }}
+          >
+            <h2
+              className="font-display font-black uppercase text-3xl md:text-4xl tracking-tight"
+              style={{ color: BLUE }}
+            >
+              {hp.studioHeading?.trim() || "From the Studio"}
+            </h2>
+            <Link
+              href="/studio"
+              className="text-sm uppercase tracking-widest font-sans hover:opacity-70 transition-opacity"
+              style={{ color: BLUE }}
+            >
+              {hp.studioLinkLabel?.trim() || "Visit Studio →"}
+            </Link>
+          </div>
+          <ArtworksSlideshow
+            items={artworks}
+            onOpen={setModalItem}
+            cardSize={studio.artworksCardSize}
+          />
+        </section>
+      )}
 
       {/* ── Brief About ── */}
       <motion.section
@@ -247,7 +343,10 @@ export default function Home() {
         style={{ background: BLUE + "10", border: `2px solid ${BLUE}35` }}
       >
         <div className="flex flex-col gap-3 shrink-0">
-          <span className="text-sm uppercase tracking-[0.45em] font-sans font-bold" style={{ color: BLUE }}>
+          <span
+            className="text-sm uppercase tracking-[0.45em] font-sans font-bold"
+            style={{ color: BLUE }}
+          >
             {hp.aboutEyebrow}
           </span>
           <h2

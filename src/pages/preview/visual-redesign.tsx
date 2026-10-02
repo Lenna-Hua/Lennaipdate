@@ -344,7 +344,7 @@ function PreviewBanner() {
         </span>
       </div>
       <Link
-        href="/home"
+        href="/"
         className="text-xs uppercase tracking-[0.2em] font-sans font-bold hover:opacity-70 transition-opacity"
         style={{ color: BLUE }}
       >

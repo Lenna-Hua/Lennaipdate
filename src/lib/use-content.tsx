@@ -1,4 +1,16 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
+import {
+  PREVIEW_MSG,
+  isPreviewMessage,
+  type PreviewMessage,
+} from "@/lib/live-preview";
 
 // Build-time fallback. These are the same JSON files the API seeds the
 // database from on first deploy, so the SPA can render correctly even
@@ -61,34 +73,45 @@ function mergeWithSeed(key: keyof ContentMap, live: unknown): unknown {
   return live;
 }
 
-function isPreviewMode(): boolean {
-  if (typeof window === "undefined") return false;
-  return new URLSearchParams(window.location.search).get("preview") === "1";
-}
+/**
+ * Latched at load: in-app navigation drops `?preview=1` from the URL, but the
+ * draft must keep applying on every page the preview visits.
+ */
+const PREVIEW_MODE =
+  typeof window !== "undefined" &&
+  new URLSearchParams(window.location.search).get("preview") === "1";
 
-/** Overlay local admin draft when visiting with ?preview=1 */
-function applyDraftPreview(content: ContentMap): ContentMap {
-  if (!isPreviewMode()) return content;
+/** Preview running inside the admin's live preview iframe. */
+const EMBEDDED_PREVIEW =
+  PREVIEW_MODE && typeof window !== "undefined" && window.parent !== window;
+
+function readStoredDraft(): Partial<ContentMap> | null {
   try {
     const raw = localStorage.getItem(DRAFT_KEY);
-    if (!raw) return content;
-    const draft = JSON.parse(raw) as Partial<ContentMap>;
-    const next = { ...content };
-    (Object.keys(SEEDS) as (keyof ContentMap)[]).forEach((key) => {
-      if (draft[key] === undefined) return;
-      const seed = SEEDS[key];
-      const live = content[key];
-      const d = draft[key];
-      if (isPlainObject(seed) && isPlainObject(live) && isPlainObject(d)) {
-        next[key] = { ...seed, ...live, ...d };
-      } else {
-        next[key] = d;
-      }
-    });
-    return next;
+    return raw ? (JSON.parse(raw) as Partial<ContentMap>) : null;
   } catch {
-    return content;
+    return null;
   }
+}
+
+function overlayDraft(
+  content: ContentMap,
+  draft: Partial<ContentMap> | null,
+): ContentMap {
+  if (!draft) return content;
+  const next = { ...content };
+  (Object.keys(SEEDS) as (keyof ContentMap)[]).forEach((key) => {
+    if (draft[key] === undefined) return;
+    const seed = SEEDS[key];
+    const live = content[key];
+    const d = draft[key];
+    if (isPlainObject(seed) && isPlainObject(live) && isPlainObject(d)) {
+      next[key] = { ...seed, ...live, ...d };
+    } else {
+      next[key] = d;
+    }
+  });
+  return next;
 }
 
 function buildContentMap(data: Record<string, unknown>): ContentMap {
@@ -105,17 +128,57 @@ function buildContentMap(data: Record<string, unknown>): ContentMap {
     studio: mergeWithSeed("studio", data.studio),
     appearance: mergeWithSeed("appearance", data.appearance),
   };
-  return applyDraftPreview(merged);
+  return merged;
 }
 
 export function ContentProvider({ children }: { children: ReactNode }) {
-  const [content, setContent] = useState<ContentMap>(() =>
-    applyDraftPreview(SEEDS),
+  const [liveContent, setContent] = useState<ContentMap>(SEEDS);
+  const [draft, setDraft] = useState<Partial<ContentMap> | null>(() =>
+    PREVIEW_MODE ? readStoredDraft() : null,
   );
-  const [previewBanner, setPreviewBanner] = useState(false);
+  const content = useMemo(
+    () => overlayDraft(liveContent, draft),
+    [liveContent, draft],
+  );
 
   useEffect(() => {
-    setPreviewBanner(isPreviewMode());
+    if (!EMBEDDED_PREVIEW) return;
+    const origin = window.location.origin;
+    const post = (msg: PreviewMessage) => window.parent.postMessage(msg, origin);
+
+    const onMessage = (e: MessageEvent) => {
+      if (e.origin !== origin || e.source !== window.parent) return;
+      if (!isPreviewMessage(e.data)) return;
+      if (e.data.type === PREVIEW_MSG.draft) {
+        setDraft(e.data.draft as Partial<ContentMap>);
+      } else if (e.data.type === PREVIEW_MSG.navigate) {
+        if (window.location.pathname !== e.data.path) {
+          window.history.pushState(null, "", e.data.path);
+          window.dispatchEvent(new PopStateEvent("popstate"));
+        }
+      }
+    };
+    window.addEventListener("message", onMessage);
+    post({ type: PREVIEW_MSG.ready });
+
+    // wouter navigates with pushState, which fires no event — poll the path.
+    let lastPath = "";
+    const reportPath = () => {
+      const path = window.location.pathname;
+      if (path === lastPath) return;
+      lastPath = path;
+      post({ type: PREVIEW_MSG.location, path });
+    };
+    reportPath();
+    const pathTimer = window.setInterval(reportPath, 400);
+
+    return () => {
+      window.removeEventListener("message", onMessage);
+      window.clearInterval(pathTimer);
+    };
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
     const hydrate = async () => {
       const r = await fetch("/api/content?meta=1");
@@ -149,7 +212,7 @@ export function ContentProvider({ children }: { children: ReactNode }) {
 
   return (
     <ContentCtx.Provider value={content}>
-      {previewBanner && (
+      {PREVIEW_MODE && !EMBEDDED_PREVIEW && (
         <div
           className="fixed top-0 inset-x-0 z-[100] px-4 py-2 text-center text-sm font-sans"
           style={{ background: "#C8A96E", color: "#0A0908" }}

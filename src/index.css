@@ -464,6 +464,22 @@ html:not(.dark) .card-glass {
   100% { transform: translate(0%, 0%)    scale(1); }
 }
 
+/* ── Rotating “VIEW LIVE” circular badge ─────────────── */
+@keyframes rotating-live-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.rotating-live-text {
+  transform-origin: center;
+  animation: rotating-live-spin 12s linear infinite;
+  will-change: transform;
+}
+
+/* Showcase carousel: let tilted polaroid frames overhang the track */
+.showcase-carousel-track {
+  overflow-y: visible;
+}
+
 /* ── Reduced Motion ─────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -479,7 +495,8 @@ html:not(.dark) .card-glass {
   .reveal-up,
   .logo-marquee-track,
   .studio-decor-swing,
-  .studio-decor-float {
+  .studio-decor-float,
+  .rotating-live-text {
     animation: none !important;
   }
 }

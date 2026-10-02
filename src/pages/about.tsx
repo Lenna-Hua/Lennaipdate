@@ -1,5 +1,6 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
+import { Award } from "lucide-react";
 import aboutSeed from "@/data/about.json";
 import experienceSeed from "@/data/experience.json";
 import educationSeed from "@/data/education.json";
@@ -17,9 +18,10 @@ function resumeHref(resume: ResumeMeta | undefined): string {
   return import.meta.env.BASE_URL + raw.replace(/^\/+/, "");
 }
 
-type AboutShape = typeof aboutSeed & { community?: string; yearsExperience?: string };
 import { FloatingDecor } from "@/components/FloatingDecor";
 import { SafeImage } from "@/components/SafeImage";
+import { ContactSection } from "@/components/ContactSection";
+import type { About as AboutData, CommunityItem, EducationItem } from "@/components/admin/types";
 
 const BLUE = "#1F67F1";
 const ACCENTS = [BLUE];
@@ -151,11 +153,84 @@ function StackedExpCard({
   );
 }
 
+function CommunityCard({ item }: { item: CommunityItem }) {
+  const images = (item.images ?? []).filter((src) => src?.trim());
+  const [active, setActive] = useState(0);
+  const cover = images[Math.min(active, images.length - 1)];
+
+  return (
+    <motion.article
+      variants={fadeUp}
+      className="flex flex-col rounded-xl overflow-hidden"
+      style={{ background: BLUE + "12", border: `1.5px solid ${BLUE}35` }}
+    >
+      {cover ? (
+        <div className="aspect-[4/3] overflow-hidden bg-muted">
+          <SafeImage
+            key={cover}
+            src={cover}
+            alt={item.title}
+            loading="lazy"
+            className="w-full h-full object-cover"
+            fallbackAspect="4 / 3"
+          />
+        </div>
+      ) : null}
+      {images.length > 1 && (
+        <div className="flex gap-2 px-5 pt-4 overflow-x-auto">
+          {images.map((src, i) => (
+            <button
+              key={`${src}-${i}`}
+              type="button"
+              onClick={() => setActive(i)}
+              aria-label={`Show photo ${i + 1} of ${item.title}`}
+              aria-current={i === active}
+              className="flex-shrink-0 w-12 h-12 rounded-md overflow-hidden border-2 transition-colors"
+              style={{ borderColor: i === active ? BLUE : "transparent" }}
+            >
+              <SafeImage src={src} alt="" className="w-full h-full object-cover" fallbackAspect="1 / 1" />
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="flex flex-col gap-2 p-5">
+        {item.period ? (
+          <span
+            className="self-start font-mono text-xs px-2 py-0.5 rounded-full uppercase tracking-widest"
+            style={{ background: BLUE + "25", color: BLUE }}
+          >
+            {item.period}
+          </span>
+        ) : null}
+        <h3 className="text-foreground text-base font-sans font-semibold leading-snug">{item.title}</h3>
+        {item.organization ? (
+          <h4 className="text-sm font-sans" style={{ color: BLUE }}>{item.organization}</h4>
+        ) : null}
+        {item.description ? (
+          <p className="text-muted-foreground text-sm font-sans leading-relaxed">{item.description}</p>
+        ) : null}
+        {item.linkUrl ? (
+          <a
+            href={item.linkUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-1 text-xs uppercase tracking-widest font-sans font-bold w-max hover:opacity-70 transition-opacity"
+            style={{ color: BLUE }}
+          >
+            {item.linkLabel || "Learn more"} ↗
+          </a>
+        ) : null}
+      </div>
+    </motion.article>
+  );
+}
+
 export default function About() {
-  const aboutData = useContent("about", aboutSeed) as AboutShape;
+  const aboutData = useContent("about", aboutSeed) as AboutData;
   const yearsLabel = `${(aboutData.yearsExperience ?? "3+").trim() || "3+"} Years`;
   const experienceData = useContent("experience", experienceSeed) as typeof experienceSeed;
-  const educationData = useContent("education", educationSeed) as typeof educationSeed;
+  const educationData = useContent("education", educationSeed) as EducationItem[];
+  const communityItems = (aboutData.communityItems ?? []).filter((c) => c.title?.trim());
   const filesContent = useContent("files", filesSeed) as FilesShape;
   return (
     <div className="w-full flex flex-col gap-24 md:gap-32 pt-12 md:pt-24 pb-24">
@@ -350,7 +425,7 @@ export default function About() {
       </section>
 
       {/* ── Community & Volunteer ── */}
-      {aboutData.community ? (
+      {aboutData.community || communityItems.length > 0 ? (
         <section className="flex flex-col gap-8 pt-12" style={{ borderTop: `2px solid ${BLUE}` }}>
           <motion.h2
             variants={fadeUp} initial="hidden" whileInView="show" viewport={VP}
@@ -359,12 +434,24 @@ export default function About() {
           >
             Community & Volunteer
           </motion.h2>
-          <motion.p
-            variants={fadeUp} initial="hidden" whileInView="show" viewport={VP}
-            className="text-muted-foreground text-lg leading-relaxed font-light font-sans max-w-3xl"
-          >
-            {aboutData.community}
-          </motion.p>
+          {aboutData.community ? (
+            <motion.p
+              variants={fadeUp} initial="hidden" whileInView="show" viewport={VP}
+              className="text-muted-foreground text-lg leading-relaxed font-light font-sans max-w-3xl"
+            >
+              {aboutData.community}
+            </motion.p>
+          ) : null}
+          {communityItems.length > 0 && (
+            <motion.div
+              variants={stagger} initial="hidden" whileInView="show" viewport={VP}
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+            >
+              {communityItems.map((item) => (
+                <CommunityCard key={item.id} item={item} />
+              ))}
+            </motion.div>
+          )}
         </section>
       ) : null}
 
@@ -381,6 +468,7 @@ export default function About() {
         <motion.div variants={stagger} initial="hidden" whileInView="show" viewport={VP} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {educationData.map((edu, i) => {
             const accent = ACCENTS[(i + 2) % ACCENTS.length];
+            const honors = (edu.honors ?? []).filter((h) => h.trim());
             return (
               <motion.div
                 key={edu.id}
@@ -398,11 +486,38 @@ export default function About() {
                   </span>
                 </div>
                 <h4 className="text-sm font-sans" style={{ color: accent }}>{edu.institution}</h4>
+                {edu.summary?.trim() ? (
+                  <p className="text-muted-foreground text-sm font-sans leading-relaxed mt-1">{edu.summary}</p>
+                ) : null}
+                {edu.gpa?.trim() || honors.length > 0 ? (
+                  <div className="flex flex-col gap-2 mt-2 pt-3" style={{ borderTop: `1px solid ${accent}30` }}>
+                    {edu.gpa?.trim() ? (
+                      <span
+                        className="self-start text-xs uppercase tracking-widest font-sans font-bold px-2.5 py-1 rounded-full"
+                        style={{ background: accent + "25", color: accent }}
+                      >
+                        GPA {edu.gpa}
+                      </span>
+                    ) : null}
+                    {honors.length > 0 && (
+                      <ul className="flex flex-col gap-1.5" aria-label="Honors and awards">
+                        {honors.map((h) => (
+                          <li key={h} className="text-muted-foreground text-sm font-sans flex items-start gap-2">
+                            <Award size={14} className="shrink-0 mt-0.5" style={{ color: accent }} aria-hidden />
+                            <span>{h}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                ) : null}
               </motion.div>
             );
           })}
         </motion.div>
       </section>
+
+      <ContactSection />
     </div>
   );
 }

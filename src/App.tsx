@@ -14,15 +14,12 @@ import { FontApplier } from "@/components/FontApplier";
 import { HrAssistant } from "@/components/HrAssistant";
 
 // Lazy load all route-level pages for code splitting
-const Entry = lazy(() => import("@/pages/entry"));
 const Home = lazy(() => import("@/pages/home"));
 const WorkIndex = lazy(() => import("@/pages/work/index"));
 const CaseStudy = lazy(() => import("@/pages/work/case-study"));
 const About = lazy(() => import("@/pages/about"));
 const Studio = lazy(() => import("@/pages/studio"));
 const StudioDetail = lazy(() => import("@/pages/studio-detail"));
-const Contact = lazy(() => import("@/pages/contact"));
-const Play = lazy(() => import("@/pages/play"));
 const Privacy = lazy(() => import("@/pages/privacy"));
 const Terms = lazy(() => import("@/pages/terms"));
 const NotFound = lazy(() => import("@/pages/not-found"));
@@ -117,11 +114,30 @@ function ScrollManager() {
     positions.current.set(prevLocation.current, window.scrollY);
     const wasPop = isPop.current;
     isPop.current = false;
+    prevLocation.current = location;
+
+    const hash = decodeURIComponent(window.location.hash.slice(1));
+    if (hash && !wasPop) {
+      // Pages are lazy-loaded, so the anchor may not exist on the first frame.
+      let tries = 0;
+      let timer = 0;
+      const seek = () => {
+        const el = document.getElementById(hash);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
+          return;
+        }
+        if (++tries < 40) timer = window.setTimeout(seek, 75);
+      };
+      seek();
+      return () => window.clearTimeout(timer);
+    }
+
     const targetY = wasPop ? (positions.current.get(location) ?? 0) : 0;
-    requestAnimationFrame(() => {
+    const raf = requestAnimationFrame(() => {
       window.scrollTo({ top: targetY, left: 0, behavior: "auto" });
     });
-    prevLocation.current = location;
+    return () => cancelAnimationFrame(raf);
   }, [location]);
 
   return null;
@@ -174,10 +190,10 @@ function AppRoutes() {
   return (
     <Switch>
       <Route path="/">
-        <Suspense fallback={<PageLoading />}><Entry /></Suspense>
+        <WithLayout><PageTransition><Suspense fallback={<PageLoading />}><Home /></Suspense></PageTransition></WithLayout>
       </Route>
       <Route path="/home">
-        <WithLayout><PageTransition><Suspense fallback={<PageLoading />}><Home /></Suspense></PageTransition></WithLayout>
+        <Redirect to="/" />
       </Route>
       <Route path="/work">
         <WithLayout><PageTransition><Suspense fallback={<PageLoading />}><WorkIndex /></Suspense></PageTransition></WithLayout>
@@ -198,10 +214,10 @@ function AppRoutes() {
         <WithLayout><PageTransition><Suspense fallback={<PageLoading />}><Studio /></Suspense></PageTransition></WithLayout>
       </Route>
       <Route path="/contact">
-        <WithLayout><PageTransition><Suspense fallback={<PageLoading />}><Contact /></Suspense></PageTransition></WithLayout>
+        <Redirect to="/about#contact" replace />
       </Route>
       <Route path="/play">
-        <WithLayout><PageTransition><Suspense fallback={<PageLoading />}><Play /></Suspense></PageTransition></WithLayout>
+        <Redirect to="/studio#play" replace />
       </Route>
       <Route path="/privacy">
         <WithLayout><PageTransition><Suspense fallback={<PageLoading />}><Privacy /></Suspense></PageTransition></WithLayout>

@@ -4,7 +4,7 @@ export const DEFAULT_STUDIO: Studio = {
   eyebrow: "Studio · Archive",
   heading: "Studio",
   intro:
-    "A living scrapbook of art direction, illustration, photography, motion, and editorial work — full productions above, smaller pieces in the slideshow below.",
+    "A living scrapbook of illustration, photography, motion, and editorial studies — plus a little type game to play.",
   bigEyebrow: "01 · Productions",
   bigHeading: "Big Projects",
   bigBlurb:
@@ -15,6 +15,10 @@ export const DEFAULT_STUDIO: Studio = {
     "Smaller pieces, studies, and standalone artworks. Scroll horizontally or click a card to view details.",
   artworksCardSize: "lg",
   artworksDefaultStyle: "slideshow",
+  showPlay: true,
+  playEyebrow: "Interactive",
+  playHeading: "Play",
+  playBlurb: "",
   showGrid: true,
   showDecor: true,
   showLogoMarquee: true,
@@ -55,7 +59,10 @@ function asLogo(id: string, name: string, src?: string, href?: string): StudioLo
   };
 }
 
-/** Custom marquee logos, then optional auto logos from gallery + work projects. */
+/**
+ * Custom marquee logos, then optional auto logos from gallery + work projects.
+ * With auto on and no logos anywhere, falls back to project titles so the strip isn't empty.
+ */
 export function collectMarqueeLogos(
   studio: Studio,
   gallery: GalleryItem[],
@@ -78,6 +85,7 @@ export function collectMarqueeLogos(
   };
 
   for (const item of gallery) {
+    if (item.archived) continue;
     if (!item.logo?.trim()) continue;
     push(
       asLogo(
@@ -99,6 +107,17 @@ export function collectMarqueeLogos(
         proj.slug ? `/work/${proj.slug}` : undefined,
       ),
     );
+  }
+
+  if (custom.length === 0 && auto.length === 0) {
+    for (const proj of projects) {
+      if (proj.archived) continue;
+      push(asLogo(`p-${proj.id}`, proj.title, undefined, proj.slug ? `/work/${proj.slug}` : undefined));
+    }
+    for (const item of gallery) {
+      if (item.archived || item.kind === "small") continue;
+      push(asLogo(`g-${item.id}`, item.title, undefined, item.slug ? `/studio/${item.slug}` : undefined));
+    }
   }
 
   return [...custom, ...auto];

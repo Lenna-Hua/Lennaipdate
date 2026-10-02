@@ -1,10 +1,10 @@
-import { memo } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { CoverMedia } from "@/components/CoverMedia";
-import projectsData from "@/data/projects.json";
 import { BRAND_DECK, BRAND_RGB } from "@/lib/brand";
 
 const ACCENTS = BRAND_DECK;
 const ACCENT_RGB = BRAND_RGB;
+const HOVER_VIDEO_DELAY_MS = 650;
 
 /** Dual-tone glow pairs — assigned per card for variety */
 const GLOW_PAIRS: [string, string][] = [
@@ -22,6 +22,24 @@ const BLOB_ANIMS = [
   "entry-blob-drift-3 10s ease-in-out infinite",
 ] as const;
 
+export type PinterestCardProject = {
+  id: string;
+  slug: string;
+  title: string;
+  coverImage: string;
+  year: string;
+  tags: string[];
+  /** Badge text (Work `type` or Studio `role`). */
+  type: string;
+  subtitle?: string;
+  cardDescription?: string;
+  /** Defaults to `/work/${slug}`. Use `/studio/${slug}` for gallery items. */
+  href?: string;
+  /** Short muted loop after a long hover on the cover. */
+  hoverVideo?: string;
+  liveUrl?: string;
+};
+
 function glowSeed(slug: string, i: number) {
   let h = i * 2654435761;
   for (let c = 0; c < slug.length; c++) {
@@ -35,7 +53,7 @@ export const PinterestCard = memo(function PinterestCard({
   i,
   isDark,
 }: {
-  project: (typeof projectsData)[0];
+  project: PinterestCardProject;
   i: number;
   isDark: boolean;
   featured?: boolean;
@@ -49,6 +67,46 @@ export const PinterestCard = memo(function PinterestCard({
     background: isDark ? "rgba(20,18,15,0.7)" : "rgba(255,252,245,0.8)",
     color: isDark ? "rgba(255,255,255,0.8)" : "rgba(0,0,0,0.7)",
   } as const;
+  const href = project.href ?? `/work/${project.slug}`;
+  const description = project.cardDescription || project.subtitle || "";
+  const tags = project.tags ?? [];
+  const hasHoverVideo = Boolean(project.hoverVideo?.trim());
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [showVideo, setShowVideo] = useState(false);
+
+  const clearHoverTimer = useCallback(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
+
+  const stopVideo = useCallback(() => {
+    clearHoverTimer();
+    setShowVideo(false);
+    const v = videoRef.current;
+    if (v) {
+      v.pause();
+      try {
+        v.currentTime = 0;
+      } catch {
+        /* ignore */
+      }
+    }
+  }, [clearHoverTimer]);
+
+  const onEnter = useCallback(() => {
+    if (!hasHoverVideo) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    clearHoverTimer();
+    timerRef.current = setTimeout(() => {
+      setShowVideo(true);
+      void videoRef.current?.play().catch(() => {});
+    }, HOVER_VIDEO_DELAY_MS);
+  }, [hasHoverVideo, clearHoverTimer]);
+
+  useEffect(() => () => clearHoverTimer(), [clearHoverTimer]);
 
   return (
     <div className="group relative">
@@ -86,7 +144,7 @@ export const PinterestCard = memo(function PinterestCard({
       />
 
       <a
-        href={`/work/${project.slug}`}
+        href={href}
         className="group/card relative z-10 flex flex-col rounded-2xl overflow-hidden cursor-pointer aspect-[4/5] focus-visible:outline-2 focus-visible:outline-offset-2"
         style={{
           outlineColor: accent,
@@ -95,6 +153,10 @@ export const PinterestCard = memo(function PinterestCard({
             : `0 16px 44px -12px rgba(${glowA},0.18), 0 0 48px -8px rgba(${glowB},0.12)`,
         }}
         tabIndex={0}
+        onMouseEnter={onEnter}
+        onMouseLeave={stopVideo}
+        onFocus={onEnter}
+        onBlur={stopVideo}
       >
         {/* ── Full-bleed cover image ───────────────────────────── */}
         <div className="absolute inset-0">
@@ -103,7 +165,9 @@ export const PinterestCard = memo(function PinterestCard({
               src={project.coverImage}
               alt={project.title}
               loading="lazy"
-              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.04] group-focus-within:scale-[1.04]"
+              className={`w-full h-full object-cover transition-[transform,opacity] duration-700 group-hover:scale-[1.04] group-focus-within:scale-[1.04] ${
+                showVideo ? "opacity-0" : "opacity-100"
+              }`}
             />
           ) : (
             <div
@@ -115,6 +179,20 @@ export const PinterestCard = memo(function PinterestCard({
               }}
             />
           )}
+          {hasHoverVideo ? (
+            <video
+              ref={videoRef}
+              src={project.hoverVideo}
+              muted
+              loop
+              playsInline
+              preload="none"
+              aria-hidden={!showVideo}
+              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
+                showVideo ? "opacity-100" : "opacity-0"
+              }`}
+            />
+          ) : null}
         </div>
 
         {/* ── Bottom gradient — soft, just for type contrast ── */}
@@ -150,10 +228,10 @@ export const PinterestCard = memo(function PinterestCard({
           }}
         />
 
-        {/* ── Top badges: role stays one line; year stays separate ── */}
-        <div className="absolute top-3 left-3 right-3 flex items-center gap-2 z-10 pointer-events-none">
+        {/* ── Top badges — inset past rounded corners so pills aren’t clipped ── */}
+        <div className="absolute top-4 left-4 right-4 flex items-start gap-2 z-10 pointer-events-none">
           <span
-            className="text-[8px] sm:text-[9px] uppercase tracking-wide font-sans font-bold px-2.5 py-1.5 rounded-full backdrop-blur-sm whitespace-nowrap leading-none min-w-0"
+            className="text-[8px] sm:text-[9px] uppercase tracking-wide font-sans font-bold px-2.5 py-1.5 rounded-full backdrop-blur-sm leading-tight min-w-0 max-w-[70%] line-clamp-2"
             style={badgeStyle}
           >
             {project.type}
@@ -167,8 +245,8 @@ export const PinterestCard = memo(function PinterestCard({
         </div>
 
         {/* ── Unified type block: title → description → tags ── */}
-        <div className="absolute inset-x-0 bottom-0 z-20 flex flex-col justify-end gap-2 px-4 sm:px-5 pb-4 sm:pb-5 pt-20 pointer-events-none">
-          <h3 className="font-display font-black uppercase text-base sm:text-lg md:text-xl leading-[1.2] tracking-[0.04em] text-white">
+        <div className="absolute inset-x-0 bottom-0 z-20 flex flex-col justify-end gap-2 px-4 sm:px-5 pb-5 sm:pb-6 pt-24 pointer-events-none">
+          <h3 className="font-display font-black uppercase text-sm sm:text-base md:text-lg leading-[1.15] tracking-[0.03em] text-white line-clamp-3 break-words [overflow-wrap:anywhere]">
             {project.title}
           </h3>
 
@@ -179,13 +257,14 @@ export const PinterestCard = memo(function PinterestCard({
             transition-[max-height,opacity] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]
             motion-reduce:max-h-28 motion-reduce:opacity-100 motion-reduce:transition-none"
           >
-            <p className="text-xs font-sans text-white/75 leading-relaxed line-clamp-2">
-              {(project as { cardDescription?: string }).cardDescription ||
-                project.subtitle}
-            </p>
+            {description ? (
+              <p className="text-xs font-sans text-white/75 leading-relaxed line-clamp-2">
+                {description}
+              </p>
+            ) : null}
 
             <div className="flex items-center gap-1.5 flex-wrap">
-              {project.tags.slice(0, 3).map((tag) => (
+              {tags.slice(0, 3).map((tag) => (
                 <span
                   key={tag}
                   className="text-[9px] uppercase tracking-wider font-sans font-bold px-2 py-0.5 rounded-full"

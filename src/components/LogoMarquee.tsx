@@ -32,7 +32,7 @@ export function LogoMarquee({
         >
           {loop.map((item, i) => {
             const inner = (
-              <span className="flex items-center gap-3 opacity-80 hover:opacity-100 transition-opacity grayscale hover:grayscale-0">
+              <span className="flex items-center gap-3 opacity-90 hover:opacity-100 transition-opacity">
                 {item.src ? (
                   <SafeImage
                     src={item.src}

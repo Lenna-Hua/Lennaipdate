@@ -26,6 +26,8 @@ type GalleryItem = {
   order?: number;
   linkUrl?: string;
   linkLabel?: string;
+  featured?: boolean;
+  archived?: boolean;
 };
 
 // `items` is now resolved per-render inside the component via useContent so
@@ -104,7 +106,9 @@ function Lightbox({
 }
 
 export default function StudioDetail() {
-  const items = useContent("gallery", gallerySeed) as GalleryItem[];
+  const items = (useContent("gallery", gallerySeed) as GalleryItem[]).filter(
+    (i) => !i.archived,
+  );
   const params = useParams();
   // Only navigate among "big" projects — small artworks use modal on studio page
   const bigItems = items.filter((i) => i.kind === "big");

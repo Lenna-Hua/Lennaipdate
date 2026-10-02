@@ -97,7 +97,7 @@ export default function Terms() {
               Privacy Policy
             </Link>{" "}
             and{" "}
-            <Link href="/contact" className="underline underline-offset-4" style={{ color: BLUE }}>
+            <Link href="/about#contact" className="underline underline-offset-4" style={{ color: BLUE }}>
               Contact
             </Link>{" "}
             page.

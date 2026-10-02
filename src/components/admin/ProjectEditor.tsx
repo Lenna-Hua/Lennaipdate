@@ -17,6 +17,7 @@ import {
   UploadToLibraryDashed,
   PickFromLibraryButton,
 } from "./AssetLibrary";
+import { parseBriefToProject } from "@/lib/case-study-brief";
 
 // ── Helpers ────────────────────────────────────────────────────────────
 
@@ -512,6 +513,108 @@ function SectionsEditor({
 
 // ── ProjectsEditor ─────────────────────────────────────────────────────
 
+function projectHasWritableCopy(p: Project): boolean {
+  return Boolean(
+    p.subtitle?.trim() ||
+      p.description?.trim() ||
+      p.challenge?.trim() ||
+      p.solution?.trim() ||
+      p.impact?.trim() ||
+      (p.sections?.length ?? 0) > 0,
+  );
+}
+
+function BriefAutofillPanel({
+  onApply,
+  hasExistingCopy,
+}: {
+  onApply: (patch: Partial<Project>) => void;
+  hasExistingCopy: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [brief, setBrief] = useState("");
+  const [includeSections, setIncludeSections] = useState(true);
+  const [error, setError] = useState("");
+  const [hint, setHint] = useState("");
+
+  const fillFromBrief = () => {
+    setError("");
+    setHint("");
+    if (
+      hasExistingCopy &&
+      !window.confirm(
+        "This will overwrite title, subtitle, overview, problem/solution/impact, and (if enabled) sections. Cover image and logo stay. Continue?",
+      )
+    ) {
+      return;
+    }
+
+    const result = parseBriefToProject(brief, { includeSections });
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    onApply(result.patch as Partial<Project>);
+    setHint(
+      includeSections
+        ? `Filled from brief (local) — ${result.patch.sections?.length ?? 0} sections. Review, add images, then Save.`
+        : "Filled hero and Overview / Problem / Solution / Impact from brief. Review, then Save.",
+    );
+  };
+
+  return (
+    <div className="border border-[#272421] p-4 flex flex-col gap-3">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center justify-between text-left"
+      >
+        <span className="text-[#C8A96E] text-xs uppercase tracking-widest">
+          Fill from brief
+        </span>
+        <span className="text-[#4A4540] text-xs">{open ? "Hide" : "Show"}</span>
+      </button>
+      {open && (
+        <>
+          <p className="text-[#4A4540] text-xs leading-relaxed">
+            Paste a labeled brief. Runs in your browser only — no API key, no network call.
+            Use lines like <span className="text-[#8A8278]">Title:</span>,{" "}
+            <span className="text-[#8A8278]">Role:</span>,{" "}
+            <span className="text-[#8A8278]">Problem:</span>,{" "}
+            <span className="text-[#8A8278]">Solution:</span>,{" "}
+            <span className="text-[#8A8278]">Impact:</span>.
+          </p>
+          <textarea
+            value={brief}
+            onChange={(e) => setBrief(e.target.value)}
+            rows={8}
+            placeholder={`Title: Habiganize\nRole: Product Designer\nUsers: People who quit habit apps in a week\nMethods: Retention research, Figma system, IA\nProblem: Habit apps lose users because quitting costs nothing.\nSolution: Pair check-ins with a pet-care economy.\nImpact: Live multi-platform product; store release next.\nTags: Product Design, UX, Gamification`}
+            className="bg-transparent border border-[#3A3530] text-[#F2EDE5] p-3 text-sm focus:outline-none focus:border-[#C8A96E] transition-colors placeholder:text-[#3A3530] resize-y min-h-[140px]"
+          />
+          <label className="flex items-center gap-2 text-sm text-[#8A8278] cursor-pointer">
+            <input
+              type="checkbox"
+              checked={includeSections}
+              onChange={(e) => setIncludeSections(e.target.checked)}
+              className="accent-[#C8A96E]"
+            />
+            Also build narrative sections from the brief
+          </label>
+          <button
+            type="button"
+            onClick={fillFromBrief}
+            className="self-start text-sm border border-[#C8A96E] text-[#C8A96E] px-3 py-2 hover:bg-[#C8A96E] hover:text-[#0A0908] transition-colors uppercase tracking-widest"
+          >
+            Fill case study
+          </button>
+          {error && <p className="text-red-400 text-xs leading-relaxed">{error}</p>}
+          {hint && <p className="text-[#8A8278] text-xs leading-relaxed">{hint}</p>}
+        </>
+      )}
+    </div>
+  );
+}
+
 export function ProjectsEditor({
   data,
   onChange,
@@ -702,6 +805,7 @@ export function ProjectsEditor({
                 }`}
               >
                 {p.title}
+                {p.featured ? " ★" : ""}
                 {p.archived && (
                   <span className="ml-2 text-[10px] uppercase tracking-widest opacity-70">
                     (archived)
@@ -752,6 +856,19 @@ export function ProjectsEditor({
 
           {subTab === "details" && (
             <div className="flex flex-col gap-5">
+              <BriefAutofillPanel
+                hasExistingCopy={projectHasWritableCopy(project)}
+                onApply={(patch) => {
+                  const current = data[selectedIdx];
+                  if (!current) return;
+                  const next: Project = { ...current, ...patch };
+                  if ("sections" in patch) {
+                    delete next.detailSections;
+                    setSubTab("sections");
+                  }
+                  onChange(data.map((p, i) => (i === selectedIdx ? next : p)));
+                }}
+              />
               <TextInput label="Title" value={project.title} onChange={(v) => updateProject(selectedIdx, { title: v })} />
               <TextInput
                 label="Slug (URL path)"
@@ -840,10 +957,44 @@ export function ProjectsEditor({
                   </div>
                 )}
               </div>
+
+              {/* Hover preview video + live URL */}
+              <div className="flex flex-col gap-2">
+                <label className="text-[#8A8278] text-xs uppercase tracking-widest">Hover Preview Video</label>
+                <p className="text-[#4A4540] text-xs leading-relaxed">
+                  Short muted loop that plays after a long hover on Work/Home cards. Leave empty to keep the static cover.
+                </p>
+                <input
+                  type="text"
+                  value={project.hoverVideo ?? ""}
+                  onChange={(e) => updateProject(selectedIdx, { hoverVideo: e.target.value })}
+                  placeholder="Paste mp4/webm URL"
+                  className="bg-transparent border-b border-[#3A3530] text-[#F2EDE5] py-2 text-sm focus:outline-none focus:border-[#C8A96E] transition-colors placeholder:text-[#3A3530]"
+                />
+                <div className="flex items-center gap-2 flex-wrap">
+                  <UploadToLibraryDashed
+                    label="↑ Upload hover video"
+                    accept="video/mp4,video/webm,.mp4,.webm"
+                    onUploaded={(url) => updateProject(selectedIdx, { hoverVideo: url })}
+                  />
+                  <PickFromLibraryButton
+                    type="video"
+                    onPick={(url) => updateProject(selectedIdx, { hoverVideo: url })}
+                  />
+                </div>
+              </div>
+              <TextInput
+                label="Live product URL"
+                value={project.liveUrl ?? ""}
+                onChange={(v) => updateProject(selectedIdx, { liveUrl: v })}
+                hint="Powers the floating VIEW LIVE badge on the case study page."
+                placeholder="https://…"
+              />
+
               <div className="flex flex-col gap-2">
                 <label className="text-[#8A8278] text-xs uppercase tracking-widest">Logo (Studio marquee)</label>
                 <p className="text-[#4A4540] text-xs leading-relaxed">
-                  Square mark for the looping logo strip on /studio. Leave blank to skip this project.
+                  Square mark for the looping logo strip at the bottom of the Work page. Leave blank to skip this project.
                 </p>
                 <input
                   type="text"

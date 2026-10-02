@@ -8,14 +8,8 @@ const DEFAULT_TITLE = `${SITE.name} — ${SITE.role}`;
 function titleForPath(path: string): { title: string; description: string } {
   const clean = path.replace(/\/+$/, "") || "/";
 
-  if (clean === "/") {
+  if (clean === "/" || clean === "/home") {
     return { title: DEFAULT_TITLE, description: SITE.description };
-  }
-  if (clean === "/home") {
-    return {
-      title: `Home — ${SITE.name}`,
-      description: SITE.description,
-    };
   }
   if (clean === "/work") {
     return {
@@ -42,18 +36,6 @@ function titleForPath(path: string): { title: string; description: string } {
     return {
       title: `About — ${SITE.name}`,
       description: `${SITE.name} is a ${SITE.role} based in ${SITE.location}, specializing in UX research, service design, and visual storytelling.`,
-    };
-  }
-  if (clean === "/contact") {
-    return {
-      title: `Contact — ${SITE.name}`,
-      description: `Get in touch with ${SITE.name} for product design, UX research, and freelance inquiries. ${SITE.email}`,
-    };
-  }
-  if (clean === "/play") {
-    return {
-      title: `Play — ${SITE.name}`,
-      description: `A kerning game from ${SITE.name}'s design portfolio.`,
     };
   }
   if (clean === "/privacy") {

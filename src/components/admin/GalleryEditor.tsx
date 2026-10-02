@@ -12,7 +12,7 @@ import {
   withGalleryImageColumns,
   withGalleryImageSrc,
 } from "@/lib/gallery-image";
-import { TextInput, TextareaInput, TagsInput, slugify } from "./shared";
+import { TextInput, TextareaInput, TagsInput, CheckboxInput, slugify } from "./shared";
 import {
   UploadToLibraryDashed,
   PickFromLibraryButton,
@@ -35,9 +35,24 @@ export function GalleryEditor({
   tagSuggestions: string[];
 }) {
   const [selectedIdx, setSelectedIdx] = useState(0);
+  const [visibilityFilter, setVisibilityFilter] = useState<
+    "all" | "active" | "archived"
+  >("active");
 
   const update = (idx: number, patch: Partial<GalleryItem>) => {
     onChange(data.map((item, i) => (i === idx ? { ...item, ...patch } : item)));
+  };
+
+  const itemCounts = {
+    all: data.length,
+    active: data.filter((g) => !g.archived).length,
+    archived: data.filter((g) => Boolean(g.archived)).length,
+  };
+
+  const matchesVisibility = (g: GalleryItem) => {
+    if (visibilityFilter === "active") return !g.archived;
+    if (visibilityFilter === "archived") return Boolean(g.archived);
+    return true;
   };
 
   const updateWithSlug = (idx: number, title: string) => {
@@ -71,6 +86,8 @@ export function GalleryEditor({
       coverImage: "",
       images: [],
       order: maxOrder + 1,
+      featured: false,
+      archived: false,
     };
     const updated = [...data, newItem];
     onChange(updated);
@@ -101,11 +118,45 @@ export function GalleryEditor({
         >
           + Add Gallery Item
         </button>
+        <div className="mb-2 flex flex-col gap-1">
+          {(
+            [
+              { id: "all" as const, label: "All", count: itemCounts.all },
+              { id: "active" as const, label: "Active", count: itemCounts.active },
+              { id: "archived" as const, label: "Archived", count: itemCounts.archived },
+            ]
+          ).map((opt) => {
+            const active = visibilityFilter === opt.id;
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => setVisibilityFilter(opt.id)}
+                className={`flex items-center justify-between gap-2 text-[10px] uppercase tracking-widest px-2 py-1.5 border transition-colors ${
+                  active
+                    ? "bg-[#C8A96E] text-[#0A0908] border-[#C8A96E]"
+                    : "text-[#8A8278] border-[#3A3530] hover:border-[#C8A96E]"
+                }`}
+              >
+                <span>{opt.label}</span>
+                <span
+                  className={`tabular-nums text-[9px] px-1.5 py-0.5 rounded ${
+                    active ? "bg-[#0A0908]/20" : "bg-[#1B1815] text-[#4A4540]"
+                  }`}
+                >
+                  {opt.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
         {(["big", "small"] as const).map((kind) => {
-          const group = data.filter((g) => (g.kind ?? "big") === kind);
+          const group = data.filter(
+            (g) => (g.kind ?? "big") === kind && matchesVisibility(g),
+          );
           if (group.length === 0) return null;
           const heading =
-            kind === "big" ? "Big Projects" : "Artworks";
+            kind === "big" ? "Big Projects · Work page" : "Artworks · Slideshow";
           return (
             <div key={kind} className="flex flex-col gap-1.5 mt-3 first:mt-0">
               <div className="text-[10px] uppercase tracking-[0.3em] text-[#C8A96E] px-1 pt-1 pb-1">
@@ -116,7 +167,9 @@ export function GalleryEditor({
                 onReorder={(reorderedGroup) => {
                   const selectedId = data[selectedIdx]?.id;
                   const positions = data.reduce<number[]>((acc, item, i) => {
-                    if ((item.kind ?? "big") === kind) acc.push(i);
+                    if ((item.kind ?? "big") === kind && matchesVisibility(item)) {
+                      acc.push(i);
+                    }
                     return acc;
                   }, []);
                   const newData = [...data];
@@ -143,7 +196,13 @@ export function GalleryEditor({
                         }`}
                         title={g.title}
                       >
+                        {g.featured ? "★ " : ""}
                         {g.title}
+                        {g.archived && (
+                          <span className="ml-2 text-[10px] uppercase tracking-widest opacity-70">
+                            (archived)
+                          </span>
+                        )}
                         {g.linkUrl && (
                           <span className="ml-2 opacity-70" title="Has external link">
                             ↗
@@ -215,8 +274,9 @@ export function GalleryEditor({
               })}
             </div>
             <span className="text-[#4A4540] text-[11px] font-sans">
-              Big Projects appear in the masonry with a detail page; Artworks
-              appear below in the horizontal slideshow.
+              Big Projects appear as cards on the Work page, each with its own
+              /studio/&lt;slug&gt; page. Artworks appear in the slideshow on Studio and
+              Home and open in a popup.
             </span>
           </div>
 
@@ -255,8 +315,8 @@ export function GalleryEditor({
                 })}
               </div>
               <span className="text-[#4A4540] text-[11px] font-sans">
-                Auto detects from the cover image. Portrait = tall card;
-                Landscape = wide card.
+                Auto uses the cover&apos;s natural ratio. Portrait = 4:5, Landscape =
+                16:10. All cards share the same max height; width follows the ratio.
               </span>
             </div>
           )}
@@ -308,6 +368,19 @@ export function GalleryEditor({
             suggestions={tagSuggestions}
             onChange={(tags) => update(selectedIdx, { tags })}
           />
+
+          <div className="flex flex-col gap-3 border border-[#272421] rounded p-3">
+            <CheckboxInput
+              label="★ Show on homepage Selected Work"
+              checked={Boolean(item.featured)}
+              onChange={(v) => update(selectedIdx, { featured: v })}
+            />
+            <CheckboxInput
+              label="Archive (hide from public site)"
+              checked={Boolean(item.archived)}
+              onChange={(v) => update(selectedIdx, { archived: v })}
+            />
+          </div>
 
           {/* External hyperlink */}
           <div className="flex flex-col gap-2 border border-[#272421] rounded p-3">
@@ -374,7 +447,7 @@ export function GalleryEditor({
               Project logo (marquee)
             </label>
             <span className="text-[#4A4540] text-[11px] font-sans">
-              Square mark for the looping logo strip on Studio. Leave blank to skip this item.
+              Square mark for the looping logo strip at the bottom of the Work page. Leave blank to skip this item.
             </span>
             <input
               type="text"

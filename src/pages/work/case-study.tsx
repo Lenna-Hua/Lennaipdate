@@ -7,6 +7,7 @@ import contactSeed from "@/data/contact.json";
 import { useContent } from "@/lib/use-content";
 import { BRAND_EASE } from "@/lib/brand";
 import { SafeImage } from "@/components/SafeImage";
+import { RotatingLiveBadge } from "@/components/RotatingLiveBadge";
 
 function ClampedText({ children, lines = 5 }: { children: React.ReactNode; lines?: number }) {
   const [expanded, setExpanded] = useState(false);
@@ -92,6 +93,8 @@ interface Project {
   solution: string;
   impact: string;
   coverImage: string;
+  hoverVideo?: string;
+  liveUrl?: string;
   year: string;
   period?: string;
   featured: boolean;
@@ -721,6 +724,14 @@ export default function CaseStudy() {
 
   return (
     <div className="w-full flex flex-col gap-16 md:gap-20 pb-24">
+      {project.liveUrl?.trim() ? (
+        <RotatingLiveBadge
+          href={project.liveUrl.trim()}
+          label="VIEW LIVE • VIEW LIVE •"
+          fixed
+          size={156}
+        />
+      ) : null}
       <AnimatePresence>
         {lightbox && (
           <Lightbox
@@ -957,8 +968,9 @@ export default function CaseStudy() {
                   const expanding = !showDetail;
                   setShowDetail(expanding);
                   if (expanding) {
+                    // Expand grows content above this button; stay at the top so reading starts from the beginning.
                     requestAnimationFrame(() => {
-                      document.getElementById("cs-detail-toggle")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                      window.scrollTo({ top: 0, behavior: "smooth" });
                     });
                   }
                 }}

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { Home, Briefcase, Palette, User, Mail, type LucideIcon } from "lucide-react";
+import { Home, Briefcase, Palette, User, type LucideIcon } from "lucide-react";
 
 const EASE_OUT_EXPO: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -29,15 +29,16 @@ export function BottomNav() {
   }, []);
 
   const links: Array<{ href: string; label: string; icon: LucideIcon }> = [
-    { href: "/home",    label: "Home",    icon: Home },
+    { href: "/",        label: "Home",    icon: Home },
     { href: "/work",    label: "Work",    icon: Briefcase },
     { href: "/studio",  label: "Studio",  icon: Palette },
     { href: "/about",   label: "About",   icon: User },
-    { href: "/contact", label: "Contact", icon: Mail },
   ];
 
   const isActive = (href: string) =>
-    location === href || (location.startsWith(href + "/") && href !== "/");
+    href === "/"
+      ? location === "/" || location === "/home"
+      : location === href || location.startsWith(href + "/");
 
   return (
     <motion.nav

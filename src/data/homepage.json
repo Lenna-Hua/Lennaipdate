@@ -10,7 +10,11 @@
     "secondaryCtaHref": "/about",
     "secondaryCtaLabel": "About Me",
     "selectedWorkHeading": "Selected Work",
-    "selectedWorkLinkLabel": "View All →"
+    "selectedWorkLinkLabel": "View All →",
+    "badgeLabel": "VIEW WORK • VIEW WORK •",
+    "showStudioBand": true,
+    "studioHeading": "From the Studio",
+    "studioLinkLabel": "Visit Studio →"
   },
   "entry": {
     "artCard": {

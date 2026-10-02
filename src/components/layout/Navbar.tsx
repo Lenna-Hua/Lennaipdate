@@ -53,16 +53,16 @@ export function Navbar() {
   }, [mobileOpen]);
 
   const links = [
-    { href: "/home",    label: "Home"    },
+    { href: "/",        label: "Home"    },
     { href: "/work",    label: "Work"    },
     { href: "/studio",  label: "Studio"  },
-    { href: "/play",    label: "Play"    },
     { href: "/about",   label: "About"   },
-    { href: "/contact", label: "Contact" },
   ];
 
   const isActive = (href: string) =>
-    location === href || (location.startsWith(href) && href !== "/");
+    href === "/"
+      ? location === "/" || location === "/home"
+      : location === href || location.startsWith(href + "/");
 
   return (
     <>

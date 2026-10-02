@@ -2,7 +2,7 @@
  * Homepage editor — entry/splash page and home page content.
  */
 import type { Homepage } from "./types";
-import { TextInput, TextareaInput } from "./shared";
+import { TextInput, TextareaInput, CheckboxInput } from "./shared";
 import {
   UploadToLibraryDashed,
   PickFromLibraryButton,
@@ -51,7 +51,7 @@ export function HomepageEditor({
             onClick={onPreview}
             className="text-sm border border-[#3A3530] text-[#8A8278] px-3 py-1.5 hover:border-[#C8A96E] hover:text-[#C8A96E] uppercase tracking-widest"
           >
-            Preview /home
+            Preview home
           </button>
         </div>
       )}
@@ -108,7 +108,7 @@ export function HomepageEditor({
       <section className="flex flex-col gap-5">
         <h2 className="font-serif text-2xl text-[#F2EDE5]">Home Page</h2>
         <p className="text-[#8A8278] text-sm">
-          The main home page (after entering). Your name and bio are edited under Identity & Contact and About.
+          Order on the page: Hero → Selected Work → From the Studio → About. Your name and bio are edited under Identity & Contact and About.
         </p>
 
         <TextInput
@@ -191,6 +191,14 @@ export function HomepageEditor({
             <TextInput label="Secondary label" value={data.home.secondaryCtaLabel} onChange={(v) => updateHome({ secondaryCtaLabel: v })} />
             <TextInput label="Secondary link" value={data.home.secondaryCtaHref} onChange={(v) => updateHome({ secondaryCtaHref: v })} />
           </div>
+          <TextInput
+            label="Flower badge text (repeat it twice so it wraps the circle)"
+            value={data.home.badgeLabel ?? "VIEW WORK • VIEW WORK •"}
+            onChange={(v) => updateHome({ badgeLabel: v })}
+          />
+          <p className="text-[#4A4540] text-xs">
+            The spinning flower sticker in the hero links to the primary button&apos;s link. Hidden on phones.
+          </p>
         </div>
 
         <div className="border border-[#272421] p-4 flex flex-col gap-3">
@@ -199,15 +207,45 @@ export function HomepageEditor({
             <TextInput label="Heading" value={data.home.selectedWorkHeading} onChange={(v) => updateHome({ selectedWorkHeading: v })} />
             <TextInput label='"View all" link label' value={data.home.selectedWorkLinkLabel} onChange={(v) => updateHome({ selectedWorkLinkLabel: v })} />
           </div>
+          <p className="text-[#4A4540] text-xs">
+            Up to 6 cards from Work and Gallery items with “★ Show on homepage Selected Work” ticked (and not archived).
+          </p>
         </div>
 
         <div className="border border-[#272421] p-4 flex flex-col gap-3">
-          <span className="text-[#C8A96E] text-sm uppercase tracking-widest">Approach band</span>
+          <span className="text-[#C8A96E] text-sm uppercase tracking-widest">From the Studio band</span>
+          <CheckboxInput
+            label="Show the artworks slideshow on Home"
+            checked={data.home.showStudioBand !== false}
+            onChange={(v) => updateHome({ showStudioBand: v })}
+          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <TextInput
+              label="Heading"
+              value={data.home.studioHeading ?? "From the Studio"}
+              onChange={(v) => updateHome({ studioHeading: v })}
+            />
+            <TextInput
+              label="Studio link label"
+              value={data.home.studioLinkLabel ?? "Visit Studio →"}
+              onChange={(v) => updateHome({ studioLinkLabel: v })}
+            />
+          </div>
+          <p className="text-[#4A4540] text-xs">
+            Slides are the Gallery items set to “Artwork” (not archived), in Gallery order. Card size follows Studio Page → Card size.
+          </p>
+        </div>
+
+        <div className="border border-[#272421] p-4 flex flex-col gap-3">
+          <span className="text-[#C8A96E] text-sm uppercase tracking-widest">About band (bottom of Home)</span>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <TextInput label="Eyebrow" value={data.home.aboutEyebrow} onChange={(v) => updateHome({ aboutEyebrow: v })} />
             <TextInput label="Heading" value={data.home.aboutHeading} onChange={(v) => updateHome({ aboutHeading: v })} />
           </div>
           <TextInput label='"Read full bio" link label' value={data.home.aboutCtaLabel} onChange={(v) => updateHome({ aboutCtaLabel: v })} />
+          <p className="text-[#4A4540] text-xs">
+            The paragraph is the first Bio paragraph from the About tab.
+          </p>
         </div>
       </section>
     </div>
