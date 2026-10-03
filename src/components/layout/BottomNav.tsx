@@ -57,7 +57,7 @@ export function BottomNav() {
           flex items-center gap-0.5
           rounded-full
           border border-border/60
-          bg-background/70 backdrop-blur-xl
+          bg-background/95 md:bg-background/70 md:backdrop-blur-xl
           shadow-[0_10px_40px_-12px_rgba(0,0,0,0.35),0_2px_8px_-2px_rgba(0,0,0,0.15)]
           px-1 py-1 sm:px-1.5 sm:py-1.5
         "

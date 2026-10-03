@@ -129,17 +129,17 @@ export const PinterestCard = memo(function PinterestCard({
     <div
       className={
         horizontal
-          ? "group relative grid grid-cols-2 gap-x-[var(--card-grid-gap,2rem)]"
-          : "group relative"
+          ? "group relative grid grid-cols-2 gap-x-[var(--card-grid-gap,2rem)] [content-visibility:auto] [contain-intrinsic-size:auto_22rem]"
+          : "group relative [content-visibility:auto] [contain-intrinsic-size:auto_28rem]"
       }
     >
       {horizontal ? (
         <div aria-hidden="true" className="col-start-1 row-start-1 aspect-[4/5]" />
       ) : null}
-      {/* Dual-tone floating grain glow — high-feather gradient blur under card */}
+      {/* Dual-tone floating grain glow — desktop only; blur + mix-blend janks phones */}
       <div
         aria-hidden="true"
-        className="absolute -inset-10 rounded-[2.5rem] pointer-events-none transition-opacity duration-700 opacity-60 group-hover:opacity-100 group-focus-within:opacity-100"
+        className="hidden md:block absolute -inset-10 rounded-[2.5rem] pointer-events-none transition-opacity duration-700 opacity-60 group-hover:opacity-100 group-focus-within:opacity-100"
         style={{
           background: isDark
             ? `radial-gradient(ellipse 70% 65% at 30% 55%, rgba(${glowA},0.38) 0%, rgba(${glowA},0.12) 35%, transparent 70%),
@@ -153,7 +153,7 @@ export const PinterestCard = memo(function PinterestCard({
       />
       <div
         aria-hidden="true"
-        className="absolute -inset-6 rounded-[2rem] pointer-events-none mix-blend-overlay transition-opacity duration-700 opacity-25 group-hover:opacity-45 group-focus-within:opacity-45"
+        className="hidden md:block absolute -inset-6 rounded-[2rem] pointer-events-none mix-blend-overlay transition-opacity duration-700 opacity-25 group-hover:opacity-45 group-focus-within:opacity-45"
         style={{
           backgroundImage: `
             radial-gradient(ellipse 75% 65% at 50% 55%, rgba(255,255,255,0.55) 0%, transparent 70%),
@@ -193,6 +193,8 @@ export const PinterestCard = memo(function PinterestCard({
               src={project.coverImage}
               alt={project.title}
               loading="lazy"
+              sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+              maxWidth={1200}
               className={`w-full h-full object-cover transition-[transform,opacity] duration-700 group-hover:scale-[1.04] group-focus-within:scale-[1.04] ${
                 showVideo ? "opacity-0" : "opacity-100"
               }`}

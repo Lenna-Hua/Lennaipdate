@@ -166,8 +166,7 @@ function Lightbox({ src, caption, onClose }: { src: string; caption?: string; on
       role="dialog"
       aria-modal="true"
       aria-label={caption || "Image lightbox"}
-      className="fixed inset-0 z-[200] flex flex-col items-center justify-center"
-      style={{ background: "rgba(5,5,5,0.95)", backdropFilter: "blur(6px)" }}
+      className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-black/95 md:backdrop-blur-sm"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -226,6 +225,8 @@ function Lightbox({ src, caption, onClose }: { src: string; caption?: string; on
           <SafeImage
             src={src}
             alt={caption || ""}
+            maxWidth={2048}
+            sizes="100vw"
             style={{
               display: "block",
               maxWidth: "100%",
@@ -503,6 +504,8 @@ function ImageSection({
           alt={section.caption || section.title || ""}
           className="block max-w-full max-h-[40vh] md:max-h-[55vh] w-auto h-auto object-contain transition-transform duration-500 group-hover:scale-[1.015]"
           loading="lazy"
+          sizes="(max-width: 768px) 100vw, 90vw"
+          maxWidth={1600}
           fallbackAspect="16 / 5"
           onError={() => setErrored(true)}
         />
@@ -859,12 +862,14 @@ export default function CaseStudy() {
           }}
         >
           {(/\.(mp4|webm|ogg|mov)(\?|$)/i.test(project.coverImage) || project.coverImage.startsWith("data:video")) ? (
-            <video src={project.coverImage} autoPlay loop muted playsInline className="w-full h-full object-cover" />
+            <video src={project.coverImage} loop muted playsInline preload="metadata" className="w-full h-full object-cover" />
           ) : (
             <SafeImage
               src={project.coverImage}
               alt={project.title}
               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+              sizes="(max-width: 768px) 100vw, 90vw"
+              maxWidth={1600}
               onError={() => setCoverErrored(true)}
             />
           )}

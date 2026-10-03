@@ -173,6 +173,8 @@ function CommunityCard({ item }: { item: CommunityItem }) {
             loading="lazy"
             className="w-full h-full object-cover"
             fallbackAspect="4 / 3"
+            sizes="(max-width: 768px) 100vw, 50vw"
+            maxWidth={900}
           />
         </div>
       ) : null}
@@ -188,7 +190,7 @@ function CommunityCard({ item }: { item: CommunityItem }) {
               className="flex-shrink-0 w-12 h-12 rounded-md overflow-hidden border-2 transition-colors"
               style={{ borderColor: i === active ? BLUE : "transparent" }}
             >
-              <SafeImage src={src} alt="" className="w-full h-full object-cover" fallbackAspect="1 / 1" />
+              <SafeImage src={src} alt="" className="w-full h-full object-cover" fallbackAspect="1 / 1" sizes="48px" maxWidth={512} />
             </button>
           ))}
         </div>
@@ -266,6 +268,8 @@ export default function About() {
               alt="Lenna Hua Portrait"
               className="w-full h-full object-cover opacity-90"
               fallbackAspect="16 / 5"
+              sizes="(max-width: 768px) 100vw, 28rem"
+              maxWidth={900}
             />
           </motion.div>
         </div>

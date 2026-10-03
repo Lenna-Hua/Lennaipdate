@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { useLiteMotion } from "@/hooks/use-lite-motion";
 import { BRAND } from "@/lib/brand";
 
 const DOTS = [
@@ -21,11 +22,14 @@ const STARS = [
 const BLUE = BRAND.blue;
 
 export function FloatingDecor({ opacity = 1 }: { opacity?: number }) {
+  const lite = useLiteMotion();
+  if (lite) return null;
+
   return (
     <div
       aria-hidden="true"
       role="presentation"
-      className="absolute inset-0 pointer-events-none overflow-hidden"
+      className="absolute inset-0 pointer-events-none overflow-hidden hidden md:block"
       style={{ opacity }}
     >
       {/* Dashed SVG rings */}

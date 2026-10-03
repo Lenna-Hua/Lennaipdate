@@ -294,6 +294,39 @@ body::-webkit-scrollbar-button,
 html.light .grain-overlay { opacity: 0.012; }
 html.dark .grain-overlay { opacity: 0.035; }
 
+/* Phones: skip the full-viewport SVG turbulence overlay and pin the
+   Y2K wash to the viewport so we don't composite a page-tall blur layer. */
+@media (max-width: 767px), (hover: none) and (pointer: coarse) {
+  .grain-overlay {
+    display: none;
+  }
+
+  .y2k-backdrop {
+    position: fixed !important;
+    inset: 0;
+    width: 100vw;
+    height: 100dvh;
+    contain: paint;
+  }
+
+  .y2k-orb {
+    filter: blur(24px) !important;
+  }
+
+  .y2k-heavy,
+  .logo-marquee-track,
+  .rotating-live-text,
+  .entry-orb,
+  .studio-decor-swing,
+  .studio-decor-float {
+    animation: none !important;
+  }
+
+  .logo-marquee-track {
+    transform: none !important;
+  }
+}
+
 /* ── Entry Page Orbs ───────────────────────────────── */
 .entry-orb {
   position: absolute;
@@ -472,7 +505,12 @@ html:not(.dark) .card-glass {
 .rotating-live-text {
   transform-origin: center;
   animation: rotating-live-spin 12s linear infinite;
-  will-change: transform;
+}
+
+@media (min-width: 768px) and (hover: hover) {
+  .rotating-live-text {
+    will-change: transform;
+  }
 }
 
 /* Showcase carousel: let tilted polaroid frames overhang the track */

@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { BRAND } from "@/lib/brand";
+import { mediaSrcSet, sizedMediaSrc } from "@/lib/media-url";
 
 type SafeImageProps = React.ImgHTMLAttributes<HTMLImageElement> & {
   fallbackAspect?: string;
   fallbackCaption?: string;
+  /** Cap CDN downloads. Lightbox / hero can raise this. */
+  maxWidth?: number;
 };
 
 export function SafeImage({
@@ -14,6 +17,7 @@ export function SafeImage({
   style,
   fallbackAspect,
   fallbackCaption,
+  maxWidth = 1600,
   onError,
   ...rest
 }: SafeImageProps) {
@@ -35,10 +39,18 @@ export function SafeImage({
     );
   }
 
+  const sized = sizedMediaSrc(src, maxWidth);
+  const srcSet = rest.srcSet ?? mediaSrcSet(src, maxWidth);
+
   return (
     <img
       {...rest}
-      src={src}
+      src={sized}
+      srcSet={srcSet}
+      sizes={
+        rest.sizes ??
+        "(max-width: 768px) 100vw, (max-width: 1280px) 70vw, 1200px"
+      }
       alt={alt}
       className={className}
       style={style}

@@ -58,8 +58,7 @@ function Lightbox({
 
   return (
     <motion.div
-      className="fixed inset-0 z-[200] flex flex-col items-center justify-center"
-      style={{ background: "rgba(5,5,5,0.95)", backdropFilter: "blur(6px)" }}
+      className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-black/95 md:backdrop-blur-sm"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -84,6 +83,8 @@ function Lightbox({
         <SafeImage
           src={src}
           alt={caption || ""}
+          maxWidth={2048}
+          sizes="100vw"
           style={{
             display: "block",
             maxWidth: "100%",
@@ -268,6 +269,8 @@ export default function StudioDetail() {
           alt={item.title}
           className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-[1.02]"
           fallbackAspect="16 / 5"
+          sizes="(max-width: 768px) 100vw, 90vw"
+          maxWidth={1600}
           onError={() => setCoverErrored(true)}
         />
       </motion.div>
@@ -301,6 +304,8 @@ export default function StudioDetail() {
                   loading="lazy"
                   className="w-full h-auto object-cover hover:scale-[1.02] transition-transform duration-500"
                   fallbackAspect="16 / 5"
+                  sizes="(max-width: 768px) 100vw, 50vw"
+                  maxWidth={1400}
                   onError={() => setErroredImages((prev) => ({ ...prev, [i]: true }))}
                 />
               </motion.div>

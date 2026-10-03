@@ -66,7 +66,7 @@ export function Navbar() {
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-50 px-6 md:px-12 lg:px-16 py-4 md:py-6 flex justify-between items-center backdrop-blur-sm bg-background/85 border-b border-[#ffffff06]">
+      <header className="fixed top-0 left-0 right-0 z-50 px-6 md:px-12 lg:px-16 py-4 md:py-6 flex justify-between items-center bg-background/95 md:bg-background/85 md:backdrop-blur-sm border-b border-[#ffffff06]">
 
         {/* Logo */}
         <Link href="/" className="relative z-50 flex items-center">

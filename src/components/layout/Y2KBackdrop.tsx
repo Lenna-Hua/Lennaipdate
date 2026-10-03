@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion } from "framer-motion";
 import { useTheme } from "@/context/ThemeContext";
+import { useLiteMotion } from "@/hooks/use-lite-motion";
 import { BRAND } from "@/lib/brand";
 
 type Orb = {
@@ -258,7 +259,7 @@ function ShapeSVG({ shape, size, color }: { shape: SparkleShape; size: number; c
 }
 
 export function Y2KBackdrop() {
-  const reduce = useReducedMotion();
+  const lite = useLiteMotion();
   const { theme } = useTheme();
   const isDark = theme === "dark";
 
@@ -278,8 +279,9 @@ export function Y2KBackdrop() {
      the existing framer-motion idle animation. */
   const orbWrapRefs = useRef<(HTMLDivElement | null)[]>([]);
   const cursor = useRef({ tx: 0, ty: 0, x: 0, y: 0 });
+  const orbs = lite ? ORBS.slice(0, 3) : ORBS;
   useEffect(() => {
-    if (reduce) return;
+    if (lite) return;
     const onMove = (e: MouseEvent | PointerEvent) => {
       // Normalised −0.5..+0.5 around viewport centre
       cursor.current.tx = e.clientX / window.innerWidth - 0.5;
@@ -310,46 +312,48 @@ export function Y2KBackdrop() {
       window.removeEventListener("pointermove", onMove);
       cancelAnimationFrame(raf);
     };
-  }, [reduce]);
+  }, [lite]);
 
 
   return (
     <div
       aria-hidden="true"
-      className="pointer-events-none absolute inset-0 overflow-hidden"
+      className="y2k-backdrop pointer-events-none absolute inset-0 overflow-hidden"
       style={{ zIndex: 0 }}
     >
       {/* Soft gradient orbs — bigger sweeps. Outer wrapper holds the
           cursor-parallax transform; inner motion.div keeps the existing
           framer idle drift so the two motions compose. */}
-      {ORBS.map((o, i) => (
+      {orbs.map((o, i) => (
         <div
           key={`orb-${i}`}
           ref={(el) => {
             orbWrapRefs.current[i] = el;
           }}
+          className="y2k-orb-wrap"
           style={{
             position: "absolute",
             top: o.top,
             left: o.left,
-            width: o.size,
-            height: o.size,
-            willChange: "transform",
-            transition: "transform 0.05s linear",
+            width: lite ? Math.min(o.size * 0.52, 260) : o.size,
+            height: lite ? Math.min(o.size * 0.52, 260) : o.size,
+            willChange: lite ? undefined : "transform",
+            transition: lite ? undefined : "transform 0.05s linear",
           }}
         >
           <motion.div
+            className="y2k-orb"
             style={{
               position: "absolute",
               inset: 0,
               borderRadius: "50%",
               background: `radial-gradient(circle at 30% 30%, ${o.from} 0%, ${o.to} 55%, transparent 75%)`,
-              filter: `blur(${o.blur}px)`,
-              opacity: orbOpacity,
+              filter: `blur(${lite ? Math.min(o.blur * 0.32, 28) : o.blur}px)`,
+              opacity: lite ? orbOpacity * 0.85 : orbOpacity,
               mixBlendMode: orbBlend,
             }}
             animate={
-              reduce
+              lite
                 ? undefined
                 : {
                     x: [0, o.drift[0], o.drift[0] * 0.4, 0],
@@ -367,10 +371,11 @@ export function Y2KBackdrop() {
         </div>
       ))}
 
-      {/* Tilted gradient tiles — bobbing & rotating */}
-      {TILES.map((t, i) => (
+      {/* Tilted gradient tiles — bobbing & rotating (desktop only) */}
+      {!lite && TILES.map((t, i) => (
         <motion.div
           key={`tile-${i}`}
+          className="y2k-heavy"
           style={{
             position: "absolute",
             top: t.top,
@@ -383,14 +388,10 @@ export function Y2KBackdrop() {
             backdropFilter: "blur(2px)",
             boxShadow: `0 8px 32px ${t.color}33`,
           }}
-          animate={
-            reduce
-              ? { rotate: t.rotate }
-              : {
-                  y: [0, -t.drift, t.drift * 0.5, 0],
-                  x: [0, t.drift * 0.6, -t.drift * 0.4, 0],
-                  rotate: [t.rotate, t.rotate + 18, t.rotate - 8, t.rotate],
-                }
+          animate={{
+            y: [0, -t.drift, t.drift * 0.5, 0],
+            x: [0, t.drift * 0.6, -t.drift * 0.4, 0],
+            rotate: [t.rotate, t.rotate + 18, t.rotate - 8, t.rotate],
           }
           transition={{
             duration: t.duration,
@@ -401,10 +402,11 @@ export function Y2KBackdrop() {
         />
       ))}
 
-      {/* Larger Y2K floaters drifting on figure-8 paths */}
-      {FLOATERS.map((f, i) => (
+      {/* Larger Y2K floaters drifting on figure-8 paths (desktop only) */}
+      {!lite && FLOATERS.map((f, i) => (
         <motion.div
           key={`floater-${i}`}
+          className="y2k-heavy"
           style={{
             position: "absolute",
             top: f.top,
@@ -412,15 +414,11 @@ export function Y2KBackdrop() {
             opacity: f.opacity,
             filter: "drop-shadow(0 4px 14px rgba(0,0,0,0.12))",
           }}
-          animate={
-            reduce
-              ? undefined
-              : {
-                  x: [0, f.driftX, f.driftX * -0.6, f.driftX * 0.4, 0],
-                  y: [0, f.driftY, f.driftY * 0.7, f.driftY * -0.4, 0],
-                  rotate: [0, f.rotateBy, f.rotateBy * 0.5, f.rotateBy * 1.4, 0],
-                  scale: [1, 1.08, 0.92, 1.04, 1],
-                }
+          animate={{
+            x: [0, f.driftX, f.driftX * -0.6, f.driftX * 0.4, 0],
+            y: [0, f.driftY, f.driftY * 0.7, f.driftY * -0.4, 0],
+            rotate: [0, f.rotateBy, f.rotateBy * 0.5, f.rotateBy * 1.4, 0],
+            scale: [1, 1.08, 0.92, 1.04, 1],
           }
           transition={{
             duration: f.duration,
@@ -433,23 +431,20 @@ export function Y2KBackdrop() {
         </motion.div>
       ))}
 
-      {/* Sparkles, asterisks, rings — twinkle + spin */}
-      {SPARKLES.map((s, i) => (
+      {/* Sparkles, asterisks, rings — twinkle + spin (desktop only) */}
+      {!lite && SPARKLES.map((s, i) => (
         <motion.div
           key={`star-${i}`}
+          className="y2k-heavy"
           style={{
             position: "absolute",
             top: s.top,
             left: s.left,
           }}
-          animate={
-            reduce
-              ? { rotate: s.rotate, opacity: 0.55 }
-              : {
-                  scale: [0.7, 1.25, 0.85, 1.1, 0.7],
-                  rotate: [s.rotate, s.rotate + 360],
-                  opacity: [0.25, 0.85, 0.4, 0.7, 0.25],
-                }
+          animate={{
+            scale: [0.7, 1.25, 0.85, 1.1, 0.7],
+            rotate: [s.rotate, s.rotate + 360],
+            opacity: [0.25, 0.85, 0.4, 0.7, 0.25],
           }
           transition={{
             duration: s.duration,
@@ -462,19 +457,22 @@ export function Y2KBackdrop() {
         </motion.div>
       ))}
 
-      {/* Drifting grain layer on top of decorations */}
-      <motion.div
-        style={{
-          position: "absolute",
-          inset: -40,
-          backgroundImage:
-            "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.55 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>\")",
-          opacity: 0.07,
-          mixBlendMode: "multiply",
-        }}
-        animate={reduce ? undefined : { x: [0, 30, -20, 0], y: [0, -20, 25, 0] }}
-        transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
-      />
+      {/* Drifting grain layer on top of decorations (desktop only) */}
+      {!lite && (
+        <motion.div
+          className="y2k-heavy"
+          style={{
+            position: "absolute",
+            inset: -40,
+            backgroundImage:
+              "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.55 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>\")",
+            opacity: 0.07,
+            mixBlendMode: "multiply",
+          }}
+          animate={{ x: [0, 30, -20, 0], y: [0, -20, 25, 0] }}
+          transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
+        />
+      )}
     </div>
   );
 }
