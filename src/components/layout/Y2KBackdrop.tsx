@@ -392,7 +392,7 @@ export function Y2KBackdrop() {
             y: [0, -t.drift, t.drift * 0.5, 0],
             x: [0, t.drift * 0.6, -t.drift * 0.4, 0],
             rotate: [t.rotate, t.rotate + 18, t.rotate - 8, t.rotate],
-          }
+          }}
           transition={{
             duration: t.duration,
             delay: t.delay,
@@ -419,7 +419,7 @@ export function Y2KBackdrop() {
             y: [0, f.driftY, f.driftY * 0.7, f.driftY * -0.4, 0],
             rotate: [0, f.rotateBy, f.rotateBy * 0.5, f.rotateBy * 1.4, 0],
             scale: [1, 1.08, 0.92, 1.04, 1],
-          }
+          }}
           transition={{
             duration: f.duration,
             delay: f.delay,
@@ -445,7 +445,7 @@ export function Y2KBackdrop() {
             scale: [0.7, 1.25, 0.85, 1.1, 0.7],
             rotate: [s.rotate, s.rotate + 360],
             opacity: [0.25, 0.85, 0.4, 0.7, 0.25],
-          }
+          }}
           transition={{
             duration: s.duration,
             delay: s.delay,
