@@ -294,14 +294,18 @@ function isSafeCtaHref(href: string): boolean {
 function MediaCta({ href, linkLabel }: { href?: string; linkLabel?: string }) {
   const raw = href?.trim() ?? "";
   if (!raw || !isSafeCtaHref(raw)) return null;
+  const label = (linkLabel?.trim() || "Try the product").replace(/\s*[→↗›»]+\s*$/, "");
   return (
     <a
       href={raw}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex items-center gap-2 mt-1 text-primary text-xs uppercase tracking-[0.25em] font-sans font-bold w-max hover:opacity-80 transition-opacity"
+      className="group inline-flex items-center justify-center gap-3 mt-2 self-start px-7 py-3.5 rounded-full border-2 border-primary bg-primary text-primary-foreground font-sans text-sm md:text-base font-bold uppercase tracking-[0.18em] shadow-md shadow-primary/20 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/30 active:translate-y-0 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     >
-      {linkLabel?.trim() || "Click here to try the product →"}
+      {label}
+      <span aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-1">
+        →
+      </span>
     </a>
   );
 }
