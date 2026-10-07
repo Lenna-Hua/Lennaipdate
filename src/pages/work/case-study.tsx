@@ -7,6 +7,8 @@ import contactSeed from "@/data/contact.json";
 import { useContent } from "@/lib/use-content";
 import { BRAND_EASE } from "@/lib/brand";
 import { SafeImage } from "@/components/SafeImage";
+import { DeviceMockup, isDeviceFrame } from "@/components/DeviceMockup";
+import type { DeviceFrame } from "@/components/DeviceMockup";
 import { RotatingLiveBadge } from "@/components/RotatingLiveBadge";
 
 function ClampedText({ children, lines = 5 }: { children: React.ReactNode; lines?: number }) {
@@ -47,7 +49,7 @@ function ClampedText({ children, lines = 5 }: { children: React.ReactNode; lines
   );
 }
 
-type SectionType = "text" | "image" | "video" | "problem-solution" | "embed";
+type SectionType = "text" | "image" | "video" | "problem-solution" | "embed" | "mockup";
 
 interface ContentSection {
   id: string;
@@ -78,6 +80,8 @@ interface ContentSection {
   height?: number;
   transparent?: boolean;
   loop?: boolean;
+  /** Mockup: device chrome around the screenshot. */
+  deviceFrame?: DeviceFrame;
 }
 
 interface Project {
@@ -363,10 +367,73 @@ function SectionBlock({
   if (section.type === "image" || section.type === "video") {
     return <ImageSection section={section} onImageClick={onImageClick} />;
   }
+  if (section.type === "mockup") {
+    return <MockupSection section={section} onImageClick={onImageClick} />;
+  }
   if (section.type === "embed") {
     return <EmbedSection section={section} />;
   }
   return <SectionBlockText section={section} expanded={expanded} />;
+}
+
+function MockupSection({
+  section,
+  onImageClick,
+}: {
+  section: ContentSection;
+  onImageClick: (src: string, caption?: string) => void;
+}) {
+  const [errored, setErrored] = useState(false);
+  const frame = isDeviceFrame(section.deviceFrame) ? section.deviceFrame : "phone";
+  const clickable = !errored && !!section.src;
+  const maxWidth =
+    frame === "phone" ? 320 : frame === "tablet" ? 440 : frame === "laptop" ? 760 : 840;
+
+  return (
+    <motion.div
+      id={`cs-${section.id}`}
+      className="flex flex-col gap-4"
+      initial={{ opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.65, ease: BRAND_EASE }}
+    >
+      {section.title && (
+        <h2 className="font-display font-black uppercase text-xl md:text-2xl text-primary leading-tight tracking-tight">
+          {section.title}
+        </h2>
+      )}
+      <div
+        className={`w-full flex justify-center py-2 ${clickable ? "cursor-zoom-in" : ""}`}
+        onClick={() => clickable && onImageClick(section.src!, section.caption)}
+        role={clickable ? "button" : undefined}
+        tabIndex={clickable ? 0 : undefined}
+        aria-label={clickable ? `Expand screenshot: ${section.caption || section.title || ""}` : undefined}
+        onKeyDown={(e) =>
+          clickable && e.key === "Enter" && onImageClick(section.src!, section.caption)
+        }
+      >
+        <DeviceMockup frame={frame} maxWidth={maxWidth}>
+          <SafeImage
+            src={section.src}
+            alt={section.caption || section.title || ""}
+            className="h-full w-full object-cover"
+            loading="lazy"
+            fallbackAspect="9 / 16"
+            onError={() => setErrored(true)}
+          />
+        </DeviceMockup>
+      </div>
+      {section.caption && (
+        <p className="text-sm font-sans text-muted-foreground italic text-center">
+          {section.caption}
+        </p>
+      )}
+      <div className="flex justify-center">
+        <MediaCta href={section.href} linkLabel={section.linkLabel} />
+      </div>
+    </motion.div>
+  );
 }
 
 function pickExpanded<T>(expanded: boolean, skim: T | undefined, detail: T | undefined): T | undefined {
