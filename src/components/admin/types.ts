@@ -8,7 +8,16 @@ export type {
   GalleryImageEntry,
 } from "@/lib/gallery-image";
 
-export type SectionType = "text" | "image" | "video" | "problem-solution" | "embed";
+export type SectionType =
+  | "text"
+  | "image"
+  | "video"
+  | "problem-solution"
+  | "embed"
+  | "mockup";
+
+/** Device chrome for mockup sections (phone / tablet / laptop / browser). */
+export type DeviceFrame = "phone" | "tablet" | "laptop" | "browser";
 
 /** Skim vs expanded: "always" shows by default; "detail" only after See more. */
 export type SectionVisibility = "always" | "detail";
@@ -45,6 +54,8 @@ export type Section = {
   transparent?: boolean;
   /** Video: autoplay muted on repeat like a GIF instead of a player with controls. */
   loop?: boolean;
+  /** Mockup section: which device chrome wraps the screenshot. */
+  deviceFrame?: DeviceFrame;
 };
 
 /**

@@ -2,8 +2,10 @@
  * ProjectEditor — edit project details, sections, cover images, tags, etc.
  * Includes SectionsEditor for managing text/image/problem-solution blocks.
  */
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { SafeImage } from "@/components/SafeImage";
+import { DeviceMockup, DEVICE_FRAMES, isDeviceFrame } from "@/components/DeviceMockup";
+import type { DeviceFrame } from "@/components/DeviceMockup";
 import { AdminSortableList } from "@/pages/admin-sortable";
 import type { Project, Section, SectionType } from "./types";
 import {
@@ -27,7 +29,29 @@ const SECTION_TYPES = new Set<SectionType>([
   "video",
   "problem-solution",
   "embed",
+  "mockup",
 ]);
+
+const ADDABLE_SECTION_TYPES: SectionType[] = [
+  "text",
+  "image",
+  "video",
+  "problem-solution",
+  "embed",
+  "mockup",
+];
+
+function sectionOutlineLabel(sec: Section, index: number): string {
+  const title = sec.title?.trim();
+  if (title) return title;
+  if (sec.type === "mockup") {
+    const frame = sec.deviceFrame ?? "phone";
+    return `Mockup · ${frame}`;
+  }
+  if (sec.type === "problem-solution") return "Problem / Solution";
+  if (sec.type === "image" && sec.caption?.trim()) return sec.caption.trim();
+  return `${sec.type} ${index + 1}`;
+}
 
 /** Normalize a sections array from JSON upload (full project or bare array). */
 function normalizeSections(raw: unknown): Section[] | undefined {
@@ -311,250 +335,405 @@ function SectionsEditor({
   sections: Section[];
   onChange: (s: Section[]) => void;
 }) {
-  const addSection = (type: SectionType) => {
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const blockRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  const addSection = (type: SectionType, deviceFrame?: DeviceFrame) => {
     const id = String(Date.now());
     let newSec: Section;
     if (type === "text") newSec = { id, type, visibility: "always", title: "", summary: "", body: "" };
     else if (type === "image") newSec = { id, type, visibility: "always", src: "", caption: "", href: "", linkLabel: "" };
     else if (type === "video") newSec = { id, type, visibility: "always", src: "", caption: "", title: "", href: "", linkLabel: "" };
     else if (type === "embed") newSec = { id, type, visibility: "always", src: "", title: "", caption: "", height: 500 };
-    else newSec = { id, type, visibility: "always", problem: "", solution: "" };
+    else if (type === "mockup") {
+      newSec = {
+        id,
+        type,
+        visibility: "always",
+        title: "",
+        src: "",
+        caption: "",
+        deviceFrame: deviceFrame ?? "phone",
+        href: "",
+        linkLabel: "",
+      };
+    } else newSec = { id, type, visibility: "always", problem: "", solution: "" };
     onChange([newSec, ...sections]);
+    setActiveId(id);
+    requestAnimationFrame(() => {
+      blockRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   };
 
   const update = (idx: number, patch: Partial<Section>) => {
     onChange(sections.map((s, i) => (i === idx ? { ...s, ...patch } : s)));
   };
 
-  const remove = (idx: number) => onChange(sections.filter((_, i) => i !== idx));
+  const remove = (idx: number) => {
+    const removedId = sections[idx]?.id;
+    onChange(sections.filter((_, i) => i !== idx));
+    if (removedId && activeId === removedId) setActiveId(null);
+  };
 
-  const move = (idx: number, dir: -1 | 1) => {
-    const arr = [...sections];
-    const to = idx + dir;
-    if (to < 0 || to >= arr.length) return;
-    [arr[idx], arr[to]] = [arr[to], arr[idx]];
-    onChange(arr);
+  const scrollToSection = (id: string) => {
+    setActiveId(id);
+    blockRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const detailCount = sections.filter((s) => s.visibility === "detail").length;
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex gap-2 flex-wrap">
-        {(["text", "image", "video", "problem-solution", "embed"] as SectionType[]).map((t) => (
+    <div className="flex flex-col gap-4">
+      <div className="flex gap-2 flex-wrap items-center">
+        {ADDABLE_SECTION_TYPES.map((t) => (
           <button
             key={t}
             type="button"
             onClick={() => addSection(t)}
-            className="text-sm border border-[#C8A96E] text-[#C8A96E] px-3 py-1.5 hover:bg-[#C8A96E] hover:text-[#0A0908] transition-colors uppercase tracking-widest"
+            className={`text-sm border px-3 py-1.5 transition-colors uppercase tracking-widest ${
+              t === "mockup"
+                ? "border-[#C8A96E] bg-[#C8A96E]/15 text-[#C8A96E] hover:bg-[#C8A96E] hover:text-[#0A0908]"
+                : "border-[#C8A96E] text-[#C8A96E] hover:bg-[#C8A96E] hover:text-[#0A0908]"
+            }`}
           >
-            + {t}
+            + {t === "mockup" ? "mockup (fast)" : t}
           </button>
         ))}
       </div>
-      <p className="text-[#4A4540] text-xs leading-relaxed -mt-2">
-        New blocks land at the top — reorder with ↑ ↓. Mark blocks “See more only” for the expand button.
-        Upload JSON (full project or a bare sections array) to fill these fields automatically.
+      <div className="flex gap-1.5 flex-wrap -mt-1">
+        <span className="text-[#4A4540] text-[10px] uppercase tracking-widest self-center mr-1">
+          Quick mockup
+        </span>
+        {DEVICE_FRAMES.map((f) => (
+          <button
+            key={f.id}
+            type="button"
+            onClick={() => addSection("mockup", f.id)}
+            className="text-[10px] uppercase tracking-widest px-2 py-1 border border-[#3A3530] text-[#8A8278] hover:border-[#C8A96E] hover:text-[#C8A96E] transition-colors"
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+      <p className="text-[#4A4540] text-xs leading-relaxed">
+        Drag sections in the left outline to reorder. Click a name to jump. Mark blocks “See more only” for the expand button.
         {detailCount > 0 ? ` ${detailCount} block(s) hidden until See more.` : ""}
       </p>
 
-      {sections.length === 0 && (
+      {sections.length === 0 ? (
         <p className="text-[#4A4540] text-sm italic">
-          No sections yet. Add text, image, video, problem-solution, or embed — or Upload JSON / TXT.
+          No sections yet. Add text, image, video, mockup, problem-solution, or embed — or Upload JSON / TXT.
         </p>
-      )}
+      ) : (
+        <div className="flex gap-4 items-start min-h-[320px]">
+          {/* Left outline — drag to reorder */}
+          <aside className="w-44 flex-shrink-0 sticky top-2 max-h-[70vh] overflow-y-auto flex flex-col gap-1 border border-[#272421] p-2 bg-[#0A0908]/60">
+            <p className="text-[10px] uppercase tracking-widest text-[#8A8278] px-1 mb-1">
+              Outline · drag
+            </p>
+            <AdminSortableList
+              items={sections}
+              onReorder={onChange}
+              renderItem={(sec, index, dragHandle) => {
+                const active = sec.id === activeId;
+                return (
+                  <div className="flex items-center gap-0.5">
+                    {dragHandle}
+                    <button
+                      type="button"
+                      onClick={() => scrollToSection(sec.id)}
+                      className={`flex-1 min-w-0 text-left text-[11px] px-1.5 py-1.5 truncate transition-colors ${
+                        active
+                          ? "bg-[#C8A96E] text-[#0A0908]"
+                          : "text-[#8A8278] hover:text-[#F2EDE5] border border-transparent hover:border-[#3A3530]"
+                      }`}
+                      title={sectionOutlineLabel(sec, index)}
+                    >
+                      <span className="block truncate font-medium leading-tight">
+                        {sectionOutlineLabel(sec, index)}
+                      </span>
+                      <span
+                        className={`block text-[9px] uppercase tracking-widest truncate ${
+                          active ? "opacity-70" : "text-[#4A4540]"
+                        }`}
+                      >
+                        {sec.type}
+                        {sec.visibility === "detail" ? " · more" : ""}
+                      </span>
+                    </button>
+                  </div>
+                );
+              }}
+            />
+          </aside>
 
-      {sections.map((sec, idx) => (
-        <div key={sec.id} className="border border-[#272421] p-4 flex flex-col gap-3">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <span className="text-[#C8A96E] text-sm uppercase tracking-widest">
-              {sec.type}
-              {sec.visibility === "detail" ? (
-                <span className="ml-2 text-[10px] text-[#8A8278] normal-case tracking-normal">· see more</span>
-              ) : null}
-            </span>
-            <div className="flex items-center gap-3">
-              <button type="button" onClick={() => move(idx, -1)} className="text-[#4A4540] hover:text-[#F2EDE5] text-sm">↑</button>
-              <button type="button" onClick={() => move(idx, 1)} className="text-[#4A4540] hover:text-[#F2EDE5] text-sm">↓</button>
-              <button type="button" onClick={() => remove(idx)} className="text-[#4A4540] hover:text-red-400 text-sm">Remove</button>
-            </div>
-          </div>
-
-          <VisibilityToggle
-            value={sec.visibility === "detail" ? "detail" : "always"}
-            onChange={(v) => update(idx, { visibility: v })}
-          />
-
-          {sec.type === "text" && (
-            <>
-              <TextInput label="Section Title (left)" value={sec.title ?? ""} onChange={(v) => update(idx, { title: v })} />
-              <TextInput label="Summary line (right)" value={sec.summary ?? ""} onChange={(v) => update(idx, { summary: v })} />
-              <TextareaInput label="Body text (below)" value={sec.body ?? ""} onChange={(v) => update(idx, { body: v })} rows={4} />
-              <TextareaInput
-                label="Bullets (one per line, optional)"
-                value={(sec.bullets ?? []).join("\n")}
-                onChange={(v) =>
-                  update(idx, {
-                    bullets: v.split("\n").map((b) => b.trim()).filter(Boolean),
-                  })
-                }
-                rows={3}
-              />
-              <div className="border-t border-[#272421] pt-3 flex flex-col gap-3">
-                <p className="text-[#8A8278] text-[10px] uppercase tracking-widest">
-                  Expanded copy (optional — swaps in when See more is on)
-                </p>
-                <TextInput label="Title when expanded" value={sec.titleDetail ?? ""} onChange={(v) => update(idx, { titleDetail: v })} />
-                <TextInput label="Summary when expanded" value={sec.summaryDetail ?? ""} onChange={(v) => update(idx, { summaryDetail: v })} />
-                <TextareaInput label="Body when expanded" value={sec.bodyDetail ?? ""} onChange={(v) => update(idx, { bodyDetail: v })} rows={4} />
-                <TextareaInput
-                  label="Bullets when expanded (one per line)"
-                  value={(sec.bulletsDetail ?? []).join("\n")}
-                  onChange={(v) =>
-                    update(idx, {
-                      bulletsDetail: v.split("\n").map((b) => b.trim()).filter(Boolean),
-                    })
-                  }
-                  rows={3}
-                />
-              </div>
-            </>
-          )}
-
-          {sec.type === "image" && (
-            <>
-              <TextInput label="Title (optional)" value={sec.title ?? ""} onChange={(v) => update(idx, { title: v })} />
-              <TextInput label="Image URL" value={sec.src ?? ""} onChange={(v) => update(idx, { src: v })} />
-              <div className="flex items-center gap-2 flex-wrap">
-                <SectionImageUploader
-                  accept="image/*,.gif,.png,.jpg,.jpeg,.webp"
-                  label="↑ Upload image"
-                  onPicked={(url) => update(idx, { src: url })}
-                />
-                <PickFromLibraryButton
-                  type="image"
-                  onPick={(url) => update(idx, { src: url })}
-                />
-              </div>
-              <TextInput label="Caption (optional)" value={sec.caption ?? ""} onChange={(v) => update(idx, { caption: v })} />
-              <MediaLinkFields
-                href={sec.href}
-                linkLabel={sec.linkLabel}
-                onChange={(patch) => update(idx, patch)}
-              />
-              <CheckboxInput
-                label="Transparent background"
-                checked={!!sec.transparent}
-                onChange={(v) => update(idx, { transparent: v })}
-              />
-              <p className="text-[#4A4540] text-xs -mt-1">
-                For PNG, WebP or GIF files with see-through areas — removes the card behind the image.
-              </p>
-              {sec.src && (
-                <div className="mt-1 self-start" style={sec.transparent ? CHECKERBOARD : undefined}>
-                  <SafeImage
-                    src={sec.src}
-                    alt=""
-                    className={`h-24 ${sec.transparent ? "object-contain" : "object-cover opacity-60"}`}
-                  />
-                </div>
-              )}
-            </>
-          )}
-
-          {sec.type === "video" && (
-            <>
-              <TextInput label="Title (optional)" value={sec.title ?? ""} onChange={(v) => update(idx, { title: v })} />
-              <TextInput label="Video URL (.mp4 / .webm)" value={sec.src ?? ""} onChange={(v) => update(idx, { src: v })} />
-              <div className="flex items-center gap-2 flex-wrap">
-                <SectionImageUploader
-                  accept="video/mp4,video/webm,.mp4,.webm"
-                  label="↑ Upload video"
-                  onPicked={(url) => update(idx, { src: url })}
-                />
-                <PickFromLibraryButton
-                  type="video"
-                  onPick={(url) => update(idx, { src: url })}
-                />
-              </div>
-              <TextInput label="Caption (optional)" value={sec.caption ?? ""} onChange={(v) => update(idx, { caption: v })} />
-              <MediaLinkFields
-                href={sec.href}
-                linkLabel={sec.linkLabel}
-                onChange={(patch) => update(idx, patch)}
-              />
-              <CheckboxInput
-                label="Loop (autoplay muted, like a GIF)"
-                checked={!!sec.loop}
-                onChange={(v) => update(idx, { loop: v })}
-              />
-              <CheckboxInput
-                label="Transparent background"
-                checked={!!sec.transparent}
-                onChange={(v) => update(idx, { transparent: v })}
-              />
-              <p className="text-[#4A4540] text-xs leading-relaxed -mt-1">
-                MP4 can’t store transparency — export a <span className="text-[#8A8278]">WebM (VP9 with alpha)</span> for
-                see-through video. Safari may show WebM transparency as a solid background.
-              </p>
-              {sec.src && (
-                <video
-                  src={sec.src}
-                  muted
-                  playsInline
-                  loop={!!sec.loop}
-                  autoPlay={!!sec.loop}
-                  className={`h-24 mt-1 w-full ${sec.transparent ? "object-contain" : "object-cover opacity-60 bg-[#0A0908]"}`}
-                  style={sec.transparent ? CHECKERBOARD : undefined}
-                />
-              )}
-              <p className="text-[#4A4540] text-xs">
-                {sec.loop
-                  ? "Loops silently on the case study; visitors can click to pause."
-                  : "Plays with controls on the case study (no autoplay) so the page stays stable."}
-              </p>
-            </>
-          )}
-
-          {sec.type === "problem-solution" && (
-            <>
-              <TextInput label="Title (optional)" value={sec.title ?? ""} onChange={(v) => update(idx, { title: v })} />
-              <TextareaInput label="Problem" value={sec.problem ?? ""} onChange={(v) => update(idx, { problem: v })} rows={3} />
-              <TextareaInput label="Solution" value={sec.solution ?? ""} onChange={(v) => update(idx, { solution: v })} rows={3} />
-              <div className="border-t border-[#272421] pt-3 flex flex-col gap-3">
-                <p className="text-[#8A8278] text-[10px] uppercase tracking-widest">
-                  Expanded copy (optional — swaps in when See more is on)
-                </p>
-                <TextareaInput label="Problem when expanded" value={sec.problemDetail ?? ""} onChange={(v) => update(idx, { problemDetail: v })} rows={3} />
-                <TextareaInput label="Solution when expanded" value={sec.solutionDetail ?? ""} onChange={(v) => update(idx, { solutionDetail: v })} rows={3} />
-              </div>
-            </>
-          )}
-
-          {sec.type === "embed" && (
-            <>
-              <TextInput label="Title (optional)" value={sec.title ?? ""} onChange={(v) => update(idx, { title: v })} />
-              <TextInput
-                label="Embed URL (online.pubhtml5.com only)"
-                value={sec.src ?? ""}
-                onChange={(v) => update(idx, { src: v })}
-              />
-              <TextInput
-                label="Height (px)"
-                value={String(sec.height ?? 500)}
-                onChange={(v) => {
-                  const n = parseInt(v, 10);
-                  update(idx, { height: Number.isFinite(n) && n > 0 ? n : 500 });
+          {/* Section editors */}
+          <div className="flex-1 min-w-0 flex flex-col gap-5">
+            {sections.map((sec, idx) => (
+              <div
+                key={sec.id}
+                ref={(el) => {
+                  blockRefs.current[sec.id] = el;
                 }}
-              />
-              <TextInput label="Caption (optional)" value={sec.caption ?? ""} onChange={(v) => update(idx, { caption: v })} />
-              <p className="text-[#4A4540] text-xs leading-relaxed">
-                PubHTML5 viewer URLs only. For live products, use Image/Video + Product CTA link instead of an iframe.
-              </p>
-            </>
-          )}
+                className={`border p-4 flex flex-col gap-3 scroll-mt-4 ${
+                  sec.id === activeId ? "border-[#C8A96E]" : "border-[#272421]"
+                }`}
+                onFocusCapture={() => setActiveId(sec.id)}
+                onClick={() => setActiveId(sec.id)}
+              >
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <span className="text-[#C8A96E] text-sm uppercase tracking-widest">
+                    {sec.type}
+                    {sec.visibility === "detail" ? (
+                      <span className="ml-2 text-[10px] text-[#8A8278] normal-case tracking-normal">· see more</span>
+                    ) : null}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => remove(idx)}
+                    className="text-[#4A4540] hover:text-red-400 text-sm"
+                  >
+                    Remove
+                  </button>
+                </div>
+
+                <VisibilityToggle
+                  value={sec.visibility === "detail" ? "detail" : "always"}
+                  onChange={(v) => update(idx, { visibility: v })}
+                />
+
+                {sec.type === "text" && (
+                  <>
+                    <TextInput label="Section Title (left)" value={sec.title ?? ""} onChange={(v) => update(idx, { title: v })} />
+                    <TextInput label="Summary line (right)" value={sec.summary ?? ""} onChange={(v) => update(idx, { summary: v })} />
+                    <TextareaInput label="Body text (below)" value={sec.body ?? ""} onChange={(v) => update(idx, { body: v })} rows={4} />
+                    <TextareaInput
+                      label="Bullets (one per line, optional)"
+                      value={(sec.bullets ?? []).join("\n")}
+                      onChange={(v) =>
+                        update(idx, {
+                          bullets: v.split("\n").map((b) => b.trim()).filter(Boolean),
+                        })
+                      }
+                      rows={3}
+                    />
+                    <div className="border-t border-[#272421] pt-3 flex flex-col gap-3">
+                      <p className="text-[#8A8278] text-[10px] uppercase tracking-widest">
+                        Expanded copy (optional — swaps in when See more is on)
+                      </p>
+                      <TextInput label="Title when expanded" value={sec.titleDetail ?? ""} onChange={(v) => update(idx, { titleDetail: v })} />
+                      <TextInput label="Summary when expanded" value={sec.summaryDetail ?? ""} onChange={(v) => update(idx, { summaryDetail: v })} />
+                      <TextareaInput label="Body when expanded" value={sec.bodyDetail ?? ""} onChange={(v) => update(idx, { bodyDetail: v })} rows={4} />
+                      <TextareaInput
+                        label="Bullets when expanded (one per line)"
+                        value={(sec.bulletsDetail ?? []).join("\n")}
+                        onChange={(v) =>
+                          update(idx, {
+                            bulletsDetail: v.split("\n").map((b) => b.trim()).filter(Boolean),
+                          })
+                        }
+                        rows={3}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {sec.type === "image" && (
+                  <>
+                    <TextInput label="Title (optional)" value={sec.title ?? ""} onChange={(v) => update(idx, { title: v })} />
+                    <TextInput label="Image URL" value={sec.src ?? ""} onChange={(v) => update(idx, { src: v })} />
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <SectionImageUploader
+                        accept="image/*,.gif,.png,.jpg,.jpeg,.webp"
+                        label="↑ Upload image"
+                        onPicked={(url) => update(idx, { src: url })}
+                      />
+                      <PickFromLibraryButton
+                        type="image"
+                        onPick={(url) => update(idx, { src: url })}
+                      />
+                    </div>
+                    <TextInput label="Caption (optional)" value={sec.caption ?? ""} onChange={(v) => update(idx, { caption: v })} />
+                    <MediaLinkFields
+                      href={sec.href}
+                      linkLabel={sec.linkLabel}
+                      onChange={(patch) => update(idx, patch)}
+                    />
+                    <CheckboxInput
+                      label="Transparent background"
+                      checked={!!sec.transparent}
+                      onChange={(v) => update(idx, { transparent: v })}
+                    />
+                    <p className="text-[#4A4540] text-xs -mt-1">
+                      For PNG, WebP or GIF files with see-through areas — removes the card behind the image.
+                    </p>
+                    {sec.src && (
+                      <div className="mt-1 self-start" style={sec.transparent ? CHECKERBOARD : undefined}>
+                        <SafeImage
+                          src={sec.src}
+                          alt=""
+                          className={`h-24 ${sec.transparent ? "object-contain" : "object-cover opacity-60"}`}
+                        />
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {sec.type === "mockup" && (
+                  <>
+                    <TextInput label="Title (optional)" value={sec.title ?? ""} onChange={(v) => update(idx, { title: v })} />
+                    <div className="flex flex-col gap-2">
+                      <span className="text-[#8A8278] text-xs uppercase tracking-widest">Device frame</span>
+                      <div className="flex gap-1.5 flex-wrap">
+                        {DEVICE_FRAMES.map((f) => {
+                          const selected = (sec.deviceFrame ?? "phone") === f.id;
+                          return (
+                            <button
+                              key={f.id}
+                              type="button"
+                              onClick={() => update(idx, { deviceFrame: f.id })}
+                              className={`text-[10px] uppercase tracking-widest px-2.5 py-1.5 border transition-colors ${
+                                selected
+                                  ? "bg-[#C8A96E] text-[#0A0908] border-[#C8A96E]"
+                                  : "text-[#8A8278] border-[#3A3530] hover:border-[#C8A96E]"
+                              }`}
+                            >
+                              {f.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <TextInput label="Screenshot URL" value={sec.src ?? ""} onChange={(v) => update(idx, { src: v })} />
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <SectionImageUploader
+                        accept="image/*,.gif,.png,.jpg,.jpeg,.webp"
+                        label="↑ Upload screenshot"
+                        onPicked={(url) => update(idx, { src: url })}
+                      />
+                      <PickFromLibraryButton
+                        type="image"
+                        onPick={(url) => update(idx, { src: url })}
+                      />
+                    </div>
+                    <p className="text-[#4A4540] text-xs -mt-1">
+                      Upload a full-bleed UI screenshot (no device chrome). The frame is added automatically.
+                    </p>
+                    <TextInput label="Caption (optional)" value={sec.caption ?? ""} onChange={(v) => update(idx, { caption: v })} />
+                    <MediaLinkFields
+                      href={sec.href}
+                      linkLabel={sec.linkLabel}
+                      onChange={(patch) => update(idx, patch)}
+                    />
+                    {sec.src && (
+                      <div className="mt-2 max-w-xs">
+                        <DeviceMockup
+                          frame={isDeviceFrame(sec.deviceFrame) ? sec.deviceFrame : "phone"}
+                          maxWidth={sec.deviceFrame === "phone" ? 160 : 240}
+                        >
+                          <SafeImage src={sec.src} alt="" className="h-full w-full object-cover" />
+                        </DeviceMockup>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {sec.type === "video" && (
+                  <>
+                    <TextInput label="Title (optional)" value={sec.title ?? ""} onChange={(v) => update(idx, { title: v })} />
+                    <TextInput label="Video URL (.mp4 / .webm)" value={sec.src ?? ""} onChange={(v) => update(idx, { src: v })} />
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <SectionImageUploader
+                        accept="video/mp4,video/webm,.mp4,.webm"
+                        label="↑ Upload video"
+                        onPicked={(url) => update(idx, { src: url })}
+                      />
+                      <PickFromLibraryButton
+                        type="video"
+                        onPick={(url) => update(idx, { src: url })}
+                      />
+                    </div>
+                    <TextInput label="Caption (optional)" value={sec.caption ?? ""} onChange={(v) => update(idx, { caption: v })} />
+                    <MediaLinkFields
+                      href={sec.href}
+                      linkLabel={sec.linkLabel}
+                      onChange={(patch) => update(idx, patch)}
+                    />
+                    <CheckboxInput
+                      label="Loop (autoplay muted, like a GIF)"
+                      checked={!!sec.loop}
+                      onChange={(v) => update(idx, { loop: v })}
+                    />
+                    <CheckboxInput
+                      label="Transparent background"
+                      checked={!!sec.transparent}
+                      onChange={(v) => update(idx, { transparent: v })}
+                    />
+                    <p className="text-[#4A4540] text-xs leading-relaxed -mt-1">
+                      MP4 can’t store transparency — export a <span className="text-[#8A8278]">WebM (VP9 with alpha)</span> for
+                      see-through video. Safari may show WebM transparency as a solid background.
+                    </p>
+                    {sec.src && (
+                      <video
+                        src={sec.src}
+                        muted
+                        playsInline
+                        loop={!!sec.loop}
+                        autoPlay={!!sec.loop}
+                        className={`h-24 mt-1 w-full ${sec.transparent ? "object-contain" : "object-cover opacity-60 bg-[#0A0908]"}`}
+                        style={sec.transparent ? CHECKERBOARD : undefined}
+                      />
+                    )}
+                    <p className="text-[#4A4540] text-xs">
+                      {sec.loop
+                        ? "Loops silently on the case study; visitors can click to pause."
+                        : "Plays with controls on the case study (no autoplay) so the page stays stable."}
+                    </p>
+                  </>
+                )}
+
+                {sec.type === "problem-solution" && (
+                  <>
+                    <TextInput label="Title (optional)" value={sec.title ?? ""} onChange={(v) => update(idx, { title: v })} />
+                    <TextareaInput label="Problem" value={sec.problem ?? ""} onChange={(v) => update(idx, { problem: v })} rows={3} />
+                    <TextareaInput label="Solution" value={sec.solution ?? ""} onChange={(v) => update(idx, { solution: v })} rows={3} />
+                    <div className="border-t border-[#272421] pt-3 flex flex-col gap-3">
+                      <p className="text-[#8A8278] text-[10px] uppercase tracking-widest">
+                        Expanded copy (optional — swaps in when See more is on)
+                      </p>
+                      <TextareaInput label="Problem when expanded" value={sec.problemDetail ?? ""} onChange={(v) => update(idx, { problemDetail: v })} rows={3} />
+                      <TextareaInput label="Solution when expanded" value={sec.solutionDetail ?? ""} onChange={(v) => update(idx, { solutionDetail: v })} rows={3} />
+                    </div>
+                  </>
+                )}
+
+                {sec.type === "embed" && (
+                  <>
+                    <TextInput label="Title (optional)" value={sec.title ?? ""} onChange={(v) => update(idx, { title: v })} />
+                    <TextInput
+                      label="Embed URL (online.pubhtml5.com only)"
+                      value={sec.src ?? ""}
+                      onChange={(v) => update(idx, { src: v })}
+                    />
+                    <TextInput
+                      label="Height (px)"
+                      value={String(sec.height ?? 500)}
+                      onChange={(v) => {
+                        const n = parseInt(v, 10);
+                        update(idx, { height: Number.isFinite(n) && n > 0 ? n : 500 });
+                      }}
+                    />
+                    <TextInput label="Caption (optional)" value={sec.caption ?? ""} onChange={(v) => update(idx, { caption: v })} />
+                    <p className="text-[#4A4540] text-xs leading-relaxed">
+                      PubHTML5 viewer URLs only. For live products, use Image/Video + Product CTA link instead of an iframe.
+                    </p>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
-      ))}
+      )}
     </div>
   );
 }
