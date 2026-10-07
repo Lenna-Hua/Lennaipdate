@@ -95,6 +95,25 @@ export async function uploadAsset(input: {
   return toAsset(rows[0]!);
 }
 
+/** Record a blob that the browser already uploaded directly to storage. */
+export async function registerAsset(input: {
+  url: string;
+  filename: string;
+  mime: string;
+  size: number;
+  width?: number | null;
+  height?: number | null;
+}): Promise<Asset> {
+  const id = crypto.randomUUID();
+  const rows = await query<Row>(
+    `INSERT INTO assets (id, url, filename, mime, size, width, height)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     RETURNING id, url, filename, mime, size, width, height, created_at`,
+    [id, input.url, input.filename || "upload", input.mime, input.size, input.width ?? null, input.height ?? null],
+  );
+  return toAsset(rows[0]!);
+}
+
 export async function replaceAsset(
   id: string,
   input: { buffer: Buffer; mime: string; width?: number | null; height?: number | null },

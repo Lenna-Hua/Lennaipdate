@@ -214,7 +214,10 @@ Script: `scripts/test-video-upload.mjs`
   - Residual inline base64 media in gallery payload
 
 ## If Video Upload Fails
-- File over **4 MB** → compress or trim before upload.
+- Files over **4 MB** upload straight from the browser to Vercel Blob (`?op=client-token` then `?op=register` on `/api/admin/assets`) because Vercel Functions reject request bodies over ~4.5 MB with **413**. Videos are capped at **100 MB**, images at **4 MB**.
+- `413` on upload → the client is still on the old function-only path; hard-refresh admin after deploy.
+- Direct upload blocked in the console → `connect-src` in `vercel.json` must include `https://vercel.com`.
+- Replacing an existing asset still goes through the function → max **4 MB**; upload larger files as a new asset.
 - Unsupported type → use `mp4` or `webm`.
 - `Unauthorized` → log out and back into admin (refresh Bearer token).
 - Preview works in admin but not on site → **Save to Site** after setting cover URL.

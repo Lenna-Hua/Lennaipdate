@@ -13,6 +13,7 @@ import {
 } from "./shared";
 import {
   MAX_ASSET_BYTES,
+  MAX_FUNCTION_UPLOAD_BYTES,
   maxAssetBytesForFileType,
   formatMaxMb,
 } from "@/lib/asset-limits";
@@ -78,6 +79,9 @@ export async function uploadAssetFile(
     );
   }
   const dims = await readAssetDimensions(file);
+  if (file.size > MAX_FUNCTION_UPLOAD_BYTES) {
+    return uploadAssetFileDirect(file, sessionToken, dims);
+  }
   const fd = new FormData();
   fd.append("filename", file.name);
   if (dims?.width != null) fd.append("width", String(dims.width));
@@ -93,6 +97,51 @@ export async function uploadAssetFile(
     asset?: Asset;
     error?: string;
   };
+  if (!res.ok || !body.asset) {
+    if (res.status === 413) {
+      throw new Error(`"${file.name}" is too large for the server upload (${formatMaxMb(MAX_FUNCTION_UPLOAD_BYTES)} MB).`);
+    }
+    throw new Error(body.error ?? `Upload failed (${res.status}).`);
+  }
+  return body.asset;
+}
+
+/** Large files skip the API function (4.5 MB body cap) and go straight from the browser to Blob storage. */
+async function uploadAssetFileDirect(
+  file: File,
+  sessionToken: string,
+  dims: { width: number; height: number } | null,
+): Promise<Asset> {
+  const { upload } = await import("@vercel/blob/client");
+  const ext = (/\.([a-z0-9]{1,8})$/i.exec(file.name)?.[1] ?? file.type.split("/")[1] ?? "bin")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+  const pathname = `assets/${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}.${ext || "bin"}`;
+  const authHeaders = { Authorization: `Bearer ${sessionToken}` };
+  let blob: { url: string };
+  try {
+    blob = await upload(pathname, file, {
+      access: "private",
+      contentType: file.type,
+      handleUploadUrl: `${import.meta.env.BASE_URL}api/admin/assets?op=client-token`,
+      headers: authHeaders,
+      multipart: file.size > 20 * 1024 * 1024,
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "";
+    throw new Error(msg ? `Upload failed: ${msg}` : "Upload failed.");
+  }
+  const res = await fetch(`${import.meta.env.BASE_URL}api/admin/assets?op=register`, {
+    method: "POST",
+    headers: { ...authHeaders, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      url: blob.url,
+      filename: file.name,
+      width: dims?.width ?? null,
+      height: dims?.height ?? null,
+    }),
+  });
+  const body = (await res.json().catch(() => ({}))) as { asset?: Asset; error?: string };
   if (!res.ok || !body.asset) {
     throw new Error(body.error ?? `Upload failed (${res.status}).`);
   }

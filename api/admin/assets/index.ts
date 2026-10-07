@@ -1,8 +1,10 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import formidable from "formidable";
 import fs from "fs";
+import { head, del } from "@vercel/blob";
+import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { isAdminRequest } from "../../../lib/admin-auth.js";
-import { listAssets, uploadAsset } from "../../../lib/assets-store.js";
+import { listAssets, uploadAsset, registerAsset } from "../../../lib/assets-store.js";
 import {
   MAX_VIDEO_ASSET_BYTES,
   maxAssetBytesForMime,
@@ -13,6 +15,22 @@ export const config = { bodyParser: false, maxDuration: 30 };
 
 const isAllowedAssetMime = (mime: string): boolean =>
   mime.startsWith("image/") || mime.startsWith("video/");
+
+/** Pathnames the browser may write to via direct Blob upload (matches server-generated keys). */
+const DIRECT_UPLOAD_PATHNAME = /^assets\/[a-z0-9]+-[a-z0-9]+\.[a-z0-9]{1,8}$/;
+
+function isOwnBlobUrl(raw: string): boolean {
+  try {
+    const u = new URL(raw);
+    return (
+      u.protocol === "https:" &&
+      u.hostname.endsWith(".blob.vercel-storage.com") &&
+      DIRECT_UPLOAD_PATHNAME.test(u.pathname.slice(1))
+    );
+  } catch {
+    return false;
+  }
+}
 
 type MultipartFields = Record<string, string | string[] | undefined>;
 type MultipartFile = {
@@ -107,6 +125,82 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (req.method !== "POST") {
     res.status(405).json({ error: "Method not allowed" });
+    return;
+  }
+
+  const op = typeof req.query["op"] === "string" ? req.query["op"] : "";
+
+  if (op === "client-token") {
+    if (!isAdminRequest({ token: readToken(req) })) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+    const body = await readJsonBody(req);
+    try {
+      const result = await handleUpload({
+        body: body as unknown as HandleUploadBody,
+        request: req,
+        onBeforeGenerateToken: async (pathname) => {
+          if (!DIRECT_UPLOAD_PATHNAME.test(pathname)) {
+            throw new Error("Invalid upload path.");
+          }
+          return {
+            allowedContentTypes: ["image/*", "video/*"],
+            maximumSizeInBytes: MAX_VIDEO_ASSET_BYTES,
+            addRandomSuffix: false,
+          };
+        },
+      });
+      res.json(result);
+    } catch (err) {
+      res.status(400).json({ error: err instanceof Error ? err.message : "Could not start upload." });
+    }
+    return;
+  }
+
+  if (op === "register") {
+    if (!isAdminRequest({ token: readToken(req) })) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+    const body = await readJsonBody(req);
+    const url = typeof body.url === "string" ? body.url : "";
+    if (!isOwnBlobUrl(url)) {
+      res.status(400).json({ error: "Invalid asset URL." });
+      return;
+    }
+    let meta: Awaited<ReturnType<typeof head>>;
+    try {
+      meta = await head(url);
+    } catch {
+      res.status(404).json({ error: "Uploaded file not found in storage." });
+      return;
+    }
+    const mime = (meta.contentType || "").toLowerCase();
+    const maxBytes = maxAssetBytesForMime(mime);
+    if (!isAllowedAssetMime(mime) || meta.size > maxBytes) {
+      await del(meta.url).catch(() => {});
+      res.status(isAllowedAssetMime(mime) ? 413 : 400).json({
+        error: isAllowedAssetMime(mime)
+          ? `File is too large (max ${formatMaxMb(maxBytes)} MB).`
+          : `Unsupported file type: ${mime || "unknown"}`,
+      });
+      return;
+    }
+    try {
+      const asset = await registerAsset({
+        url: meta.url,
+        mime,
+        size: meta.size,
+        filename: typeof body.filename === "string" && body.filename.trim() ? body.filename.trim().slice(0, 200) : "upload",
+        width: intField(body.width),
+        height: intField(body.height),
+      });
+      res.json({ ok: true, asset });
+    } catch (err) {
+      console.error("[admin] register asset failed", err);
+      res.status(500).json({ error: "Failed to save asset" });
+    }
     return;
   }
 

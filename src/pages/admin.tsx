@@ -54,7 +54,7 @@ import {
   resolveAssetUrl,
   MAX_ASSET_BYTES,
 } from "@/components/admin/AssetLibrary";
-import { maxAssetBytesForFileType, formatMaxMb } from "@/lib/asset-limits";
+import { maxAssetBytesForFileType, formatMaxMb, MAX_FUNCTION_UPLOAD_BYTES } from "@/lib/asset-limits";
 import { AboutEditor } from "@/components/admin/AboutEditor";
 import { ExperienceEditor } from "@/components/admin/ExperienceEditor";
 import { EducationEditor } from "@/components/admin/EducationEditor";
@@ -523,10 +523,10 @@ export default function Admin() {
     if (!/^image\//.test(file.type) && !/^video\//.test(file.type)) {
       throw new Error(`Unsupported file type: ${file.type || "unknown"}.`);
     }
-    const maxBytes = maxAssetBytesForFileType(file.type);
+    const maxBytes = Math.min(maxAssetBytesForFileType(file.type), MAX_FUNCTION_UPLOAD_BYTES);
     if (file.size > maxBytes) {
       throw new Error(
-        `File too large (max ${formatMaxMb(maxBytes)} MB).`,
+        `Replace supports files up to ${formatMaxMb(maxBytes)} MB — upload this one as a new asset instead.`,
       );
     }
     const dims = await readAssetDimensions(file);
