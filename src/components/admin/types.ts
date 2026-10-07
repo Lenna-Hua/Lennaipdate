@@ -41,6 +41,10 @@ export type Section = {
   linkLabel?: string;
   /** Embed iframe height in px (default 500). PubHTML5 only. */
   height?: number;
+  /** Image/video: drop the card background so alpha (PNG, WebP, GIF, WebM) shows the page behind. */
+  transparent?: boolean;
+  /** Video: autoplay muted on repeat like a GIF instead of a player with controls. */
+  loop?: boolean;
 };
 
 /**

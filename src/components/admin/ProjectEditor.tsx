@@ -2,7 +2,7 @@
  * ProjectEditor — edit project details, sections, cover images, tags, etc.
  * Includes SectionsEditor for managing text/image/problem-solution blocks.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { SafeImage } from "@/components/SafeImage";
 import { AdminSortableList } from "@/pages/admin-sortable";
 import type { Project, Section, SectionType } from "./types";
@@ -270,6 +270,12 @@ function VisibilityToggle({
   );
 }
 
+const CHECKERBOARD: CSSProperties = {
+  backgroundColor: "#2A2622",
+  backgroundImage: "conic-gradient(#3A3530 25%, transparent 0 50%, #3A3530 0 75%, transparent 0)",
+  backgroundSize: "16px 16px",
+};
+
 function MediaLinkFields({
   href,
   linkLabel,
@@ -436,8 +442,22 @@ function SectionsEditor({
                 linkLabel={sec.linkLabel}
                 onChange={(patch) => update(idx, patch)}
               />
+              <CheckboxInput
+                label="Transparent background"
+                checked={!!sec.transparent}
+                onChange={(v) => update(idx, { transparent: v })}
+              />
+              <p className="text-[#4A4540] text-xs -mt-1">
+                For PNG, WebP or GIF files with see-through areas — removes the card behind the image.
+              </p>
               {sec.src && (
-                <SafeImage src={sec.src} alt="" className="h-24 object-cover opacity-60 mt-1" />
+                <div className="mt-1 self-start" style={sec.transparent ? CHECKERBOARD : undefined}>
+                  <SafeImage
+                    src={sec.src}
+                    alt=""
+                    className={`h-24 ${sec.transparent ? "object-contain" : "object-cover opacity-60"}`}
+                  />
+                </div>
               )}
             </>
           )}
@@ -463,10 +483,36 @@ function SectionsEditor({
                 linkLabel={sec.linkLabel}
                 onChange={(patch) => update(idx, patch)}
               />
+              <CheckboxInput
+                label="Loop (autoplay muted, like a GIF)"
+                checked={!!sec.loop}
+                onChange={(v) => update(idx, { loop: v })}
+              />
+              <CheckboxInput
+                label="Transparent background"
+                checked={!!sec.transparent}
+                onChange={(v) => update(idx, { transparent: v })}
+              />
+              <p className="text-[#4A4540] text-xs leading-relaxed -mt-1">
+                MP4 can’t store transparency — export a <span className="text-[#8A8278]">WebM (VP9 with alpha)</span> for
+                see-through video. Safari may show WebM transparency as a solid background.
+              </p>
               {sec.src && (
-                <video src={sec.src} muted playsInline className="h-24 object-cover opacity-60 mt-1 w-full bg-[#0A0908]" />
+                <video
+                  src={sec.src}
+                  muted
+                  playsInline
+                  loop={!!sec.loop}
+                  autoPlay={!!sec.loop}
+                  className={`h-24 mt-1 w-full ${sec.transparent ? "object-contain" : "object-cover opacity-60 bg-[#0A0908]"}`}
+                  style={sec.transparent ? CHECKERBOARD : undefined}
+                />
               )}
-              <p className="text-[#4A4540] text-xs">Plays with controls on the case study (no autoplay) so the page stays stable.</p>
+              <p className="text-[#4A4540] text-xs">
+                {sec.loop
+                  ? "Loops silently on the case study; visitors can click to pause."
+                  : "Plays with controls on the case study (no autoplay) so the page stays stable."}
+              </p>
             </>
           )}
 

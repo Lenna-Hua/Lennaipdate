@@ -1,5 +1,5 @@
 import { useParams, Link } from "wouter";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useState, useEffect, useCallback, useRef } from "react";
 import projectsSeed from "@/data/projects.json";
 import identitySeed from "@/data/identity.json";
@@ -76,6 +76,8 @@ interface ContentSection {
   linkLabel?: string;
   /** Embed iframe height in px (default 500). PubHTML5 only. */
   height?: number;
+  transparent?: boolean;
+  loop?: boolean;
 }
 
 interface Project {
@@ -432,6 +434,45 @@ function EmbedSection({ section }: { section: ContentSection }) {
   );
 }
 
+function SectionVideo({ src, loop, label }: { src: string; loop: boolean; label?: string }) {
+  const reduceMotion = useReducedMotion();
+  const ref = useRef<HTMLVideoElement>(null);
+  const gifLike = loop && !reduceMotion;
+  const togglePlay = () => {
+    const v = ref.current;
+    if (!v) return;
+    if (v.paused) void v.play();
+    else v.pause();
+  };
+  return (
+    <video
+      ref={ref}
+      src={src}
+      controls={!gifLike}
+      loop={loop}
+      autoPlay={gifLike}
+      muted={gifLike}
+      playsInline
+      preload={gifLike ? "auto" : "metadata"}
+      aria-label={label || undefined}
+      title={gifLike ? "Click to pause or play" : undefined}
+      onClick={gifLike ? togglePlay : undefined}
+      tabIndex={gifLike ? 0 : undefined}
+      onKeyDown={
+        gifLike
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                togglePlay();
+              }
+            }
+          : undefined
+      }
+      className={`block w-full h-auto max-h-[70vh] ${gifLike ? "cursor-pointer" : ""}`}
+    />
+  );
+}
+
 function ImageSection({
   section,
   onImageClick,
@@ -461,14 +502,8 @@ function ImageSection({
             {section.title}
           </h2>
         )}
-        <div className="w-full overflow-hidden rounded-xl bg-card">
-          <video
-            src={section.src}
-            controls
-            playsInline
-            preload="metadata"
-            className="block w-full h-auto max-h-[70vh]"
-          />
+        <div className={`w-full overflow-hidden rounded-xl ${section.transparent ? "" : "bg-card"}`}>
+          <SectionVideo src={section.src!} loop={!!section.loop} label={section.caption || section.title} />
         </div>
         {section.caption && (
           <p className="text-sm font-sans text-muted-foreground italic">
@@ -495,7 +530,7 @@ function ImageSection({
         </h2>
       )}
       <div
-        className={`w-full overflow-hidden rounded-xl group relative bg-card flex items-center justify-center ${clickable ? "cursor-zoom-in" : ""}`}
+        className={`w-full overflow-hidden rounded-xl group relative flex items-center justify-center ${section.transparent ? "" : "bg-card"} ${clickable ? "cursor-zoom-in" : ""}`}
         onClick={() => clickable && onImageClick(section.src!, section.caption)}
         role={clickable ? "button" : undefined}
         tabIndex={clickable ? 0 : undefined}
@@ -511,7 +546,7 @@ function ImageSection({
           onError={() => setErrored(true)}
         />
         {clickable && (
-          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-300 rounded-xl flex items-center justify-center">
+          <div className={`absolute inset-0 transition-colors duration-300 rounded-xl flex items-center justify-center ${section.transparent ? "" : "bg-black/0 group-hover:bg-black/30"}`}>
             <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-white text-sm uppercase tracking-widest font-sans bg-black/60 px-4 py-2 rounded-full">
               Click to expand
             </span>
