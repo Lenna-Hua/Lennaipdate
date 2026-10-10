@@ -3,6 +3,7 @@ import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { SafeImage } from "@/components/SafeImage";
 import { galleryImageSrc } from "@/lib/gallery-image";
+import { sizedMediaSrc } from "@/lib/media-url";
 import type { GalleryItem, Studio } from "@/components/admin/types";
 
 const BLUE = "#1F67F1";
@@ -96,7 +97,7 @@ function useSlideRatio(
     img.onerror = () => {
       if (!cancelled) setRatio(PORTRAIT_RATIO);
     };
-    img.src = src;
+    img.src = sizedMediaSrc(src, 512);
     return () => {
       cancelled = true;
     };
@@ -164,8 +165,7 @@ export function ArtworkModal({
       aria-modal="true"
       aria-label={item.title}
       data-fast-scroll-skip
-      className="fixed inset-0 z-[200] flex items-center justify-center p-4 md:p-10"
-      style={{ background: "rgba(8,8,10,0.85)", backdropFilter: "blur(8px)" }}
+      className="fixed inset-0 z-[200] flex items-center justify-center p-4 md:p-10 bg-black/90 md:bg-black/80 md:backdrop-blur-sm"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -198,6 +198,8 @@ export function ArtworkModal({
               alt={item.title}
               className="max-w-full max-h-[min(60vh,520px)] w-auto h-auto object-contain rounded-lg"
               fallbackAspect="16 / 10"
+              sizes="(max-width: 768px) 92vw, 50vw"
+              maxWidth={1600}
               style={{ maxHeight: "min(60vh, 520px)" }}
             />
             {imageSources.length > 1 && (
@@ -246,6 +248,8 @@ export function ArtworkModal({
                     alt=""
                     className="w-full h-full object-cover"
                     fallbackAspect="1 / 1"
+                    sizes="56px"
+                    maxWidth={512}
                   />
                 </button>
               ))}
@@ -392,6 +396,8 @@ function ArtworkSlide({
           alt={item.title}
           loading="lazy"
           draggable={false}
+          sizes="(max-width: 768px) 85vw, 40vw"
+          maxWidth={1200}
           className="w-full h-full object-cover select-none transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] pointer-fine:group-hover:scale-[1.04]"
           fallbackAspect={`${ratio}`}
         />

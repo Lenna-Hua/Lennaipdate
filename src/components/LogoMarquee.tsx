@@ -39,6 +39,8 @@ export function LogoMarquee({
                     alt=""
                     className="h-12 md:h-16 w-auto max-w-[160px] object-contain"
                     fallbackAspect="1 / 1"
+                    sizes="160px"
+                    maxWidth={512}
                   />
                 ) : (
                   <span className="font-display font-black uppercase text-2xl md:text-3xl tracking-tight text-foreground/80 whitespace-nowrap">

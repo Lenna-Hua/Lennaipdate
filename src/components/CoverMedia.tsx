@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { SafeImage } from "@/components/SafeImage";
+import { useLiteMotion } from "@/hooks/use-lite-motion";
 
 /** Detect video URLs — extension, data URI, Cloudinary, or stored mime hint. */
 export function isVideo(src: string, mimeHint?: string): boolean {
@@ -19,6 +20,8 @@ interface CoverMediaProps {
   loading?: "lazy" | "eager";
   /** When the URL has no extension (e.g. /api/assets/…), use stored mime from the library. */
   mimeHint?: string;
+  sizes?: string;
+  maxWidth?: number;
 }
 
 export function CoverMedia({
@@ -28,20 +31,58 @@ export function CoverMedia({
   style,
   loading = "lazy",
   mimeHint,
+  sizes,
+  maxWidth,
 }: CoverMediaProps) {
+  const lite = useLiteMotion();
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el || !isVideo(src, mimeHint)) return;
+    if (lite) {
+      el.pause();
+      return;
+    }
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          void el.play().catch(() => {});
+        } else {
+          el.pause();
+        }
+      },
+      { threshold: 0.25 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [src, mimeHint, lite]);
+
   if (isVideo(src, mimeHint)) {
     return (
       <video
+        ref={videoRef}
         src={src}
-        autoPlay
+        autoPlay={!lite}
         loop
         muted
         playsInline
+        preload={lite ? "metadata" : "none"}
         aria-label={alt}
         className={className}
         style={style}
       />
     );
   }
-  return <SafeImage src={src} alt={alt} className={className} style={style} loading={loading} />;
+  return (
+    <SafeImage
+      src={src}
+      alt={alt}
+      className={className}
+      style={style}
+      loading={loading}
+      sizes={sizes}
+      maxWidth={maxWidth}
+    />
+  );
 }

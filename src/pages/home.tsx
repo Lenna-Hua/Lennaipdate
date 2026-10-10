@@ -207,6 +207,8 @@ export default function Home() {
               mimeHint={hp.heroMediaMime}
               className="w-full aspect-video object-cover"
               loading="eager"
+              sizes="(max-width: 768px) 100vw, 48rem"
+              maxWidth={1400}
             />
           </motion.div>
         ) : null}

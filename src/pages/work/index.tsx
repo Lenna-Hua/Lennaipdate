@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useLiteMotion } from "@/hooks/use-lite-motion";
 import {
   Sparkles,
   Star,
@@ -86,11 +87,13 @@ const FLOAT_ICONS = [
 ];
 
 function CursorFollowIcons() {
+  const lite = useLiteMotion();
   const containerRef = useRef<HTMLDivElement>(null);
   const targetRef = useRef({ x: 0.5, y: 0.5 });
   const currentRef = useRef({ x: 0.5, y: 0.5 });
 
   useEffect(() => {
+    if (lite) return;
     const onMove = (e: MouseEvent) => {
       targetRef.current = {
         x: e.clientX / window.innerWidth,
@@ -99,9 +102,10 @@ function CursorFollowIcons() {
     };
     window.addEventListener("mousemove", onMove);
     return () => window.removeEventListener("mousemove", onMove);
-  }, []);
+  }, [lite]);
 
   useEffect(() => {
+    if (lite) return;
     let raf = 0;
     const tick = (t: number) => {
       currentRef.current.x += (targetRef.current.x - currentRef.current.x) * 0.06;
@@ -124,13 +128,15 @@ function CursorFollowIcons() {
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, []);
+  }, [lite]);
+
+  if (lite) return null;
 
   return (
     <div
       ref={containerRef}
       aria-hidden
-      className="pointer-events-none absolute inset-0 overflow-hidden"
+      className="pointer-events-none absolute inset-0 overflow-hidden hidden md:block"
       style={{ zIndex: 0 }}
     >
       {FLOAT_ICONS.map(({ Icon, x, y, size, depth, color }, i) => (
