@@ -3,6 +3,7 @@
  */
 import { useState } from "react";
 import type { Files } from "./types";
+import { resolveResumeUrl } from "@/lib/resume-url";
 
 export function FilesEditor({
   data,
@@ -17,12 +18,7 @@ export function FilesEditor({
   const [errorMsg, setErrorMsg] = useState("");
 
   const resume = data.resume ?? { url: "", filename: "", updatedAt: "" };
-  const previewHref = (() => {
-    const raw = (resume.url ?? "").trim();
-    if (!raw) return "";
-    if (/^https?:\/\//i.test(raw)) return raw;
-    return import.meta.env.BASE_URL + raw.replace(/^\/+/, "");
-  })();
+  const previewHref = resolveResumeUrl(resume);
   const updatedLabel = (resume.updatedAt ?? "").trim()
     ? new Date(resume.updatedAt).toLocaleString()
     : "Bundled with site (never replaced)";
@@ -43,9 +39,9 @@ export function FilesEditor({
       setErrorMsg("Please choose a PDF file.");
       return;
     }
-    if (file.size > 10 * 1024 * 1024) {
+    if (file.size > 3 * 1024 * 1024) {
       setStatus("error");
-      setErrorMsg("PDF must be 10 MB or smaller.");
+      setErrorMsg("PDF must be 3 MB or smaller.");
       return;
     }
     setStatus("uploading");
@@ -121,7 +117,7 @@ export function FilesEditor({
       </div>
 
       <label className="flex items-center justify-center gap-3 cursor-pointer px-6 py-4 border-2 border-dashed border-[#3A3530] hover:border-[#C8A96E] transition-colors rounded text-[#8A8278] text-sm uppercase tracking-widest">
-        <span>{status === "uploading" ? "Uploading…" : "↑ Upload new resume PDF (max 10 MB)"}</span>
+        <span>{status === "uploading" ? "Uploading…" : "↑ Upload new resume PDF (max 3 MB)"}</span>
         <input
           type="file"
           accept="application/pdf,.pdf"

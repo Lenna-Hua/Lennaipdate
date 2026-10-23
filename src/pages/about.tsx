@@ -7,16 +7,9 @@ import educationSeed from "@/data/education.json";
 import filesSeed from "@/data/files.json";
 import { useContent } from "@/lib/use-content";
 
-type ResumeMeta = { url?: string; filename?: string; updatedAt?: string };
-type FilesShape = { resume?: ResumeMeta };
+import { resolveResumeUrl, type ResumeMeta } from "@/lib/resume-url";
 
-function resumeHref(resume: ResumeMeta | undefined): string {
-  const fallback = `${import.meta.env.BASE_URL}Lenna_Hua_Resume.pdf`;
-  const raw = (resume?.url ?? "").trim();
-  if (!raw) return fallback;
-  if (/^https?:\/\//i.test(raw)) return raw;
-  return import.meta.env.BASE_URL + raw.replace(/^\/+/, "");
-}
+type FilesShape = { resume?: ResumeMeta };
 
 import { FloatingDecor } from "@/components/FloatingDecor";
 import { SafeImage } from "@/components/SafeImage";
@@ -313,7 +306,7 @@ export default function About() {
             className="flex flex-wrap gap-3 mt-2"
           >
             <a
-              href={resumeHref(filesContent.resume)}
+              href={resolveResumeUrl(filesContent.resume)}
               target="_blank"
               rel="noopener noreferrer"
               download={filesContent.resume?.filename?.trim() || "Lenna_Hua_Resume.pdf"}

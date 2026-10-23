@@ -1,3 +1,5 @@
+import { resolveResumeUrl, type ResumeMeta } from "@/lib/resume-url";
+
 export type HrAction =
   | "summarize"
   | "projects"
@@ -397,19 +399,14 @@ export function parseHrContext(raw: {
     socials?: { label?: string; href?: string }[];
   };
   const files = (raw.files ?? {}) as {
-    resume?: { url?: string; filename?: string };
+    resume?: ResumeMeta;
   };
 
   const linkedin = contact.socials?.find((s) =>
     /linkedin/i.test(s.label ?? ""),
   )?.href;
 
-  const resumeFile = files.resume?.filename || files.resume?.url;
-  const resumeUrl = resumeFile
-    ? resumeFile.startsWith("http")
-      ? resumeFile
-      : `/api/files/${encodeURIComponent(resumeFile)}`
-    : undefined;
+  const resumeUrl = resolveResumeUrl(files.resume);
 
   return {
     name: identity.name ?? "Lenna Hua",

@@ -3,6 +3,10 @@ import { query } from "./db.js";
 
 const RESUME_BLOB_KEY = "resume/Lenna_Hua_Resume.pdf";
 const RESUME_DB_SECTION = "files_blob_resume";
+/** The blob is private; browsers must go through this proxy route. */
+export const RESUME_PUBLIC_PATH = "/api/files/resume.pdf";
+/** Uploads are base64 JSON, and Vercel caps request bodies at 4.5 MB. */
+export const RESUME_MAX_BYTES = 3 * 1024 * 1024;
 
 export type StoredResume = {
   url: string;
@@ -23,7 +27,7 @@ export async function saveResume(buf: Buffer, userFilename: string): Promise<Sto
      ON CONFLICT (name) DO UPDATE SET data = EXCLUDED.data, updated_at = now()`,
     [RESUME_DB_SECTION, JSON.stringify({ filename: userFilename, url: blob.url, updatedAt })],
   );
-  return { url: blob.url, filename: userFilename, updatedAt };
+  return { url: RESUME_PUBLIC_PATH, filename: userFilename, updatedAt };
 }
 
 export type ResumeBlob = {

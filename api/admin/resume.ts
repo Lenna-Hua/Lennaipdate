@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { isAdminRequest } from "../../lib/admin-auth.js";
-import { saveResume, readResumeBlob } from "../../lib/resume-storage.js";
+import { saveResume, readResumeBlob, RESUME_MAX_BYTES } from "../../lib/resume-storage.js";
 
 function readToken(req: VercelRequest): string | undefined {
   const h = req.headers["authorization"];
@@ -38,8 +38,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       res.status(400).json({ error: "Uploaded file is empty." });
       return;
     }
-    if (buf.length > 10 * 1024 * 1024) {
-      res.status(413).json({ error: "Resume PDF must be 10 MB or smaller." });
+    if (buf.length > RESUME_MAX_BYTES) {
+      res.status(413).json({ error: "Resume PDF must be 3 MB or smaller." });
       return;
     }
     if (buf.slice(0, 5).toString("ascii") !== "%PDF-") {
