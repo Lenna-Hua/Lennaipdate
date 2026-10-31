@@ -1,66 +1,50 @@
 import { useMemo, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
+import { motion } from "framer-motion";
 import projectsSeed from "@/data/projects.json";
 import gallerySeed from "@/data/gallery.json";
 import aboutSeed from "@/data/about.json";
 import identitySeed from "@/data/identity.json";
 import contactSeed from "@/data/contact.json";
 import homepageSeed from "@/data/homepage.json";
-import studioSeed from "@/data/studio.json";
 import { useContent } from "@/lib/use-content";
-import { useFloatIn, useFloatStagger } from "@/lib/motion";
-import { FloatingDecor } from "@/components/FloatingDecor";
-import {
-  PinterestCard,
-  cardSpanClass,
-  type PinterestCardProject,
-} from "@/components/PinterestCard";
-import { RotatingLiveBadge } from "@/components/RotatingLiveBadge";
-import { CoverMedia, type CoverPlayback } from "@/components/CoverMedia";
-import { ArtworkModal, ArtworksSlideshow } from "@/components/ArtworksSlideshow";
-import { useTheme } from "@/context/ThemeContext";
-import { mergeStudio } from "@/lib/studio-content";
-import type { CardLayout, GalleryItem, Studio } from "@/components/admin/types";
+import { useFloatIn } from "@/lib/motion";
+import type { CoverPlayback } from "@/components/CoverMedia";
+import { ParallaxMasonry, type MasonryItem } from "@/components/ParallaxMasonry";
+import { MediaLightbox, type LightboxItem } from "@/components/MediaLightbox";
+import { BigCount, SplitShowcase, TextLink } from "@/components/layout/SplitShowcase";
+import type { GalleryItem } from "@/components/admin/types";
 
 type Project = (typeof projectsSeed)[number] & {
   archived?: boolean;
   coverMime?: string;
   coverPoster?: string;
   coverPlayback?: CoverPlayback;
-  hoverVideo?: string;
-  liveUrl?: string;
-  cardDescription?: string;
-  cardLayout?: CardLayout;
 };
 
-const BLUE = "#1F67F1";
+type HomeCopy = (typeof homepageSeed)["home"] & {
+  heroMedia?: string;
+  heroMediaAlt?: string;
+  heroMediaMime?: string;
+};
 
-function splitName(full: string): [string, string] {
-  const trimmed = (full || "").trim();
-  const idx = trimmed.indexOf(" ");
-  if (idx === -1) return [trimmed, ""];
-  return [trimmed.slice(0, idx), trimmed.slice(idx + 1)];
-}
+const HERO_MEDIA_ID = "hero-media";
+
+const joinMeta = (...parts: (string | undefined)[]) =>
+  parts.map((p) => (p ?? "").trim()).filter(Boolean).join(" · ");
 
 function buildStats(location: string, yearsExperience = "3+") {
-  const years = (yearsExperience || "3+").trim() || "3+";
   const stats = [
-    { label: years, sub: "Years", color: BLUE },
-    { label: "20+", sub: "Projects", color: BLUE },
-    { label: "8+", sub: "Studies", color: BLUE },
+    { value: (yearsExperience || "3+").trim() || "3+", label: "Years" },
+    { value: "20+", label: "Projects" },
+    { value: "8+", label: "Studies" },
   ];
-  const trimmed = (location ?? "").trim();
-  if (trimmed) {
-    const primary = trimmed.split(",")[0].trim();
-    stats.push({ label: primary, sub: "Based", color: BLUE });
-  }
+  const city = (location ?? "").split(",")[0].trim();
+  if (city) stats.push({ value: city, label: "Based" });
   return stats;
 }
 
 export default function Home() {
-  const { container, item, viewport: VP } = useFloatStagger();
-  const floatHeading = useFloatIn({ distance: 40 });
   const floatSection = useFloatIn();
   const projectsData = useContent("projects", projectsSeed) as Project[];
   const galleryData = useContent("gallery", gallerySeed) as GalleryItem[];
@@ -68,303 +52,131 @@ export default function Home() {
   const identityData = useContent("identity", identitySeed) as typeof identitySeed;
   const contactData = useContent("contact", contactSeed) as typeof contactSeed;
   const homepageData = useContent("homepage", homepageSeed) as typeof homepageSeed;
-  const studio = mergeStudio(useContent("studio", studioSeed as Studio));
-  const artworks = useMemo(
-    () => galleryData.filter((g) => !g.archived && g.kind === "small"),
-    [galleryData],
-  );
-  const [modalItem, setModalItem] = useState<GalleryItem | null>(null);
-  const { theme } = useTheme();
-  const isDark = theme === "dark";
-  const hp = homepageData.home;
+  const hp = homepageData.home as HomeCopy;
   const heroMedia = hp.heroMedia?.trim() ?? "";
+  const [openId, setOpenId] = useState<string | null>(null);
 
-  const featuredProjects = useMemo((): PinterestCardProject[] => {
-    const fromWork: PinterestCardProject[] = projectsData
+  const featuredWork = useMemo((): MasonryItem[] => {
+    const fromWork = projectsData
       .filter((p) => !p.archived && p.featured)
       .map((p) => ({
         id: p.id,
-        slug: p.slug,
+        src: p.coverImage,
+        mime: p.coverMime,
+        poster: p.coverPoster,
+        playback: p.coverPlayback,
         title: p.title,
-        coverImage: p.coverImage,
-        coverMime: p.coverMime,
-        coverPoster: p.coverPoster,
-        coverPlayback: p.coverPlayback,
-        year: p.year,
-        tags: p.tags ?? [],
-        type: p.type,
-        subtitle: p.subtitle,
-        cardDescription: p.cardDescription,
+        meta: joinMeta(p.type, p.year),
         href: `/work/${p.slug}`,
-        hoverVideo: p.hoverVideo,
-        liveUrl: p.liveUrl,
-        cardLayout: p.cardLayout,
       }));
     const workSlugs = new Set(projectsData.map((p) => p.slug));
-    const fromStudio: PinterestCardProject[] = galleryData
+    const fromStudio = galleryData
       .filter((g) => !g.archived && g.featured && !workSlugs.has(g.slug))
       .map((g) => ({
         id: g.id,
-        slug: g.slug,
+        src: g.coverImage,
         title: g.title,
-        coverImage: g.coverImage,
-        year: g.year ?? "",
-        tags: g.tags ?? [],
-        type: g.role || "Studio",
-        subtitle: g.description,
-        cardDescription: g.description,
+        meta: joinMeta(g.role || "Studio", g.year),
         href: `/studio/${g.slug}`,
-        cardLayout: g.cardLayout,
       }));
-    return [...fromWork, ...fromStudio].slice(0, 6);
+    return [...fromWork, ...fromStudio];
   }, [projectsData, galleryData]);
-  const [firstName, lastName] = useMemo(
-    () => splitName(identityData.name),
-    [identityData.name],
+
+  const artworks = useMemo((): LightboxItem[] => {
+    if (hp.showStudioBand === false) return [];
+    return galleryData
+      .filter((g) => !g.archived && g.kind === "small")
+      .map((g) => ({
+        id: g.id,
+        src: g.coverImage,
+        title: g.title,
+        meta: joinMeta(g.role, g.year),
+        description: g.description,
+        href: g.images?.length ? `/studio/${g.slug}` : undefined,
+        hrefLabel: "All images",
+      }));
+  }, [galleryData, hp.showStudioBand]);
+
+  const heroItem = useMemo(
+    (): LightboxItem | null =>
+      heroMedia
+        ? { id: HERO_MEDIA_ID, src: heroMedia, mime: hp.heroMediaMime, title: hp.heroMediaAlt?.trim() || "Showreel" }
+        : null,
+    [heroMedia, hp.heroMediaMime, hp.heroMediaAlt],
   );
-  const yearsExperience = aboutData.yearsExperience ?? "3+";
-  const STATS = useMemo(
-    () => buildStats(contactData.location, yearsExperience),
-    [contactData.location, yearsExperience],
+
+  const lightboxItems = useMemo(
+    () => (heroItem ? [heroItem, ...artworks] : artworks),
+    [heroItem, artworks],
+  );
+
+  const gridItems = useMemo((): MasonryItem[] => {
+    const toTile = ({ id, src, title, meta, mime }: LightboxItem): MasonryItem => ({ id, src, title, meta, mime });
+    const hero = heroItem ? [{ ...toTile(heroItem), playback: "loop" as const }] : [];
+    return [...hero, ...featuredWork, ...artworks.map(toTile)];
+  }, [heroItem, featuredWork, artworks]);
+
+  const stats = useMemo(
+    () => buildStats(contactData.location, aboutData.yearsExperience ?? "3+"),
+    [contactData.location, aboutData.yearsExperience],
   );
 
   return (
-    <div className="w-full flex flex-col gap-32 md:gap-48 pt-12 md:pt-24 pb-20">
-      {/* ── Hero ── */}
-      <section className="relative flex flex-col gap-8 md:gap-10">
-        <div className="absolute inset-0 z-0 pointer-events-none">
-          <FloatingDecor opacity={0.4} />
-        </div>
+    <div className="w-full flex flex-col gap-28 md:gap-40">
+      <MediaLightbox items={lightboxItems} activeId={openId} onChange={setOpenId} />
 
-        <div className="absolute right-0 bottom-0 md:right-4 md:bottom-8 z-20 hidden sm:block">
-          <RotatingLiveBadge
-            href={hp.primaryCtaHref || "/work"}
-            label={hp.badgeLabel?.trim() || "VIEW WORK • VIEW WORK •"}
-            size={176}
-            fill="#FFFFFF"
-            textColor="#1A5BD4"
-          />
-        </div>
-
-        <motion.span
-          className="relative z-10 text-sm uppercase tracking-[0.5em] font-sans"
-          style={{ color: BLUE }}
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.1 }}
-        >
-          {hp.heroEyebrow}
-        </motion.span>
-
-        <h1
-          className="relative z-10 font-display font-black uppercase leading-[0.9] tracking-tight"
-          style={{ fontSize: "clamp(4rem,13vw,12rem)" }}
-          aria-label={identityData.name}
-        >
-          <motion.span
-            className="block"
-            style={{ color: BLUE }}
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
-          >
-            {firstName}
-          </motion.span>
-          {lastName && (
-            <motion.span
-              className="block text-foreground"
-              initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.5 }}
-            >
-              {lastName}
-            </motion.span>
-          )}
-        </h1>
-
-        <motion.p
-          className="relative z-10 max-w-xl text-muted-foreground text-lg md:text-xl leading-relaxed font-light"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.7, duration: 1 }}
-        >
-          {hp.heroIntro}
-        </motion.p>
-
-        {heroMedia ? (
-          <motion.div
-            className="relative z-10 w-full max-w-3xl rounded-2xl overflow-hidden border border-border/40 shadow-lg"
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.75, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-          >
-            <CoverMedia
-              src={heroMedia}
-              alt={hp.heroMediaAlt?.trim() || "Homepage hero"}
-              mimeHint={hp.heroMediaMime}
-              className="w-full aspect-video object-cover"
-              loading="eager"
-            />
-          </motion.div>
-        ) : null}
-
-        <motion.div
-          className="relative z-10 flex flex-wrap gap-3"
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.85, duration: 0.8 }}
-        >
-          {STATS.map(({ label, sub, color }) => (
-            <div
-              key={sub}
-              className="flex flex-col px-4 py-2.5 rounded-xl"
-              style={{ background: color + "1a", border: `1.5px solid ${color}50` }}
-            >
-              <span
-                className="font-display font-black uppercase text-lg leading-none"
-                style={{ color }}
-              >
-                {label}
-              </span>
-              <span className="text-muted-foreground text-sm uppercase tracking-widest font-sans mt-0.5">
-                {sub}
-              </span>
-            </div>
-          ))}
-        </motion.div>
-
-        <motion.div
-          className="relative z-10 flex flex-wrap gap-4"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1, duration: 0.8 }}
-        >
-          <Link
-            href={hp.primaryCtaHref}
-            className="inline-flex items-center justify-center h-11 rounded-full text-sm font-sans font-bold uppercase tracking-[0.18em] leading-none border-2 box-border pl-[calc(1.75rem+0.18em)] pr-7 transition-opacity hover:opacity-85"
-            style={{
-              background: "#1A5BD4",
-              borderColor: "#1A5BD4",
-              color: "#FFFFFF",
-            }}
-          >
-            {hp.primaryCtaLabel}
-          </Link>
-          <Link
-            href={hp.secondaryCtaHref}
-            className="inline-flex items-center justify-center h-11 rounded-full text-sm font-sans font-bold uppercase tracking-[0.18em] leading-none border-2 box-border pl-[calc(1.75rem+0.18em)] pr-7 transition-opacity hover:opacity-85"
-            style={{
-              background: "transparent",
-              borderColor: BLUE + "55",
-              color: BLUE,
-            }}
-          >
-            {hp.secondaryCtaLabel}
-          </Link>
-        </motion.div>
-      </section>
-
-      {/* ── Featured Projects ── */}
-      <section className="flex flex-col gap-12">
-        <motion.div
-          {...floatHeading}
-          className="flex justify-between items-end pb-6"
-          style={{ borderBottom: `2px solid ${BLUE}55` }}
-        >
-          <h2
-            className="font-display font-black uppercase text-3xl md:text-4xl tracking-tight"
-            style={{ color: BLUE }}
-          >
-            {hp.selectedWorkHeading}
-          </h2>
-          <Link
-            href="/work"
-            className="text-sm uppercase tracking-widest font-sans hover:opacity-70 transition-opacity"
-            style={{ color: BLUE }}
-          >
-            {hp.selectedWorkLinkLabel}
-          </Link>
-        </motion.div>
-
-        <motion.div
-          variants={container}
-          initial="hidden"
-          whileInView="show"
-          viewport={VP}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 grid-flow-row-dense items-stretch [--card-grid-gap:2rem]"
-        >
-          {featuredProjects.map((project, i) => (
-            <motion.div
-              key={project.id}
-              variants={item}
-              className={`h-full ${cardSpanClass(project, "md")}`}
-            >
-              <PinterestCard project={project} i={i} isDark={isDark} />
-            </motion.div>
-          ))}
-        </motion.div>
-      </section>
-
-      {/* ── Studio slideshow ── */}
-      {hp.showStudioBand !== false && artworks.length > 0 && (
-        <motion.section {...floatSection} className="flex flex-col gap-12">
-          <AnimatePresence>
-            {modalItem && (
-              <ArtworkModal item={modalItem} onClose={() => setModalItem(null)} />
+      <SplitShowcase
+        asideTop={
+          <>
+            {hp.heroEyebrow && (
+              <span className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">{hp.heroEyebrow}</span>
             )}
-          </AnimatePresence>
-          <div
-            className="flex items-end gap-6 pb-6 flex-wrap"
-            style={{ borderBottom: `2px solid ${BLUE}55` }}
-          >
-            <h2
-              className="font-display font-black uppercase text-3xl md:text-4xl tracking-tight"
-              style={{ color: BLUE }}
-            >
-              {hp.studioHeading?.trim() || "From the Studio"}
-            </h2>
-            <Link
-              href="/studio"
-              className="text-sm uppercase tracking-widest font-sans hover:opacity-70 transition-opacity"
-              style={{ color: BLUE }}
-            >
-              {hp.studioLinkLabel?.trim() || "Visit Studio →"}
-            </Link>
-          </div>
-          <ArtworksSlideshow
-            items={artworks}
-            onOpen={setModalItem}
-            cardSize={studio.artworksCardSize}
-          />
-        </motion.section>
-      )}
+            <h1 className="font-display font-black uppercase leading-[0.88] tracking-tight text-foreground text-[clamp(2.75rem,5vw,4.75rem)]">
+              {identityData.name}
+            </h1>
+            <BigCount value={featuredWork.length} label={hp.selectedWorkHeading} />
+          </>
+        }
+        asideBottom={
+          <>
+            <p className="max-w-sm text-sm md:text-[0.95rem] leading-relaxed text-foreground/80">{hp.heroIntro}</p>
+            <dl className="grid grid-cols-2 gap-x-6 gap-y-2 max-w-xs">
+              {stats.map((s) => (
+                <div key={s.label} className="flex items-baseline justify-between gap-2 border-t border-border pt-1.5">
+                  <dt className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">{s.label}</dt>
+                  <dd className="text-sm text-foreground">{s.value}</dd>
+                </div>
+              ))}
+            </dl>
+            <div className="flex flex-wrap gap-x-6 gap-y-2">
+              {hp.primaryCtaHref && <TextLink href={hp.primaryCtaHref}>{hp.primaryCtaLabel}</TextLink>}
+              {hp.secondaryCtaHref && <TextLink href={hp.secondaryCtaHref}>{hp.secondaryCtaLabel}</TextLink>}
+              <TextLink href="/work">{hp.selectedWorkLinkLabel}</TextLink>
+              {artworks.length > 0 && (
+                <TextLink href="/studio">{hp.studioLinkLabel?.trim() || "Visit Studio →"}</TextLink>
+              )}
+            </div>
+          </>
+        }
+      >
+        <ParallaxMasonry items={gridItems} onOpen={setOpenId} />
+      </SplitShowcase>
 
-      {/* ── Brief About ── */}
       <motion.section
         {...floatSection}
-        className="p-8 md:p-16 rounded-2xl flex flex-col md:flex-row gap-12 justify-between"
-        style={{ background: BLUE + "10", border: `2px solid ${BLUE}35` }}
+        className="grid gap-8 md:grid-cols-[minmax(15rem,26%)_1fr] md:gap-8 border-t border-border pt-8"
       >
-        <div className="flex flex-col gap-3 shrink-0">
-          <span
-            className="text-sm uppercase tracking-[0.45em] font-sans font-bold"
-            style={{ color: BLUE }}
-          >
-            {hp.aboutEyebrow}
-          </span>
-          <h2
-            className="font-display font-black uppercase text-4xl md:text-5xl leading-tight"
-            style={{ color: BLUE }}
-          >
+        <div className="flex flex-col gap-2">
+          <span className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">{hp.aboutEyebrow}</span>
+          <h2 className="font-display font-black uppercase tracking-tight leading-[0.9] text-4xl md:text-5xl">
             {hp.aboutHeading}
           </h2>
         </div>
-        <div className="max-w-2xl flex flex-col gap-6 text-muted-foreground text-lg leading-relaxed">
-          <p>{aboutData.bio[0]}</p>
+        <div className="max-w-2xl flex flex-col gap-6">
+          <p className="text-lg md:text-xl leading-relaxed text-foreground/85">{aboutData.bio[0]}</p>
           <Link
             href="/about"
-            className="inline-block w-max pb-1 text-sm uppercase tracking-widest font-sans font-bold transition-opacity hover:opacity-70"
-            style={{ color: BLUE, borderBottom: `2px solid ${BLUE}60` }}
+            className="w-max text-xs uppercase tracking-[0.2em] text-primary underline underline-offset-4"
           >
             {hp.aboutCtaLabel}
           </Link>

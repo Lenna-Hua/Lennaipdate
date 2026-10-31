@@ -1,14 +1,14 @@
-import { useState, useEffect, useRef, lazy, Suspense } from "react";
+import { useEffect, useRef, lazy, Suspense } from "react";
 import { Switch, Route, Router as WouterRouter, useLocation, Redirect } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { ContentProvider } from "@/lib/use-content";
 
-import { Navbar } from "@/components/layout/Navbar";
+import { SiteChrome } from "@/components/layout/SiteChrome";
 import { Footer } from "@/components/layout/Footer";
-import { BottomNav } from "@/components/layout/BottomNav";
 import { PageTransition } from "@/components/layout/PageTransition";
-import { Y2KBackdrop } from "@/components/layout/Y2KBackdrop";
+import { IntroCurtain } from "@/components/layout/IntroCurtain";
+import { SmoothScroll, scrollPageTo, useLenis } from "@/lib/smooth-scroll";
 import { SiteMeta } from "@/components/SiteMeta";
 import { FontApplier } from "@/components/FontApplier";
 import { HrAssistant } from "@/components/HrAssistant";
@@ -25,51 +25,6 @@ const Terms = lazy(() => import("@/pages/terms"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 const Admin = lazy(() => import("@/pages/admin"));
 const VisualRedesignPreview = lazy(() => import("@/pages/preview/visual-redesign"));
-
-function CustomCursor() {
-  const dotRef = useRef<HTMLDivElement>(null);
-  const ringRef = useRef<HTMLDivElement>(null);
-  const pos = useRef({ x: 0, y: 0 });
-  const rafId = useRef(0);
-
-  useEffect(() => {
-    // Skip on touch devices — no mouse cursor to replace
-    if (!window.matchMedia("(hover: hover)").matches) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      pos.current = { x: e.clientX, y: e.clientY };
-    };
-    const tick = () => {
-      if (dotRef.current) {
-        dotRef.current.style.left = `${pos.current.x}px`;
-        dotRef.current.style.top = `${pos.current.y}px`;
-      }
-      if (ringRef.current) {
-        ringRef.current.style.left = `${pos.current.x}px`;
-        ringRef.current.style.top = `${pos.current.y}px`;
-      }
-      rafId.current = requestAnimationFrame(tick);
-    };
-    window.addEventListener("mousemove", handleMouseMove);
-    rafId.current = requestAnimationFrame(tick);
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      cancelAnimationFrame(rafId.current);
-    };
-  }, []);
-
-  // Don't render on touch devices
-  if (typeof window !== "undefined" && !window.matchMedia("(hover: hover)").matches) {
-    return null;
-  }
-
-  return (
-    <>
-      <div ref={dotRef} className="custom-cursor-dot" />
-      <div ref={ringRef} className="custom-cursor-ring" />
-    </>
-  );
-}
 
 /**
  * Resets window scroll on every in-app navigation, and emulates
@@ -97,6 +52,7 @@ function CustomCursor() {
  */
 function ScrollManager() {
   const [location] = useLocation();
+  const lenis = useLenis();
   const prevLocation = useRef(location);
   const positions = useRef<Map<string, number>>(new Map());
   const isPop = useRef(false);
@@ -124,7 +80,7 @@ function ScrollManager() {
       const seek = () => {
         const el = document.getElementById(hash);
         if (el) {
-          el.scrollIntoView({ behavior: "smooth", block: "start" });
+          scrollPageTo(lenis, el, { smooth: true });
           return;
         }
         if (++tries < 40) timer = window.setTimeout(seek, 75);
@@ -135,23 +91,16 @@ function ScrollManager() {
 
     const targetY = wasPop ? (positions.current.get(location) ?? 0) : 0;
     const raf = requestAnimationFrame(() => {
-      window.scrollTo({ top: targetY, left: 0, behavior: "auto" });
+      scrollPageTo(lenis, targetY);
     });
     return () => cancelAnimationFrame(raf);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location]);
 
   return null;
 }
 
-function WithLayout({
-  children,
-  showBottomNav = true,
-  calmBackdrop = false,
-}: {
-  children: React.ReactNode;
-  showBottomNav?: boolean;
-  calmBackdrop?: boolean;
-}) {
+function WithLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
       {/* Skip navigation link for keyboard users */}
@@ -161,15 +110,13 @@ function WithLayout({
       >
         Skip to content
       </a>
-      <Navbar />
-      <div className="relative flex flex-col min-h-screen bg-background px-6 md:px-12 lg:px-16 pt-[88px] md:pt-[100px] pb-24 md:pb-28 overflow-x-clip">
-        <Y2KBackdrop calm={calmBackdrop} />
+      <SiteChrome />
+      <div className="relative flex flex-col min-h-screen bg-background px-5 md:pl-[calc(var(--rail-w)+2rem)] md:pr-8 pt-[var(--chrome-h)] pb-12 overflow-x-clip">
         <div className="relative z-10 flex flex-col flex-1">
           {children}
           <Footer />
         </div>
       </div>
-      {showBottomNav && <BottomNav />}
     </>
   );
 }
@@ -201,10 +148,10 @@ function AppRoutes() {
         <WithLayout><PageTransition><Suspense fallback={<PageLoading />}><WorkIndex /></Suspense></PageTransition></WithLayout>
       </Route>
       <Route path="/work/:slug/full">
-        <WithLayout calmBackdrop><PageTransition><Suspense fallback={<PageLoading />}><CaseStudy full /></Suspense></PageTransition></WithLayout>
+        <WithLayout><PageTransition><Suspense fallback={<PageLoading />}><CaseStudy full /></Suspense></PageTransition></WithLayout>
       </Route>
       <Route path="/work/:slug">
-        <WithLayout calmBackdrop><PageTransition><Suspense fallback={<PageLoading />}><CaseStudy /></Suspense></PageTransition></WithLayout>
+        <WithLayout><PageTransition><Suspense fallback={<PageLoading />}><CaseStudy /></Suspense></PageTransition></WithLayout>
       </Route>
       <Route path="/art">
         <Redirect to="/studio" />
@@ -234,7 +181,7 @@ function AppRoutes() {
         <Suspense fallback={<PageLoading />}><Admin /></Suspense>
       </Route>
       <Route path="/preview/visual-redesign">
-        <WithLayout showBottomNav={false}><PageTransition><Suspense fallback={<PageLoading />}><VisualRedesignPreview /></Suspense></PageTransition></WithLayout>
+        <WithLayout><PageTransition><Suspense fallback={<PageLoading />}><VisualRedesignPreview /></Suspense></PageTransition></WithLayout>
       </Route>
       <Route>
         <WithLayout><PageTransition><Suspense fallback={<PageLoading />}><NotFound /></Suspense></PageTransition></WithLayout>
@@ -248,12 +195,14 @@ function App() {
     <ThemeProvider>
       <ContentProvider>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <ScrollManager />
-          <SiteMeta />
-          <FontApplier />
-          <div className="grain-overlay" />
-          <CustomCursor />
-          <AppRoutes />
+          <SmoothScroll>
+            <ScrollManager />
+            <SiteMeta />
+            <FontApplier />
+            <div className="grain-overlay" />
+            <IntroCurtain />
+            <AppRoutes />
+          </SmoothScroll>
         </WouterRouter>
         <Toaster />
         <HrAssistant />

@@ -198,6 +198,17 @@ body {
   color: var(--color-foreground);
 }
 
+/* ── Site chrome geometry (vertical wordmark rail + top bar) ── */
+:root {
+  --rail-w: 4.5rem;
+  --chrome-h: 4rem;
+}
+@media (min-width: 768px) {
+  :root {
+    --chrome-h: 9.5rem;
+  }
+}
+
 /* ── Scrollbar ─────────────────────────────────────── */
 .scrollbar-none {
   scrollbar-width: none !important;

@@ -19,7 +19,7 @@ export function PageTransition({ children }: PageTransitionProps) {
       transition={reduce ? { duration: 0 } : { duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
       className="min-h-screen w-full flex flex-col"
     >
-      <main id="main-content" className="flex-1 w-full relative z-10 pt-8 md:pt-32 pb-24 px-6 md:px-12 max-w-[1600px] mx-auto">
+      <main id="main-content" className="flex-1 w-full relative z-10 pt-4 pb-16 max-w-[1800px] mx-auto">
         {children}
       </main>
     </motion.div>
