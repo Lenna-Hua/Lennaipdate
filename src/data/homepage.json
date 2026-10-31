@@ -14,7 +14,10 @@
     "badgeLabel": "VIEW WORK • VIEW WORK •",
     "showStudioBand": true,
     "studioHeading": "From the Studio",
-    "studioLinkLabel": "Visit Studio →"
+    "studioLinkLabel": "Visit Studio →",
+    "heroMedia": "",
+    "heroMediaAlt": "",
+    "heroMediaMime": ""
   },
   "entry": {
     "artCard": {

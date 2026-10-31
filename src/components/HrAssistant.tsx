@@ -270,10 +270,9 @@ export function HrAssistant() {
   }, [messages, open, isThinking, scrollToEnd]);
 
   useEffect(() => {
-    if (open) {
-      const t = window.setTimeout(() => inputRef.current?.focus(), 250);
-      return () => window.clearTimeout(t);
-    }
+    if (!open) return;
+    const t = window.setTimeout(() => inputRef.current?.focus(), 250);
+    return () => window.clearTimeout(t);
   }, [open]);
 
   useEffect(
