@@ -380,7 +380,7 @@ function ArtworkSlide({
       aria-label={`${item.title} — open artwork ${idx + 1} of ${total}`}
     >
       <div
-        className="relative w-full h-full overflow-hidden rounded-[1.75rem] bg-muted transition-[transform,box-shadow] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] pointer-fine:group-hover:-translate-y-1.5 group-focus-visible:ring-2 group-focus-visible:ring-primary group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-background"
+        className="relative w-full h-full overflow-hidden bg-muted transition-[transform,box-shadow] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] pointer-fine:group-hover:-translate-y-1.5 group-focus-visible:ring-2 group-focus-visible:ring-primary group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-background"
         style={{
           boxShadow: hovered
             ? "0 28px 50px -18px rgba(15, 20, 40, 0.5)"

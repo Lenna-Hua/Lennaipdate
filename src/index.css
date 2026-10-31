@@ -39,10 +39,16 @@
   --font-mono: var(--app-font-mono);
   --font-display: var(--app-font-display);
 
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  /* Square corners site-wide (admin included). `rounded-full` still makes circles. */
+  --radius: 0px;
+  --radius-xs: 0px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+  --radius-3xl: 0px;
+  --radius-4xl: 0px;
 }
 
 /* ── Light mode (default / :root) ───────────────────── */
@@ -83,7 +89,7 @@
   --app-font-serif: 'Cormorant Garamond', serif;
   --app-font-mono: Menlo, monospace;
   --app-font-display: 'Big Shoulders Display', sans-serif;
-  --radius: 0.5rem;
+  --radius: 0px;
 
   /* Brand tokens — see `src/lib/brand.ts`. */
   --brand-blue:  #1F67F1;
@@ -423,7 +429,7 @@ html.dark .studio-grid-bg {
 }
 
 /* ── Rounded corner overrides ────────────────────────── */
-.rounded-card { border-radius: 0.5rem; }
+.rounded-card { border-radius: 0; }
 
 /* ── Glassmorphic card ───────────────────────────────── */
 /* NOTE: no backdrop-filter — avoid compositing conflict with rotateY 3D transform */
@@ -475,9 +481,61 @@ html:not(.dark) .card-glass {
   will-change: transform;
 }
 
+/* ── Lightweight backdrop loops (phones / touch) ─────── */
+@keyframes y2k-drift {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  33%      { transform: translate3d(var(--dx), var(--dy), 0); }
+  66%      { transform: translate3d(calc(var(--dx) * -0.5), calc(var(--dy) * 0.4), 0); }
+}
+@keyframes y2k-twinkle {
+  0%, 100% { opacity: 0.25; }
+  50%      { opacity: 0.8; }
+}
+.y2k-lite-anim {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
+@media (max-width: 767px), (pointer: coarse) {
+  .card-glow { animation: none !important; }
+  .card-grain { display: none; }
+}
+
 /* Showcase carousel: let tilted polaroid frames overhang the track */
 .showcase-carousel-track {
   overflow-y: visible;
+}
+
+/* ── Admin editor theme (UXfolio-style, light) ───── */
+/* Every admin color class reads these tokens — change the look here. */
+.admin-theme {
+  --adm-canvas: #f4f4f1;
+  --adm-surface: #ffffff;
+  --adm-subtle: #f1f0ec;
+  --adm-input: #ffffff;
+  --adm-line: #e7e5df;
+  --adm-line-strong: #d3d0c8;
+  --adm-text: #1b1b1a;
+  --adm-muted: #5c5a55;
+  --adm-faint: #8f8c85;
+  --adm-placeholder: #b4b1a9;
+  --adm-accent: #1f67f1;
+  --adm-accent-hover: #3d7cf4;
+  --adm-on-accent: #ffffff;
+  background: var(--adm-canvas);
+  color: var(--adm-text);
+  font-family: var(--app-font-sans, ui-sans-serif, system-ui, sans-serif);
+  color-scheme: light;
+}
+body:has(.admin-theme) .custom-cursor-dot,
+body:has(.admin-theme) .custom-cursor-ring {
+  display: none;
+}
+.admin-theme .tracking-widest {
+  letter-spacing: 0.06em;
+}
+.admin-theme textarea,
+.admin-theme select {
+  border-radius: 0;
 }
 
 /* ── Reduced Motion ─────────────────────────────────── */
@@ -496,7 +554,8 @@ html:not(.dark) .card-glass {
   .logo-marquee-track,
   .studio-decor-swing,
   .studio-decor-float,
-  .rotating-live-text {
+  .rotating-live-text,
+  .y2k-lite-anim {
     animation: none !important;
   }
 }

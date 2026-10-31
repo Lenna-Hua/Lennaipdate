@@ -42,8 +42,8 @@ export function AppearanceEditor({
   return (
     <div className="flex flex-col gap-8 max-w-3xl">
       <div>
-        <h2 className="font-serif text-2xl text-[#F2EDE5]">Fonts & look</h2>
-        <p className="text-[#8A8278] text-sm mt-1">
+        <h2 className="font-serif text-2xl text-[color:var(--adm-text)]">Fonts & look</h2>
+        <p className="text-[color:var(--adm-muted)] text-sm mt-1">
           These three families drive the whole portfolio: headlines (`font-display`),
           body (`font-sans`), and serif accents (`font-serif`). Pick a preset, or
           type any Google Fonts family names and Save to Site.
@@ -51,7 +51,7 @@ export function AppearanceEditor({
       </div>
 
       <section className="flex flex-col gap-3">
-        <label className="text-[#8A8278] text-xs uppercase tracking-widest">Presets</label>
+        <label className="text-[color:var(--adm-muted)] text-xs uppercase tracking-widest">Presets</label>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {FONT_PRESETS.map((preset) => {
             const active = data.preset === preset.id;
@@ -62,12 +62,12 @@ export function AppearanceEditor({
                 onClick={() => applyPreset(preset.id)}
                 className={`text-left border px-4 py-3 transition-colors ${
                   active
-                    ? "border-[#C8A96E] bg-[#C8A96E]/10"
-                    : "border-[#272421] hover:border-[#C8A96E]"
+                    ? "border-[color:var(--adm-accent)] bg-[color:var(--adm-accent)]/10"
+                    : "border-[color:var(--adm-line)] hover:border-[color:var(--adm-accent)]"
                 }`}
               >
-                <span className="block text-[#F2EDE5] text-sm">{preset.label}</span>
-                <span className="block text-[#8A8278] text-xs mt-1 leading-relaxed">
+                <span className="block text-[color:var(--adm-text)] text-sm">{preset.label}</span>
+                <span className="block text-[color:var(--adm-muted)] text-xs mt-1 leading-relaxed">
                   {preset.note}
                 </span>
               </button>
@@ -76,8 +76,8 @@ export function AppearanceEditor({
         </div>
       </section>
 
-      <section className="flex flex-col gap-4 border border-[#272421] p-4">
-        <h3 className="text-[#C8A96E] text-sm uppercase tracking-widest">Typefaces</h3>
+      <section className="flex flex-col gap-4 border border-[color:var(--adm-line)] p-4">
+        <h3 className="text-[color:var(--adm-accent)] text-sm uppercase tracking-widest">Typefaces</h3>
         <TextInput
           label="Display / headlines"
           value={data.displayFont}
@@ -96,17 +96,17 @@ export function AppearanceEditor({
           onChange={(v) => setCustomField("serifFont", v)}
           hint="Folder titles, quotes, admin headings."
         />
-        <p className="text-[#4A4540] text-[11px] font-sans leading-relaxed">
+        <p className="text-[color:var(--adm-faint)] text-[11px] font-sans leading-relaxed">
           Live preview of the current trio:
         </p>
-        <div className="border border-[#3A3530] p-4 flex flex-col gap-2 bg-[#0A0908]">
-          <p className="font-display font-black uppercase text-3xl text-[#F2EDE5]">
+        <div className="border border-[color:var(--adm-line-strong)] p-4 flex flex-col gap-2 bg-[color:var(--adm-input)]">
+          <p className="font-display font-black uppercase text-3xl text-[color:var(--adm-text)]">
             Display sample
           </p>
-          <p className="font-sans text-[#F2EDE5]">
+          <p className="font-sans text-[color:var(--adm-text)]">
             Body sample — the quick brown fox jumps over the lazy dog.
           </p>
-          <p className="font-serif italic text-xl text-[#C8A96E]">Serif sample — Lenna</p>
+          <p className="font-serif italic text-xl text-[color:var(--adm-accent)]">Serif sample — Lenna</p>
         </div>
       </section>
     </div>

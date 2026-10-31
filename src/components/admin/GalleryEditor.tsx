@@ -1,29 +1,18 @@
 /**
- * GalleryEditor — edit gallery items (big projects and artworks) with cover images,
+ * GalleryEditor — edit Studio artworks (slideshow cards) with cover images,
  * additional images, tags, external links, and ordering.
  */
 import { useState } from "react";
 import { SafeImage } from "@/components/SafeImage";
 import { AdminSortableList } from "@/pages/admin-sortable";
-import type { GalleryImageColumns, GalleryItem } from "./types";
-import {
-  galleryImageColumns,
-  galleryImageSrc,
-  withGalleryImageColumns,
-  withGalleryImageSrc,
-} from "@/lib/gallery-image";
+import type { GalleryItem } from "./types";
+import { galleryImageSrc, withGalleryImageSrc } from "@/lib/gallery-image";
 import { TextInput, TextareaInput, TagsInput, CheckboxInput, slugify } from "./shared";
 import {
   UploadToLibraryDashed,
   PickFromLibraryButton,
   SectionImageUploader,
 } from "./AssetLibrary";
-
-const COLUMN_OPTIONS: { value: GalleryImageColumns; label: string }[] = [
-  { value: 1, label: "1 — Full" },
-  { value: 2, label: "2 — Half" },
-  { value: 3, label: "3 — Third" },
-];
 
 export function GalleryEditor({
   data,
@@ -76,9 +65,9 @@ export function GalleryEditor({
     const maxOrder = data.reduce((m, it) => Math.max(m, it.order ?? 0), 0);
     const newItem: GalleryItem = {
       id: String(Date.now()),
-      kind: "big",
-      slug: `new-item-${Date.now()}`,
-      title: "New Item",
+      kind: "small",
+      slug: `new-artwork-${Date.now()}`,
+      title: "New Artwork",
       role: "",
       year: String(new Date().getFullYear()),
       description: "",
@@ -108,15 +97,16 @@ export function GalleryEditor({
   };
 
   const item = data[selectedIdx];
+  const listed = data.filter(matchesVisibility);
 
   return (
     <div className="flex gap-6">
       <div className="w-56 flex-shrink-0 flex flex-col gap-2">
         <button
           onClick={addItem}
-          className="text-sm border border-[#C8A96E] text-[#C8A96E] px-3 py-2 hover:bg-[#C8A96E] hover:text-[#0A0908] transition-colors uppercase tracking-widest mb-2"
+          className="text-sm border border-[color:var(--adm-accent)] text-[color:var(--adm-accent)] px-3 py-2 hover:bg-[color:var(--adm-accent)] hover:text-[color:var(--adm-on-accent)] transition-colors uppercase tracking-widest mb-2"
         >
-          + Add Gallery Item
+          + Add Artwork
         </button>
         <div className="mb-2 flex flex-col gap-1">
           {(
@@ -134,14 +124,14 @@ export function GalleryEditor({
                 onClick={() => setVisibilityFilter(opt.id)}
                 className={`flex items-center justify-between gap-2 text-[10px] uppercase tracking-widest px-2 py-1.5 border transition-colors ${
                   active
-                    ? "bg-[#C8A96E] text-[#0A0908] border-[#C8A96E]"
-                    : "text-[#8A8278] border-[#3A3530] hover:border-[#C8A96E]"
+                    ? "bg-[color:var(--adm-accent)] text-[color:var(--adm-on-accent)] border-[color:var(--adm-accent)]"
+                    : "text-[color:var(--adm-muted)] border-[color:var(--adm-line-strong)] hover:border-[color:var(--adm-accent)]"
                 }`}
               >
                 <span>{opt.label}</span>
                 <span
                   className={`tabular-nums text-[9px] px-1.5 py-0.5 rounded ${
-                    active ? "bg-[#0A0908]/20" : "bg-[#1B1815] text-[#4A4540]"
+                    active ? "bg-[color:var(--adm-input)]/20" : "bg-[color:var(--adm-subtle)] text-[color:var(--adm-faint)]"
                   }`}
                 >
                   {opt.count}
@@ -150,90 +140,75 @@ export function GalleryEditor({
             );
           })}
         </div>
-        {(["big", "small"] as const).map((kind) => {
-          const group = data.filter(
-            (g) => (g.kind ?? "big") === kind && matchesVisibility(g),
-          );
-          if (group.length === 0) return null;
-          const heading =
-            kind === "big" ? "Big Projects · Work page" : "Artworks · Slideshow";
-          return (
-            <div key={kind} className="flex flex-col gap-1.5 mt-3 first:mt-0">
-              <div className="text-[10px] uppercase tracking-[0.3em] text-[#C8A96E] px-1 pt-1 pb-1">
-                {heading} ({group.length})
-              </div>
-              <AdminSortableList
-                items={group}
-                onReorder={(reorderedGroup) => {
-                  const selectedId = data[selectedIdx]?.id;
-                  const positions = data.reduce<number[]>((acc, item, i) => {
-                    if ((item.kind ?? "big") === kind && matchesVisibility(item)) {
-                      acc.push(i);
-                    }
-                    return acc;
-                  }, []);
-                  const newData = [...data];
-                  positions.forEach((pos, i) => {
-                    newData[pos] = reorderedGroup[i]!;
-                  });
-                  onChange(newData);
-                  if (selectedId) {
-                    const newIdx = newData.findIndex((x) => x.id === selectedId);
-                    if (newIdx !== -1) setSelectedIdx(newIdx);
-                  }
-                }}
-                renderItem={(g, _groupIdx, dragHandle) => {
-                  const i = data.findIndex((x) => x.id === g.id);
-                  return (
-                    <div className="flex items-center gap-1">
-                      {dragHandle}
-                      <button
-                        onClick={() => setSelectedIdx(i)}
-                        className={`flex-1 text-left text-sm px-2 py-2 truncate transition-colors ${
-                          i === selectedIdx
-                            ? "bg-[#C8A96E] text-[#0A0908]"
-                            : "text-[#8A8278] hover:text-[#F2EDE5] border border-[#272421]"
-                        }`}
-                        title={g.title}
-                      >
-                        {g.featured ? "★ " : ""}
-                        {g.title}
-                        {g.archived && (
-                          <span className="ml-2 text-[10px] uppercase tracking-widest opacity-70">
-                            (archived)
-                          </span>
-                        )}
-                        {g.linkUrl && (
-                          <span className="ml-2 opacity-70" title="Has external link">
-                            ↗
-                          </span>
-                        )}
-                      </button>
-                    </div>
-                  );
-                }}
-              />
-            </div>
-          );
-        })}
+        {listed.length > 0 && (
+          <AdminSortableList
+            items={listed}
+            onReorder={(reordered) => {
+              const selectedId = data[selectedIdx]?.id;
+              const positions = data.reduce<number[]>((acc, it, i) => {
+                if (matchesVisibility(it)) acc.push(i);
+                return acc;
+              }, []);
+              const newData = [...data];
+              positions.forEach((pos, i) => {
+                newData[pos] = reordered[i]!;
+              });
+              onChange(newData);
+              if (selectedId) {
+                const newIdx = newData.findIndex((x) => x.id === selectedId);
+                if (newIdx !== -1) setSelectedIdx(newIdx);
+              }
+            }}
+            renderItem={(g, _idx, dragHandle) => {
+              const i = data.findIndex((x) => x.id === g.id);
+              return (
+                <div className="flex items-center gap-1">
+                  {dragHandle}
+                  <button
+                    onClick={() => setSelectedIdx(i)}
+                    className={`flex-1 text-left text-sm px-2 py-2 truncate transition-colors ${
+                      i === selectedIdx
+                        ? "bg-[color:var(--adm-accent)] text-[color:var(--adm-on-accent)]"
+                        : "text-[color:var(--adm-muted)] hover:text-[color:var(--adm-text)] border border-[color:var(--adm-line)]"
+                    }`}
+                    title={g.title}
+                  >
+                    {g.featured ? "★ " : ""}
+                    {g.title}
+                    {g.archived && (
+                      <span className="ml-2 text-[10px] uppercase tracking-widest opacity-70">
+                        (archived)
+                      </span>
+                    )}
+                    {g.linkUrl && (
+                      <span className="ml-2 opacity-70" title="Has external link">
+                        ↗
+                      </span>
+                    )}
+                  </button>
+                </div>
+              );
+            }}
+          />
+        )}
       </div>
       {item && (
         <div className="flex-1 flex flex-col gap-5 overflow-y-auto pr-2">
           <div className="flex justify-between items-center flex-wrap gap-3">
-            <span className="text-[#C8A96E] text-sm uppercase tracking-widest">
+            <span className="text-[color:var(--adm-accent)] text-sm uppercase tracking-widest">
               {item.title}
             </span>
             <div className="flex items-center gap-3">
               <button
                 onClick={() => moveItem(selectedIdx, -1)}
-                className="text-[#8A8278] hover:text-[#F2EDE5] text-sm"
+                className="text-[color:var(--adm-muted)] hover:text-[color:var(--adm-text)] text-sm"
                 title="Move up"
               >
                 ↑
               </button>
               <button
                 onClick={() => moveItem(selectedIdx, 1)}
-                className="text-[#8A8278] hover:text-[#F2EDE5] text-sm"
+                className="text-[color:var(--adm-muted)] hover:text-[color:var(--adm-text)] text-sm"
                 title="Move down"
               >
                 ↓
@@ -243,7 +218,7 @@ export function GalleryEditor({
                   onChange(data.filter((_, i) => i !== selectedIdx));
                   setSelectedIdx(Math.max(0, selectedIdx - 1));
                 }}
-                className="text-sm text-[#4A4540] hover:text-red-400"
+                className="text-sm text-[color:var(--adm-faint)] hover:text-red-400"
               >
                 Remove
               </button>
@@ -251,115 +226,43 @@ export function GalleryEditor({
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className="text-[#8A8278] text-xs uppercase tracking-widest">
-              Section
+            <label className="text-[color:var(--adm-muted)] text-xs uppercase tracking-widest">
+              Slideshow card shape
             </label>
-            <div className="flex gap-2">
-              {(["big", "small"] as const).map((k) => {
-                const active = (item.kind ?? "big") === k;
+            <div className="flex gap-2 flex-wrap">
+              {(
+                [
+                  { value: undefined, label: "Auto" },
+                  { value: "portrait" as const, label: "Portrait" },
+                  { value: "landscape" as const, label: "Landscape" },
+                ] as const
+              ).map(({ value, label }) => {
+                const active = (item.orientation ?? undefined) === value;
                 return (
                   <button
-                    key={k}
+                    key={label}
                     type="button"
-                    onClick={() => update(selectedIdx, { kind: k })}
+                    onClick={() =>
+                      update(selectedIdx, {
+                        orientation: value,
+                      })
+                    }
                     className={`text-xs uppercase tracking-widest px-3 py-1.5 border transition-colors ${
                       active
-                        ? "bg-[#C8A96E] text-[#0A0908] border-[#C8A96E]"
-                        : "text-[#8A8278] border-[#3A3530] hover:border-[#C8A96E]"
+                        ? "bg-[color:var(--adm-accent)] text-[color:var(--adm-on-accent)] border-[color:var(--adm-accent)]"
+                        : "text-[color:var(--adm-muted)] border-[color:var(--adm-line-strong)] hover:border-[color:var(--adm-accent)]"
                     }`}
                   >
-                    {k === "big" ? "Big Project" : "Artwork"}
+                    {label}
                   </button>
                 );
               })}
             </div>
-            <span className="text-[#4A4540] text-[11px] font-sans">
-              Big Projects appear as cards on the Work page, each with its own
-              /studio/&lt;slug&gt; page. Artworks appear in the slideshow on Studio and
-              Home and open in a popup.
+            <span className="text-[color:var(--adm-faint)] text-[11px] font-sans">
+              Auto uses the cover&apos;s natural ratio. Portrait = 4:5, Landscape =
+              16:10. All cards share the same max height; width follows the ratio.
             </span>
           </div>
-
-          {(item.kind ?? "big") === "big" && (
-            <div className="flex flex-col gap-2">
-              <label className="text-[#8A8278] text-xs uppercase tracking-widest">
-                Card layout (Work / Home grid)
-              </label>
-              <div className="flex gap-2 flex-wrap">
-                {(
-                  [
-                    { value: "vertical" as const, label: "Vertical" },
-                    { value: "horizontal" as const, label: "Horizontal" },
-                  ] as const
-                ).map(({ value, label }) => {
-                  const active = (item.cardLayout ?? "vertical") === value;
-                  return (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() =>
-                        update(selectedIdx, {
-                          cardLayout: value === "vertical" ? undefined : value,
-                        })
-                      }
-                      className={`text-xs uppercase tracking-widest px-3 py-1.5 border transition-colors ${
-                        active
-                          ? "bg-[#C8A96E] text-[#0A0908] border-[#C8A96E]"
-                          : "text-[#8A8278] border-[#3A3530] hover:border-[#C8A96E]"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-              <span className="text-[#4A4540] text-[11px] font-sans">
-                Vertical = one 4:5 card. Horizontal = the width of two cards plus
-                the gap between them, same height.
-              </span>
-            </div>
-          )}
-
-          {(item.kind ?? "big") === "small" && (
-            <div className="flex flex-col gap-2">
-              <label className="text-[#8A8278] text-xs uppercase tracking-widest">
-                Slideshow card shape
-              </label>
-              <div className="flex gap-2 flex-wrap">
-                {(
-                  [
-                    { value: undefined, label: "Auto" },
-                    { value: "portrait" as const, label: "Portrait" },
-                    { value: "landscape" as const, label: "Landscape" },
-                  ] as const
-                ).map(({ value, label }) => {
-                  const active = (item.orientation ?? undefined) === value;
-                  return (
-                    <button
-                      key={label}
-                      type="button"
-                      onClick={() =>
-                        update(selectedIdx, {
-                          orientation: value,
-                        })
-                      }
-                      className={`text-xs uppercase tracking-widest px-3 py-1.5 border transition-colors ${
-                        active
-                          ? "bg-[#C8A96E] text-[#0A0908] border-[#C8A96E]"
-                          : "text-[#8A8278] border-[#3A3530] hover:border-[#C8A96E]"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-              <span className="text-[#4A4540] text-[11px] font-sans">
-                Auto uses the cover&apos;s natural ratio. Portrait = 4:5, Landscape =
-                16:10. All cards share the same max height; width follows the ratio.
-              </span>
-            </div>
-          )}
 
           <TextInput
             label="Title"
@@ -409,7 +312,7 @@ export function GalleryEditor({
             onChange={(tags) => update(selectedIdx, { tags })}
           />
 
-          <div className="flex flex-col gap-3 border border-[#272421] rounded p-3">
+          <div className="flex flex-col gap-3 border border-[color:var(--adm-line)] rounded p-3">
             <CheckboxInput
               label="★ Show on homepage Selected Work"
               checked={Boolean(item.featured)}
@@ -423,8 +326,8 @@ export function GalleryEditor({
           </div>
 
           {/* External hyperlink */}
-          <div className="flex flex-col gap-2 border border-[#272421] rounded p-3">
-            <label className="text-[#8A8278] text-xs uppercase tracking-widest">
+          <div className="flex flex-col gap-2 border border-[color:var(--adm-line)] rounded p-3">
+            <label className="text-[color:var(--adm-muted)] text-xs uppercase tracking-widest">
               External Hyperlink (optional)
             </label>
             <TextInput
@@ -437,16 +340,14 @@ export function GalleryEditor({
               value={item.linkLabel ?? ""}
               onChange={(v) => update(selectedIdx, { linkLabel: v })}
             />
-            <span className="text-[#4A4540] text-[11px] font-sans">
-              Shown as a button on the public Studio detail page (big
-              projects) or in the artwork popup (artworks). Leave blank to
-              hide the button.
+            <span className="text-[color:var(--adm-faint)] text-[11px] font-sans">
+              Shown as a button in the artwork popup. Leave blank to hide the button.
             </span>
           </div>
 
           {/* Cover image */}
           <div className="flex flex-col gap-2">
-            <label className="text-[#8A8278] text-xs uppercase tracking-widest">
+            <label className="text-[color:var(--adm-muted)] text-xs uppercase tracking-widest">
               Cover Image
             </label>
             <input
@@ -454,11 +355,12 @@ export function GalleryEditor({
               value={item.coverImage}
               onChange={(e) => update(selectedIdx, { coverImage: e.target.value })}
               placeholder="Paste image URL"
-              className="bg-transparent border-b border-[#3A3530] text-[#F2EDE5] py-2 text-sm focus:outline-none focus:border-[#C8A96E] transition-colors"
+              className="bg-transparent border-b border-[color:var(--adm-line-strong)] text-[color:var(--adm-text)] py-2 text-sm focus:outline-none focus:border-[color:var(--adm-accent)] transition-colors"
             />
             <div className="flex items-center gap-2 flex-wrap">
               <UploadToLibraryDashed
                 label="↑ Upload cover image"
+                usage="artwork-cover"
                 accept="image/*"
                 onUploaded={(url) => update(selectedIdx, { coverImage: url })}
               />
@@ -469,7 +371,7 @@ export function GalleryEditor({
             </div>
             {item.coverImage && (
               <div
-                className="rounded overflow-hidden border border-[#3A3530]"
+                className="rounded overflow-hidden border border-[color:var(--adm-line-strong)]"
                 style={{ maxHeight: "150px" }}
               >
                 <SafeImage
@@ -482,11 +384,11 @@ export function GalleryEditor({
             )}
           </div>
 
-          <div className="flex flex-col gap-2 border border-[#272421] rounded p-3">
-            <label className="text-[#8A8278] text-xs uppercase tracking-widest">
-              Project logo (marquee)
+          <div className="flex flex-col gap-2 border border-[color:var(--adm-line)] rounded p-3">
+            <label className="text-[color:var(--adm-muted)] text-xs uppercase tracking-widest">
+              Logo (marquee)
             </label>
-            <span className="text-[#4A4540] text-[11px] font-sans">
+            <span className="text-[color:var(--adm-faint)] text-[11px] font-sans">
               Square mark for the looping logo strip at the bottom of the Work page. Leave blank to skip this item.
             </span>
             <input
@@ -494,11 +396,12 @@ export function GalleryEditor({
               value={item.logo ?? ""}
               onChange={(e) => update(selectedIdx, { logo: e.target.value })}
               placeholder="Paste logo URL"
-              className="bg-transparent border-b border-[#3A3530] text-[#F2EDE5] py-2 text-sm focus:outline-none focus:border-[#C8A96E] transition-colors"
+              className="bg-transparent border-b border-[color:var(--adm-line-strong)] text-[color:var(--adm-text)] py-2 text-sm focus:outline-none focus:border-[color:var(--adm-accent)] transition-colors"
             />
             <div className="flex items-center gap-2 flex-wrap">
               <UploadToLibraryDashed
                 label="↑ Upload logo"
+                usage="logo"
                 accept="image/*"
                 onUploaded={(url) => update(selectedIdx, { logo: url })}
               />
@@ -519,154 +422,69 @@ export function GalleryEditor({
 
           {/* Additional images */}
           <div className="flex flex-col gap-3">
-            <label className="text-[#8A8278] text-xs uppercase tracking-widest">
+            <label className="text-[color:var(--adm-muted)] text-xs uppercase tracking-widest">
               Additional Images
             </label>
-            {(item.kind ?? "big") === "small" && (
-              <span className="text-[#4A4540] text-[11px] font-sans">
-                Extra images appear on the artwork detail page and in the modal
-                gallery when opened.
-              </span>
-            )}
-            {(item.kind ?? "big") === "big" && (
-              <div className="flex flex-col gap-2 border border-[#272421] p-3 rounded">
-                <label className="text-[#8A8278] text-[10px] uppercase tracking-widest">
-                  Default columns
-                </label>
-                <div className="flex gap-2 flex-wrap">
-                  {COLUMN_OPTIONS.map(({ value, label }) => {
-                    const active = (item.imageColumns ?? 2) === value;
-                    return (
-                      <button
-                        key={value}
-                        type="button"
-                        onClick={() =>
-                          update(selectedIdx, { imageColumns: value })
-                        }
-                        className={`text-xs uppercase tracking-widest px-3 py-1.5 border transition-colors ${
-                          active
-                            ? "bg-[#C8A96E] text-[#0A0908] border-[#C8A96E]"
-                            : "text-[#8A8278] border-[#3A3530] hover:border-[#C8A96E]"
-                        }`}
-                      >
-                        {label}
-                      </button>
-                    );
-                  })}
-                </div>
-                <span className="text-[#4A4540] text-[11px] font-sans">
-                  Applies to images that do not have their own width. Override
-                  any single image below: 1 = full row, 2 = half, 3 = one third.
-                </span>
-              </div>
-            )}
+            <span className="text-[color:var(--adm-faint)] text-[11px] font-sans">
+              Extra images appear on the artwork detail page and in the popup gallery.
+            </span>
             {(item.images ?? []).map((entry, i) => {
               const src = galleryImageSrc(entry);
-              const columns = galleryImageColumns(entry, item.imageColumns);
               return (
                 <div
                   key={i}
-                  className="flex flex-col gap-2 border border-[#272421] p-3 rounded"
+                  className="flex items-start gap-3 border border-[color:var(--adm-line)] p-3 rounded"
                 >
-                  <div className="flex items-start gap-3">
-                    {src && (
-                      <SafeImage
-                        src={src}
-                        alt=""
-                        className="w-20 h-20 object-cover rounded flex-shrink-0"
-                        fallbackAspect="16 / 5"
-                      />
-                    )}
-                    <input
-                      type="text"
-                      value={src}
-                      onChange={(e) => {
-                        const arr = [...(item.images ?? [])];
-                        arr[i] = withGalleryImageSrc(arr[i] ?? "", e.target.value);
-                        update(selectedIdx, { images: arr });
-                      }}
-                      className="flex-1 bg-transparent border-b border-[#3A3530] text-[#F2EDE5] py-1 text-sm focus:outline-none focus:border-[#C8A96E]"
+                  {src && (
+                    <SafeImage
+                      src={src}
+                      alt=""
+                      className="w-20 h-20 object-cover rounded flex-shrink-0"
+                      fallbackAspect="16 / 5"
                     />
-                    <button
-                      onClick={() => {
-                        const arr = (item.images ?? []).filter((_, j) => j !== i);
-                        update(selectedIdx, { images: arr });
-                      }}
-                      className="text-sm text-[#4A4540] hover:text-red-400"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                  {(item.kind ?? "big") === "big" && (
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[#8A8278] text-[10px] uppercase tracking-widest">
-                        This image
-                      </label>
-                      <div className="flex gap-2 flex-wrap">
-                        {COLUMN_OPTIONS.map(({ value, label }) => {
-                          const active = columns === value;
-                          return (
-                            <button
-                              key={value}
-                              type="button"
-                              onClick={() => {
-                                const arr = [...(item.images ?? [])];
-                                arr[i] = withGalleryImageColumns(
-                                  arr[i] ?? "",
-                                  value,
-                                );
-                                update(selectedIdx, { images: arr });
-                              }}
-                              className={`text-xs uppercase tracking-widest px-3 py-1.5 border transition-colors ${
-                                active
-                                  ? "bg-[#C8A96E] text-[#0A0908] border-[#C8A96E]"
-                                  : "text-[#8A8278] border-[#3A3530] hover:border-[#C8A96E]"
-                              }`}
-                            >
-                              {label}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
                   )}
+                  <input
+                    type="text"
+                    value={src}
+                    onChange={(e) => {
+                      const arr = [...(item.images ?? [])];
+                      arr[i] = withGalleryImageSrc(arr[i] ?? "", e.target.value);
+                      update(selectedIdx, { images: arr });
+                    }}
+                    className="flex-1 bg-transparent border-b border-[color:var(--adm-line-strong)] text-[color:var(--adm-text)] py-1 text-sm focus:outline-none focus:border-[color:var(--adm-accent)]"
+                  />
+                  <button
+                    onClick={() => {
+                      const arr = (item.images ?? []).filter((_, j) => j !== i);
+                      update(selectedIdx, { images: arr });
+                    }}
+                    className="text-sm text-[color:var(--adm-faint)] hover:text-red-400"
+                  >
+                    ✕
+                  </button>
                 </div>
               );
             })}
             <div className="flex gap-2 flex-wrap">
               <button
                 onClick={() =>
-                  update(selectedIdx, {
-                    images: [
-                      ...(item.images ?? []),
-                      { src: "", columns: item.imageColumns ?? 2 },
-                    ],
-                  })
+                  update(selectedIdx, { images: [...(item.images ?? []), ""] })
                 }
-                className="text-sm border border-[#C8A96E] text-[#C8A96E] px-3 py-1.5 hover:bg-[#C8A96E] hover:text-[#0A0908] transition-colors uppercase tracking-widest"
+                className="text-sm border border-[color:var(--adm-accent)] text-[color:var(--adm-accent)] px-3 py-1.5 hover:bg-[color:var(--adm-accent)] hover:text-[color:var(--adm-on-accent)] transition-colors uppercase tracking-widest"
               >
                 + Add URL
               </button>
               <SectionImageUploader
+                usage="artwork"
                 onPicked={(url) =>
-                  update(selectedIdx, {
-                    images: [
-                      ...(item.images ?? []),
-                      { src: url, columns: item.imageColumns ?? 2 },
-                    ],
-                  })
+                  update(selectedIdx, { images: [...(item.images ?? []), url] })
                 }
               />
               <PickFromLibraryButton
                 type="image"
                 label="From library"
                 onPick={(url) =>
-                  update(selectedIdx, {
-                    images: [
-                      ...(item.images ?? []),
-                      { src: url, columns: item.imageColumns ?? 2 },
-                    ],
-                  })
+                  update(selectedIdx, { images: [...(item.images ?? []), url] })
                 }
               />
             </div>

@@ -1,6 +1,9 @@
 /** Shared types for the admin panel components. */
 
 import type { GalleryImageColumns, GalleryImageEntry } from "@/lib/gallery-image";
+import type { MockupDevice, MockupLayout, ScreenMeta } from "@/lib/device-mockup";
+import type { MediaUsage } from "@/lib/media-guidelines";
+import type { CoverPlayback } from "@/components/CoverMedia";
 
 export type {
   GalleryImage,
@@ -8,7 +11,7 @@ export type {
   GalleryImageEntry,
 } from "@/lib/gallery-image";
 
-export type SectionType = "text" | "image" | "video" | "problem-solution" | "embed";
+export type SectionType = "text" | "image" | "video" | "problem-solution" | "embed" | "mockup";
 
 /** Skim vs expanded: "always" shows by default; "detail" only after See more. */
 export type SectionVisibility = "always" | "detail";
@@ -45,6 +48,23 @@ export type Section = {
   transparent?: boolean;
   /** Video: autoplay muted on repeat like a GIF instead of a player with controls. */
   loop?: boolean;
+  /**
+   * Image/video desktop width: 1 = full row (default), 2 = half, 3 = third.
+   * Consecutive half/third sections share a row.
+   */
+  columns?: 1 | 2 | 3;
+  /** Mockup: full-bleed screenshots placed inside device frames. */
+  screens?: string[];
+  device?: MockupDevice;
+  layout?: MockupLayout;
+  /** Mockup: stage color (hex). Empty = transparent; floating defaults to navy. */
+  background?: string;
+  /** Mockup: per-screen zoom / focus / set device + size, index-aligned with screens. */
+  screenMeta?: ScreenMeta[];
+  /** Mockup: prototype-style click-through, hover scroll and tilt. */
+  interactive?: boolean;
+  /** Mockup: width as % of the content column (40–100, default 100). */
+  mockupWidth?: number;
 };
 
 /**
@@ -77,7 +97,17 @@ export type Project = {
   solution: string;
   /** "Impact" block on the case study page. */
   impact: string;
+  /** Image or video (mp4/webm). */
   coverImage: string;
+  /** MIME from library upload/pick — lets /api/assets URLs without an extension render as video. */
+  coverMime?: string;
+  /** Video covers only: still frame for the lock screen and before the video loads. */
+  coverPoster?: string;
+  /**
+   * Video covers only, on Work/Home cards. "loop" (default) plays while on screen;
+   * "hover" waits on the first frame until the card is hovered.
+   */
+  coverPlayback?: CoverPlayback;
   /**
    * Short muted loop shown on Work/Home cards after a long hover.
    * Leave empty to keep the static cover image.
@@ -93,6 +123,16 @@ export type Project = {
   period?: string;
   featured: boolean;
   archived?: boolean;
+  /** Visitors must enter a password before the case study body loads. */
+  protected?: boolean;
+  /**
+   * Custom password for this case study. Plain text until saved, then a
+   * server-side hash. Empty = use the shared CASE_STUDY_PASSWORD.
+   */
+  password?: string;
+  /** Card-only stub that hasn't been replaced with the full project from the server yet. */
+  locked?: boolean;
+  deferred?: boolean;
   sections: Section[];
   /**
    * @deprecated Prefer sections[].visibility. Kept so older DB rows still load.
@@ -363,4 +403,12 @@ export type AssetPickerFn = (
   onPick: (url: string, meta?: AssetPickMeta) => void,
   opts?: PickerOpts,
 ) => void;
-export type AssetUploadFn = (file: File) => Promise<string>;
+export type AssetUploadOpts = {
+  /** Where the media will appear — drives the editor's default crop and size recommendations. */
+  usage?: MediaUsage;
+  batch?: { index: number; total: number };
+  /** Called with the file actually uploaded (cropped / re-encoded, or the original). */
+  onPrepared?: (file: File) => void;
+};
+/** Rejects with UploadCancelledError when the user closes the editor. */
+export type AssetUploadFn = (file: File, opts?: AssetUploadOpts) => Promise<string>;

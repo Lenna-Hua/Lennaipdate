@@ -9,11 +9,15 @@ import {
   Cloud,
   Zap,
   Diamond,
+  Columns3,
+  Columns2,
+  Square,
 } from "lucide-react";
 import projectsSeed from "@/data/projects.json";
 import gallerySeed from "@/data/gallery.json";
 import studioSeed from "@/data/studio.json";
 import { useContent } from "@/lib/use-content";
+import { floatInProps, useMotionProfile, SOFT_EASE } from "@/lib/motion";
 import { useTheme } from "@/context/ThemeContext";
 import {
   PinterestCard,
@@ -22,6 +26,7 @@ import {
 } from "@/components/PinterestCard";
 import { LogoMarquee } from "@/components/LogoMarquee";
 import { collectMarqueeLogos, mergeStudio } from "@/lib/studio-content";
+import { isBigGalleryItem, STUDIO_TAG } from "@/lib/gallery-migration";
 import type {
   GalleryItem,
   Project as ProjectType,
@@ -30,12 +35,46 @@ import type {
 import {
   BRAND,
   BRAND_DECK,
-  BRAND_EASE,
   BRAND_TEXT,
 } from "@/lib/brand";
 
 const ACCENTS = BRAND_DECK;
 const FILTERS = ["All", "UX Research", "Product Design", "Analysis", "Studio"];
+
+type ColumnCount = 1 | 2 | 3;
+const COLUMNS_STORAGE_KEY = "work-columns";
+
+/* Each choice is a maximum: narrower screens step down automatically.
+   Class strings stay literal so Tailwind can see them. */
+const COLUMN_LAYOUTS: Record<
+  ColumnCount,
+  { grid: string; aspect: string; label: string; Icon: typeof Square }
+> = {
+  3: {
+    grid: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
+    aspect: "aspect-[4/5]",
+    label: "3 columns",
+    Icon: Columns3,
+  },
+  2: {
+    grid: "grid-cols-1 sm:grid-cols-2",
+    aspect: "aspect-[4/5] lg:aspect-square 2xl:aspect-[5/4]",
+    label: "2 columns",
+    Icon: Columns2,
+  },
+  1: {
+    grid: "grid-cols-1",
+    aspect: "aspect-[4/5] sm:aspect-auto sm:h-[min(80vh,56vw)]",
+    label: "1 column",
+    Icon: Square,
+  },
+};
+
+function readStoredColumns(): ColumnCount {
+  if (typeof window === "undefined") return 3;
+  const n = Number(window.localStorage.getItem(COLUMNS_STORAGE_KEY));
+  return n === 1 || n === 2 || n === 3 ? n : 3;
+}
 
 type Project = (typeof projectsSeed)[number] & { archived?: boolean };
 
@@ -61,6 +100,9 @@ function workToCard(p: Project): PinterestCardProject {
     slug: p.slug,
     title: p.title,
     coverImage: p.coverImage,
+    coverMime: (p as { coverMime?: string }).coverMime,
+    coverPoster: (p as { coverPoster?: string }).coverPoster,
+    coverPlayback: (p as { coverPlayback?: ProjectType["coverPlayback"] }).coverPlayback,
     year: p.year,
     tags: p.tags ?? [],
     type: p.type,
@@ -70,6 +112,7 @@ function workToCard(p: Project): PinterestCardProject {
     hoverVideo: (p as { hoverVideo?: string }).hoverVideo,
     liveUrl: (p as { liveUrl?: string }).liveUrl,
     cardLayout: (p as { cardLayout?: ProjectType["cardLayout"] }).cardLayout,
+    protected: (p as { protected?: boolean }).protected,
   };
 }
 
@@ -171,13 +214,27 @@ export default function WorkIndex() {
     [studio, galleryData, projectsData],
   );
   const [filter, setFilter] = useState("All");
+  const [columns, setColumns] = useState<ColumnCount>(readStoredColumns);
+  const layout = COLUMN_LAYOUTS[columns];
+  const motionProfile = useMotionProfile();
+
+  const chooseColumns = (n: ColumnCount) => {
+    setColumns(n);
+    try {
+      window.localStorage.setItem(COLUMNS_STORAGE_KEY, String(n));
+    } catch {
+      /* storage unavailable */
+    }
+  };
   const { theme } = useTheme();
   const isDark = theme === "dark";
 
   const visible = useMemo((): PinterestCardProject[] => {
     const fromWork = projectsData.filter((p) => !p.archived).map(workToCard);
+    // Gallery "big projects" not yet moved into Projects (until Admin saves the migration).
+    const workSlugs = new Set(projectsData.map((p) => p.slug));
     const fromStudio = galleryData
-      .filter((g) => !g.archived && (g.kind ?? "big") === "big")
+      .filter((g) => !g.archived && isBigGalleryItem(g) && !workSlugs.has(g.slug))
       .map(galleryBigToCard);
     return [...fromWork, ...fromStudio];
   }, [projectsData, galleryData]);
@@ -185,7 +242,9 @@ export default function WorkIndex() {
   const filtered = useMemo(() => {
     if (filter === "All") return visible;
     if (filter === "Studio") {
-      return visible.filter((p) => p.href?.startsWith("/studio/"));
+      return visible.filter(
+        (p) => p.href?.startsWith("/studio/") || p.tags.includes(STUDIO_TAG),
+      );
     }
     return visible.filter((p) => p.type === filter || p.tags.includes(filter));
   }, [visible, filter]);
@@ -200,19 +259,19 @@ export default function WorkIndex() {
       className="relative w-full"
       style={{ minHeight: "calc(100vh - 80px)" }}
     >
-      <CursorFollowIcons />
+      {!motionProfile.lite && <CursorFollowIcons />}
       <motion.div
         className="relative w-full flex flex-col gap-10 pb-28"
         style={{ zIndex: 1 }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ duration: 0.4, ease: BRAND_EASE }}
+        transition={{ duration: 0.5, ease: SOFT_EASE }}
       >
         <motion.div
           className="flex items-baseline justify-between gap-6 flex-wrap pb-3"
           initial={{ opacity: 0, y: -6 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45, ease: BRAND_EASE }}
+          transition={{ duration: 0.6, ease: SOFT_EASE }}
         >
           <span className="text-xs uppercase tracking-[0.42em] font-sans text-muted-foreground">
             Lenna Hua · Selected Works
@@ -229,9 +288,9 @@ export default function WorkIndex() {
           <motion.h1
             className="font-display font-black uppercase leading-[0.88] tracking-tight"
             style={{ fontSize: "clamp(3.5rem,11vw,11rem)" }}
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, ease: BRAND_EASE }}
+            transition={{ duration: 0.8, ease: SOFT_EASE }}
           >
             <span style={{ color: BRAND_TEXT.coral }}>Selected</span>
             <br />
@@ -239,32 +298,65 @@ export default function WorkIndex() {
           </motion.h1>
 
           <motion.div
-            className="flex flex-wrap gap-2"
-            role="group"
-            aria-label="Filter projects by category"
+            className="flex flex-wrap items-center justify-between gap-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.18, duration: 0.5 }}
+            transition={{ delay: 0.18, duration: 0.6, ease: SOFT_EASE }}
           >
-            {FILTERS.map((f, fi) => {
-              const isActive = filter === f;
-              const color = ACCENTS[fi % ACCENTS.length];
-              return (
-                <button
-                  key={f}
-                  onClick={() => setFilter(f)}
-                  aria-pressed={isActive}
-                  className="px-4 py-1.5 text-sm uppercase tracking-widest font-sans rounded-full transition-all duration-300"
-                  style={
-                    isActive
-                      ? { background: color, color: "#0A0908", fontWeight: 700 }
-                      : { border: `1.5px solid ${color}55`, color }
-                  }
-                >
-                  {f}
-                </button>
-              );
-            })}
+            <div
+              className="flex flex-wrap gap-2"
+              role="group"
+              aria-label="Filter projects by category"
+            >
+              {FILTERS.map((f, fi) => {
+                const isActive = filter === f;
+                const color = ACCENTS[fi % ACCENTS.length];
+                return (
+                  <button
+                    key={f}
+                    onClick={() => setFilter(f)}
+                    aria-pressed={isActive}
+                    className="px-4 py-1.5 text-sm uppercase tracking-widest font-sans rounded-full transition-all duration-300"
+                    style={
+                      isActive
+                        ? { background: color, color: "#0A0908", fontWeight: 700 }
+                        : { border: `1.5px solid ${color}55`, color }
+                    }
+                  >
+                    {f}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div
+              className="hidden sm:inline-flex items-center gap-1 p-1 rounded-md border border-foreground/15"
+              role="group"
+              aria-label="Cards per row"
+            >
+              {([3, 2, 1] as const).map((n) => {
+                const { Icon, label } = COLUMN_LAYOUTS[n];
+                const isActive = columns === n;
+                return (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => chooseColumns(n)}
+                    aria-pressed={isActive}
+                    aria-label={label}
+                    title={label}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-mono transition-colors duration-300 ${
+                      isActive
+                        ? "bg-foreground text-background"
+                        : "text-muted-foreground hover:text-foreground hover:bg-foreground/5"
+                    }`}
+                  >
+                    <Icon size={14} strokeWidth={1.8} aria-hidden />
+                    {n}
+                  </button>
+                );
+              })}
+            </div>
           </motion.div>
         </section>
 
@@ -272,25 +364,32 @@ export default function WorkIndex() {
           {filtered.length} project{filtered.length !== 1 ? "s" : ""} shown
           {filter !== "All" ? ` in ${filter}` : ""}
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 grid-flow-row-dense items-stretch [--card-grid-gap:2rem]">
+        <div
+          className={`grid ${layout.grid} gap-[var(--card-grid-gap)] grid-flow-row-dense items-stretch [--card-grid-gap:1.5rem] lg:[--card-grid-gap:2rem]`}
+        >
           <AnimatePresence mode="popLayout">
             {filtered.map((project, gi) => {
               const i = projectIndexMap.get(project.id) ?? 0;
+              const card = columns === 1 ? { ...project, cardLayout: undefined } : project;
+              const enter = floatInProps(motionProfile, { delay: (gi % columns) * 0.08 });
               return (
                 <motion.div
                   key={project.id}
-                  layout
-                  initial={{ opacity: 0, y: 24 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
+                  layout={motionProfile.lite ? false : "position"}
+                  {...enter}
                   transition={{
-                    duration: 0.55,
-                    delay: (gi % 6) * 0.07,
-                    ease: BRAND_EASE,
+                    ...("transition" in enter ? enter.transition : {}),
+                    layout: { duration: 0.55, ease: SOFT_EASE },
                   }}
-                  className={`h-full ${cardSpanClass(project)}`}
+                  exit={{ opacity: 0, transition: { duration: 0.25, ease: SOFT_EASE } }}
+                  className={`h-full ${cardSpanClass(card)}`}
                 >
-                  <PinterestCard project={project} i={i} isDark={isDark} />
+                  <PinterestCard
+                    project={card}
+                    i={i}
+                    isDark={isDark}
+                    aspectClass={layout.aspect}
+                  />
                 </motion.div>
               );
             })}

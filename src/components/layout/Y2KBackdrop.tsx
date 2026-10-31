@@ -1,7 +1,8 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type CSSProperties } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { useTheme } from "@/context/ThemeContext";
 import { BRAND } from "@/lib/brand";
+import { useLiteMotion } from "@/lib/motion";
 
 type Orb = {
   top: string;
@@ -257,10 +258,91 @@ function ShapeSVG({ shape, size, color }: { shape: SparkleShape; size: number; c
   }
 }
 
-export function Y2KBackdrop() {
-  const reduce = useReducedMotion();
+type DriftStyle = CSSProperties & Record<`--${string}`, string>;
+
+/* Phones / touch: a handful of decorations on compositor-only CSS loops,
+   with no blend modes, drop shadows or backdrop blur. */
+function LiteBackdrop({ isDark, calm }: { isDark: boolean; calm: boolean }) {
+  const orbs = (isDark ? ORBS_DARK : ORBS_LIGHT).filter((_, i) => i % 2 === 0);
+  const floaters = calm ? [] : FLOATERS.filter((_, i) => i % 3 === 0);
+  const sparkles = calm ? [] : SPARKLES.filter((_, i) => i % 3 === 0);
+
+  return (
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 overflow-hidden"
+      style={{ zIndex: 0 }}
+    >
+      {orbs.map((o, i) => {
+        const size = Math.round(o.size * 0.75);
+        const style: DriftStyle = {
+          position: "absolute",
+          top: o.top,
+          left: o.left,
+          width: size,
+          height: size,
+          borderRadius: "50%",
+          background: `radial-gradient(circle at 50% 50%, ${o.from} 0%, ${o.to} 40%, transparent 70%)`,
+          opacity: isDark ? 0.4 : 0.5,
+          "--dx": `${Math.round(o.drift[0] * 0.4)}px`,
+          "--dy": `${Math.round(o.drift[1] * 0.4)}px`,
+          animation: `y2k-drift ${o.duration * 1.4}s ease-in-out ${-o.delay * 3}s infinite`,
+        };
+        return <div key={`orb-${i}`} className="y2k-lite-anim" style={style} />;
+      })}
+
+      {floaters.map((f, i) => {
+        const style: DriftStyle = {
+          position: "absolute",
+          top: f.top,
+          left: f.left,
+          opacity: f.opacity * 0.85,
+          "--dx": `${Math.round(f.driftX * 0.4)}px`,
+          "--dy": `${Math.round(f.driftY * 0.4)}px`,
+          animation: `y2k-drift ${f.duration}s ease-in-out ${-f.delay * 2}s infinite`,
+        };
+        return (
+          <div key={`floater-${i}`} className="y2k-lite-anim" style={style}>
+            <ShapeSVG shape={f.shape} size={Math.round(f.size * 0.75)} color={f.color} />
+          </div>
+        );
+      })}
+
+      {sparkles.map((s, i) => (
+        <div
+          key={`star-${i}`}
+          className="y2k-lite-anim"
+          style={{
+            position: "absolute",
+            top: s.top,
+            left: s.left,
+            transform: `rotate(${s.rotate}deg)`,
+            animation: `y2k-twinkle ${s.duration}s ease-in-out ${-s.delay}s infinite`,
+          }}
+        >
+          <ShapeSVG shape={s.shape} size={s.size} color={s.color} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* `calm` keeps only the blurred colour orbs and grain — no shapes that
+   could drift under long-form reading text (case studies). */
+export function Y2KBackdrop({ calm = false }: { calm?: boolean }) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
+  const lite = useLiteMotion();
+
+  if (lite) return <LiteBackdrop isDark={isDark} calm={calm} />;
+  return <FullBackdrop isDark={isDark} calm={calm} />;
+}
+
+function FullBackdrop({ isDark, calm }: { isDark: boolean; calm: boolean }) {
+  const reduce = useReducedMotion();
+  const tiles = calm ? [] : TILES;
+  const floaters = calm ? [] : FLOATERS;
+  const sparkles = calm ? [] : SPARKLES;
 
   // Orb palette + blend per theme. Light uses warm pastels with
   // "multiply" so they tint the cream page in a recognizable way.
@@ -280,17 +362,14 @@ export function Y2KBackdrop() {
   const cursor = useRef({ tx: 0, ty: 0, x: 0, y: 0 });
   useEffect(() => {
     if (reduce) return;
-    const onMove = (e: MouseEvent | PointerEvent) => {
-      // Normalised −0.5..+0.5 around viewport centre
-      cursor.current.tx = e.clientX / window.innerWidth - 0.5;
-      cursor.current.ty = e.clientY / window.innerHeight - 0.5;
-    };
-    window.addEventListener("pointermove", onMove, { passive: true });
     let raf = 0;
     const tick = () => {
       // Lerp current toward target for smooth easing
       cursor.current.x += (cursor.current.tx - cursor.current.x) * 0.11;
       cursor.current.y += (cursor.current.ty - cursor.current.y) * 0.11;
+      const settled =
+        Math.abs(cursor.current.tx - cursor.current.x) < 0.0005 &&
+        Math.abs(cursor.current.ty - cursor.current.y) < 0.0005;
       const refs = orbWrapRefs.current;
       for (let i = 0; i < refs.length; i++) {
         const el = refs[i];
@@ -303,9 +382,15 @@ export function Y2KBackdrop() {
         const dy = cursor.current.y * depth * sign;
         el.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
       }
-      raf = requestAnimationFrame(tick);
+      raf = settled ? 0 : requestAnimationFrame(tick);
     };
-    raf = requestAnimationFrame(tick);
+    const onMove = (e: PointerEvent) => {
+      // Normalised −0.5..+0.5 around viewport centre
+      cursor.current.tx = e.clientX / window.innerWidth - 0.5;
+      cursor.current.ty = e.clientY / window.innerHeight - 0.5;
+      if (!raf) raf = requestAnimationFrame(tick);
+    };
+    window.addEventListener("pointermove", onMove, { passive: true });
     return () => {
       window.removeEventListener("pointermove", onMove);
       cancelAnimationFrame(raf);
@@ -368,7 +453,7 @@ export function Y2KBackdrop() {
       ))}
 
       {/* Tilted gradient tiles — bobbing & rotating */}
-      {TILES.map((t, i) => (
+      {tiles.map((t, i) => (
         <motion.div
           key={`tile-${i}`}
           style={{
@@ -379,7 +464,6 @@ export function Y2KBackdrop() {
             height: t.size,
             background: `linear-gradient(135deg, ${t.color}55 0%, ${t.color}10 100%)`,
             border: `1.5px solid ${t.color}55`,
-            borderRadius: 18,
             backdropFilter: "blur(2px)",
             boxShadow: `0 8px 32px ${t.color}33`,
           }}
@@ -402,7 +486,7 @@ export function Y2KBackdrop() {
       ))}
 
       {/* Larger Y2K floaters drifting on figure-8 paths */}
-      {FLOATERS.map((f, i) => (
+      {floaters.map((f, i) => (
         <motion.div
           key={`floater-${i}`}
           style={{
@@ -434,7 +518,7 @@ export function Y2KBackdrop() {
       ))}
 
       {/* Sparkles, asterisks, rings — twinkle + spin */}
-      {SPARKLES.map((s, i) => (
+      {sparkles.map((s, i) => (
         <motion.div
           key={`star-${i}`}
           style={{

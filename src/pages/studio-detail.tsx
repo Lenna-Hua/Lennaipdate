@@ -1,7 +1,8 @@
-import { useParams, Link } from "wouter";
+import { useParams, Link, Redirect } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import gallerySeed from "@/data/gallery.json";
+import projectsSeed from "@/data/projects.json";
 import { useContent } from "@/lib/use-content";
 import { SafeImage } from "@/components/SafeImage";
 import {
@@ -109,6 +110,7 @@ export default function StudioDetail() {
   const items = (useContent("gallery", gallerySeed) as GalleryItem[]).filter(
     (i) => !i.archived,
   );
+  const projects = useContent("projects", projectsSeed) as { slug: string }[];
   const params = useParams();
   // Only navigate among "big" projects — small artworks use modal on studio page
   const bigItems = items.filter((i) => i.kind === "big");
@@ -124,6 +126,11 @@ export default function StudioDetail() {
     setCoverErrored(false);
     setErroredImages({});
   }, [params.slug]);
+
+  const movedToWork = projects.some((p) => p.slug === params.slug);
+  if (movedToWork && (!item || (item.kind ?? "big") === "big")) {
+    return <Redirect to={`/work/${params.slug}`} replace />;
+  }
 
   if (!item) {
     return (

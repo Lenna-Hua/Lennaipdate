@@ -134,11 +134,11 @@ export function LivePreviewPane({
   const knownPath = pages.some((p) => p.path === path);
 
   return (
-    <div className="flex flex-col h-full border border-[#272421] bg-[#141210] overflow-hidden">
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-[#272421] flex-wrap">
-        <span className="flex items-center gap-2 text-[#8A8278] text-xs uppercase tracking-widest whitespace-nowrap">
+    <div className="flex flex-col h-full border border-[color:var(--adm-line)] bg-[color:var(--adm-surface)] overflow-hidden">
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-[color:var(--adm-line)] flex-wrap">
+        <span className="flex items-center gap-2 text-[color:var(--adm-muted)] text-xs uppercase tracking-widest whitespace-nowrap">
           <span
-            className={`h-2 w-2 rounded-full ${ready ? "bg-emerald-400" : "bg-[#4A4540] animate-pulse"}`}
+            className={`h-2 w-2 rounded-full ${ready ? "bg-emerald-400" : "bg-[color:var(--adm-line-strong)] animate-pulse"}`}
             aria-hidden
           />
           {ready ? "Live" : "Loading"}
@@ -148,7 +148,7 @@ export function LivePreviewPane({
           value={path}
           onChange={(e) => onPathChange(e.target.value)}
           aria-label="Preview page"
-          className="min-w-0 flex-1 bg-[#0A0908] border border-[#3A3530] text-[#F2EDE5] text-sm px-2 py-1 focus:outline-none focus:border-[#C8A96E]"
+          className="min-w-0 flex-1 bg-[color:var(--adm-input)] border border-[color:var(--adm-line-strong)] text-[color:var(--adm-text)] text-sm px-2 py-1 focus:outline-none focus:border-[color:var(--adm-accent)]"
         >
           {!knownPath && <option value={path}>{path}</option>}
           {Object.entries(groups).map(([group, items]) => (
@@ -162,7 +162,7 @@ export function LivePreviewPane({
           ))}
         </select>
 
-        <div className="flex items-center border border-[#3A3530]" role="group" aria-label="Device">
+        <div className="flex items-center border border-[color:var(--adm-line-strong)]" role="group" aria-label="Device">
           {DEVICES.map(({ id, label, Icon }) => (
             <button
               key={id}
@@ -173,8 +173,8 @@ export function LivePreviewPane({
               aria-pressed={device === id}
               className={`p-1.5 transition-colors ${
                 device === id
-                  ? "bg-[#C8A96E]/15 text-[#C8A96E]"
-                  : "text-[#8A8278] hover:text-[#F2EDE5]"
+                  ? "bg-[color:var(--adm-accent)]/15 text-[color:var(--adm-accent)]"
+                  : "text-[color:var(--adm-muted)] hover:text-[color:var(--adm-text)]"
               }`}
             >
               <Icon className="h-4 w-4" />
@@ -187,7 +187,7 @@ export function LivePreviewPane({
           onClick={reload}
           title="Reload preview"
           aria-label="Reload preview"
-          className="p-1.5 text-[#8A8278] hover:text-[#F2EDE5] transition-colors"
+          className="p-1.5 text-[color:var(--adm-muted)] hover:text-[color:var(--adm-text)] transition-colors"
         >
           <RotateCw className="h-4 w-4" />
         </button>
@@ -196,7 +196,7 @@ export function LivePreviewPane({
           onClick={() => onOpenTab(path)}
           title="Open draft in new tab"
           aria-label="Open draft in new tab"
-          className="p-1.5 text-[#8A8278] hover:text-[#F2EDE5] transition-colors"
+          className="p-1.5 text-[color:var(--adm-muted)] hover:text-[color:var(--adm-text)] transition-colors"
         >
           <ExternalLink className="h-4 w-4" />
         </button>
@@ -205,13 +205,13 @@ export function LivePreviewPane({
           onClick={onClose}
           title="Hide live preview"
           aria-label="Hide live preview"
-          className="p-1.5 text-[#8A8278] hover:text-[#F2EDE5] transition-colors"
+          className="p-1.5 text-[color:var(--adm-muted)] hover:text-[color:var(--adm-text)] transition-colors"
         >
           <X className="h-4 w-4" />
         </button>
       </div>
 
-      <div ref={viewportRef} className="relative flex-1 min-h-0 overflow-hidden bg-[#0A0908]">
+      <div ref={viewportRef} className="relative flex-1 min-h-0 overflow-hidden bg-[color:var(--adm-input)]">
         {size.w > 0 && (
           <iframe
             key={frameKey}
@@ -232,7 +232,7 @@ export function LivePreviewPane({
         )}
       </div>
 
-      <p className="px-3 py-1.5 border-t border-[#272421] text-[#4A4540] text-[11px]">
+      <p className="px-3 py-1.5 border-t border-[color:var(--adm-line)] text-[color:var(--adm-faint)] text-[11px]">
         Unsaved draft — updates as you type. Click Save to Site to publish.
       </p>
     </div>

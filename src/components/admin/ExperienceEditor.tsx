@@ -45,7 +45,7 @@ export function ExperienceEditor({
       <div className="w-48 flex-shrink-0 flex flex-col gap-2">
         <button
           onClick={addItem}
-          className="text-sm border border-[#C8A96E] text-[#C8A96E] px-3 py-2 hover:bg-[#C8A96E] hover:text-[#0A0908] transition-colors uppercase tracking-widest mb-2"
+          className="text-sm border border-[color:var(--adm-accent)] text-[color:var(--adm-accent)] px-3 py-2 hover:bg-[color:var(--adm-accent)] hover:text-[color:var(--adm-on-accent)] transition-colors uppercase tracking-widest mb-2"
         >
           + Add
         </button>
@@ -66,8 +66,8 @@ export function ExperienceEditor({
                 onClick={() => setSelectedIdx(i)}
                 className={`flex-1 text-left text-sm px-2 py-2 truncate transition-colors ${
                   i === selectedIdx
-                    ? "bg-[#C8A96E] text-[#0A0908]"
-                    : "text-[#8A8278] hover:text-[#F2EDE5] border border-[#272421]"
+                    ? "bg-[color:var(--adm-accent)] text-[color:var(--adm-on-accent)]"
+                    : "text-[color:var(--adm-muted)] hover:text-[color:var(--adm-text)] border border-[color:var(--adm-line)]"
                 }`}
               >
                 {exp.role}
@@ -79,10 +79,10 @@ export function ExperienceEditor({
       {item && (
         <div className="flex-1 flex flex-col gap-5">
           <div className="flex justify-between items-center">
-            <span className="text-[#C8A96E] text-sm uppercase tracking-widest">{item.role}</span>
+            <span className="text-[color:var(--adm-accent)] text-sm uppercase tracking-widest">{item.role}</span>
             <button
               onClick={() => removeItem(selectedIdx)}
-              className="text-sm text-[#4A4540] hover:text-red-400"
+              className="text-sm text-[color:var(--adm-faint)] hover:text-red-400"
             >
               Remove
             </button>

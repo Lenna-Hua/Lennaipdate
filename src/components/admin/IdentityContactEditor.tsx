@@ -31,15 +31,15 @@ export function IdentityContactEditor({
   };
 
   const fieldClass =
-    "bg-transparent border-b border-[#3A3530] text-[#F2EDE5] py-2 focus:outline-none focus:border-[#C8A96E] transition-colors";
-  const labelClass = "text-[#8A8278] text-xs uppercase tracking-widest";
+    "bg-transparent border-b border-[color:var(--adm-line-strong)] text-[color:var(--adm-text)] py-2 focus:outline-none focus:border-[color:var(--adm-accent)] transition-colors";
+  const labelClass = "text-[color:var(--adm-muted)] text-xs uppercase tracking-widest";
 
   return (
     <div className="flex flex-col gap-10">
       {/* Identity */}
       <section className="flex flex-col gap-4">
-        <h2 className="font-serif text-2xl text-[#F2EDE5]">Identity</h2>
-        <p className="text-[#8A8278] text-sm">
+        <h2 className="font-serif text-2xl text-[color:var(--adm-text)]">Identity</h2>
+        <p className="text-[color:var(--adm-muted)] text-sm">
           Your name and role appear in the navigation, footer, home hero, and case-study sidebar.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -51,7 +51,7 @@ export function IdentityContactEditor({
               onChange={(e) => onIdentityChange({ ...identity, name: e.target.value })}
               className={fieldClass}
             />
-            <span className="text-[#4A4540] text-xs">
+            <span className="text-[color:var(--adm-faint)] text-xs">
               On the home hero, the first word renders in brand blue and the rest in foreground.
             </span>
           </div>
@@ -68,9 +68,9 @@ export function IdentityContactEditor({
       </section>
 
       {/* Contact */}
-      <section className="flex flex-col gap-4 border-t border-[#272421] pt-8">
-        <h2 className="font-serif text-2xl text-[#F2EDE5]">Contact</h2>
-        <p className="text-[#8A8278] text-sm">
+      <section className="flex flex-col gap-4 border-t border-[color:var(--adm-line)] pt-8">
+        <h2 className="font-serif text-2xl text-[color:var(--adm-text)]">Contact</h2>
+        <p className="text-[color:var(--adm-muted)] text-sm">
           Used by the Let&apos;s Talk section at the bottom of About, the footer, and the case-study sidebar. Empty fields hide automatically.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -112,18 +112,18 @@ export function IdentityContactEditor({
             <button
               type="button"
               onClick={addSocial}
-              className="text-sm border border-[#C8A96E] text-[#C8A96E] px-3 py-1.5 hover:bg-[#C8A96E] hover:text-[#0A0908] transition-colors uppercase tracking-widest"
+              className="text-sm border border-[color:var(--adm-accent)] text-[color:var(--adm-accent)] px-3 py-1.5 hover:bg-[color:var(--adm-accent)] hover:text-[color:var(--adm-on-accent)] transition-colors uppercase tracking-widest"
             >
               + Add link
             </button>
           </div>
           {(contact.socials ?? []).length === 0 && (
-            <p className="text-[#4A4540] text-xs">No social links yet.</p>
+            <p className="text-[color:var(--adm-faint)] text-xs">No social links yet.</p>
           )}
           {(contact.socials ?? []).map((s, i) => (
-            <div key={i} className="grid grid-cols-1 md:grid-cols-[1fr_2fr_auto] gap-3 items-end border border-[#272421] p-3">
+            <div key={i} className="grid grid-cols-1 md:grid-cols-[1fr_2fr_auto] gap-3 items-end border border-[color:var(--adm-line)] p-3">
               <div className="flex flex-col gap-1">
-                <span className="text-[#4A4540] text-[10px] uppercase tracking-widest">Label</span>
+                <span className="text-[color:var(--adm-faint)] text-[10px] uppercase tracking-widest">Label</span>
                 <input
                   type="text"
                   value={s.label}
@@ -133,7 +133,7 @@ export function IdentityContactEditor({
                 />
               </div>
               <div className="flex flex-col gap-1">
-                <span className="text-[#4A4540] text-[10px] uppercase tracking-widest">URL</span>
+                <span className="text-[color:var(--adm-faint)] text-[10px] uppercase tracking-widest">URL</span>
                 <input
                   type="url"
                   value={s.href}
@@ -145,7 +145,7 @@ export function IdentityContactEditor({
               <button
                 type="button"
                 onClick={() => removeSocial(i)}
-                className="text-sm border border-[#3A3530] text-[#8A8278] px-3 py-1.5 hover:border-red-400 hover:text-red-400 transition-colors uppercase tracking-widest"
+                className="text-sm border border-[color:var(--adm-line-strong)] text-[color:var(--adm-muted)] px-3 py-1.5 hover:border-red-400 hover:text-red-400 transition-colors uppercase tracking-widest"
               >
                 Remove
               </button>

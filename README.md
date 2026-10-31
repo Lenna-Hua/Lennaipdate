@@ -84,6 +84,7 @@ In your Vercel project → Settings → Environment Variables, add:
 | `CLOUDINARY_API_SECRET` | Yes | Cloudinary API secret |
 | `RESEND_API_KEY` | No | Enables email notifications from contact form |
 | `CONTACT_TO_EMAIL` | No | Override contact-form recipient email |
+| `CASE_STUDY_PASSWORD` | No | Shared password for case studies marked "Password protect" in Admin. A case study with its own custom password ignores it. Changing it signs out every visitor who unlocked with the old one. |
 
 ### 5. Deploy
 

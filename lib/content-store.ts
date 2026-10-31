@@ -1,4 +1,6 @@
 import { query } from "./db.js";
+import { hashProjectPasswords } from "./case-study-access.js";
+import { isIncompleteProject } from "./project-redaction.js";
 
 import projectsSeed from "./data/projects.json" with { type: "json" };
 import aboutSeed from "./data/about.json" with { type: "json" };
@@ -106,11 +108,12 @@ export async function getContentSectionMeta(): Promise<
 }
 
 export async function setSection(name: SectionName, data: unknown): Promise<void> {
+  const stored = name === "projects" ? hashProjectPasswords(data) : data;
   await query(
     `INSERT INTO content_sections (name, data, updated_at)
      VALUES ($1, $2::jsonb, now())
      ON CONFLICT (name) DO UPDATE SET data = EXCLUDED.data, updated_at = now()`,
-    [name, JSON.stringify(data)],
+    [name, JSON.stringify(stored)],
   );
 }
 
@@ -124,6 +127,13 @@ function isSafeHref(v: unknown): boolean {
 
 export function validateSection(name: SectionName, data: unknown): string | null {
   if (typeof data !== "object" || data === null) return `Invalid ${name} payload`;
+
+  if (name === "projects" && Array.isArray(data)) {
+    const incomplete = data.find(isIncompleteProject) as { title?: unknown } | undefined;
+    if (incomplete) {
+      return `"${String(incomplete.title ?? "A case study")}" hasn't finished loading from the server. Reload Admin and save again.`;
+    }
+  }
 
   if (name === "homepage") {
     const home = (data as { home?: unknown }).home;

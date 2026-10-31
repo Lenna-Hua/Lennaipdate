@@ -18,11 +18,12 @@ function titleForPath(path: string): { title: string; description: string } {
     };
   }
   if (clean.startsWith("/work/")) {
-    const slug = clean.slice("/work/".length);
+    const [slug, view] = clean.slice("/work/".length).split("/");
     const project = projectsSeed.find((p) => p.slug === slug);
     const projectTitle = project?.title?.trim();
+    const suffix = view === "full" ? " (Full case study)" : "";
     return {
-      title: projectTitle ? `${projectTitle} — ${SITE.name}` : `Case study — ${SITE.name}`,
+      title: projectTitle ? `${projectTitle}${suffix} — ${SITE.name}` : `Case study — ${SITE.name}`,
       description: project?.subtitle?.trim() || SITE.description,
     };
   }

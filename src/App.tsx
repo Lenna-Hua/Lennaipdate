@@ -146,9 +146,11 @@ function ScrollManager() {
 function WithLayout({
   children,
   showBottomNav = true,
+  calmBackdrop = false,
 }: {
   children: React.ReactNode;
   showBottomNav?: boolean;
+  calmBackdrop?: boolean;
 }) {
   return (
     <>
@@ -161,7 +163,7 @@ function WithLayout({
       </a>
       <Navbar />
       <div className="relative flex flex-col min-h-screen bg-background px-6 md:px-12 lg:px-16 pt-[88px] md:pt-[100px] pb-24 md:pb-28 overflow-x-clip">
-        <Y2KBackdrop />
+        <Y2KBackdrop calm={calmBackdrop} />
         <div className="relative z-10 flex flex-col flex-1">
           {children}
           <Footer />
@@ -198,8 +200,11 @@ function AppRoutes() {
       <Route path="/work">
         <WithLayout><PageTransition><Suspense fallback={<PageLoading />}><WorkIndex /></Suspense></PageTransition></WithLayout>
       </Route>
+      <Route path="/work/:slug/full">
+        <WithLayout calmBackdrop><PageTransition><Suspense fallback={<PageLoading />}><CaseStudy full /></Suspense></PageTransition></WithLayout>
+      </Route>
       <Route path="/work/:slug">
-        <WithLayout><PageTransition><Suspense fallback={<PageLoading />}><CaseStudy /></Suspense></PageTransition></WithLayout>
+        <WithLayout calmBackdrop><PageTransition><Suspense fallback={<PageLoading />}><CaseStudy /></Suspense></PageTransition></WithLayout>
       </Route>
       <Route path="/art">
         <Redirect to="/studio" />
@@ -226,7 +231,7 @@ function AppRoutes() {
         <WithLayout><PageTransition><Suspense fallback={<PageLoading />}><Terms /></Suspense></PageTransition></WithLayout>
       </Route>
       <Route path="/admin">
-        <WithLayout showBottomNav={false}><PageTransition><Suspense fallback={<PageLoading />}><Admin /></Suspense></PageTransition></WithLayout>
+        <Suspense fallback={<PageLoading />}><Admin /></Suspense>
       </Route>
       <Route path="/preview/visual-redesign">
         <WithLayout showBottomNav={false}><PageTransition><Suspense fallback={<PageLoading />}><VisualRedesignPreview /></Suspense></PageTransition></WithLayout>

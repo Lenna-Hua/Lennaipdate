@@ -135,10 +135,10 @@ export function TagsManager({
     <div className="flex flex-col gap-5">
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h2 className="text-[#F2EDE5] text-lg font-serif">Tags ({tags.length})</h2>
-          <p className="text-[#8A8278] text-xs mt-1 max-w-xl">
+          <h2 className="text-[color:var(--adm-text)] text-lg font-serif">Tags ({tags.length})</h2>
+          <p className="text-[color:var(--adm-muted)] text-xs mt-1 max-w-xl">
             Rename, merge, or delete tags across all projects and gallery items at
-            once. Click <span className="text-[#C8A96E]">Save to Site</span> after
+            once. Click <span className="text-[color:var(--adm-accent)]">Save to Site</span> after
             changes to publish. Rows highlighted gold are duplicate-casing variants.
           </p>
         </div>
@@ -147,12 +147,12 @@ export function TagsManager({
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           placeholder="Filter tags…"
-          className="bg-transparent border-b border-[#3A3530] text-[#F2EDE5] py-1.5 text-sm focus:outline-none focus:border-[#C8A96E] transition-colors w-56"
+          className="bg-transparent border-b border-[color:var(--adm-line-strong)] text-[color:var(--adm-text)] py-1.5 text-sm focus:outline-none focus:border-[color:var(--adm-accent)] transition-colors w-56"
         />
       </div>
 
       {tags.length === 0 && (
-        <p className="text-[#4A4540] text-sm italic">
+        <p className="text-[color:var(--adm-faint)] text-sm italic">
           No tags in use yet. Add some on the Projects or Studio tabs.
         </p>
       )}
@@ -167,20 +167,20 @@ export function TagsManager({
             <div
               key={tag}
               className={`flex flex-col gap-2 border px-4 py-3 rounded ${
-                isDup ? "border-[#C8A96E]/40 bg-[#C8A96E]/5" : "border-[#272421]"
+                isDup ? "border-[color:var(--adm-accent)]/40 bg-[color:var(--adm-accent)]/5" : "border-[color:var(--adm-line)]"
               }`}
             >
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div className="flex items-center gap-3 min-w-0">
-                  <span className="text-[#F2EDE5] text-sm font-medium truncate">
+                  <span className="text-[color:var(--adm-text)] text-sm font-medium truncate">
                     {tag}
                   </span>
-                  <span className="text-[10px] text-[#8A8278] uppercase tracking-widest whitespace-nowrap">
+                  <span className="text-[10px] text-[color:var(--adm-muted)] uppercase tracking-widest whitespace-nowrap">
                     {pIds.length} project{pIds.length === 1 ? "" : "s"} ·{" "}
                     {gIds.length} artwork{gIds.length === 1 ? "" : "s"}
                   </span>
                   {isDup && (
-                    <span className="text-[10px] text-[#C8A96E] uppercase tracking-widest whitespace-nowrap">
+                    <span className="text-[10px] text-[color:var(--adm-accent)] uppercase tracking-widest whitespace-nowrap">
                       Duplicate casing
                     </span>
                   )}
@@ -192,7 +192,7 @@ export function TagsManager({
                       setRenamingTag(tag);
                       setRenameValue(tag);
                     }}
-                    className="text-[#8A8278] hover:text-[#C8A96E] transition-colors"
+                    className="text-[color:var(--adm-muted)] hover:text-[color:var(--adm-accent)] transition-colors"
                   >
                     Rename
                   </button>
@@ -202,7 +202,7 @@ export function TagsManager({
                       setMergingTag(tag);
                       setMergeTarget("");
                     }}
-                    className="text-[#8A8278] hover:text-[#C8A96E] transition-colors"
+                    className="text-[color:var(--adm-muted)] hover:text-[color:var(--adm-accent)] transition-colors"
                   >
                     Merge
                   </button>
@@ -211,7 +211,7 @@ export function TagsManager({
                       closeAll();
                       setConfirmDelete(tag);
                     }}
-                    className="text-[#8A8278] hover:text-red-400 transition-colors"
+                    className="text-[color:var(--adm-muted)] hover:text-red-400 transition-colors"
                   >
                     Delete
                   </button>
@@ -234,7 +234,7 @@ export function TagsManager({
                         setRenamingTag(null);
                       }
                     }}
-                    className="bg-[#0A0908] border border-[#3A3530] text-[#F2EDE5] py-1.5 px-2 text-sm focus:outline-none focus:border-[#C8A96E] transition-colors flex-1 min-w-[180px]"
+                    className="bg-[color:var(--adm-input)] border border-[color:var(--adm-line-strong)] text-[color:var(--adm-text)] py-1.5 px-2 text-sm focus:outline-none focus:border-[color:var(--adm-accent)] transition-colors flex-1 min-w-[180px]"
                   />
                   <button
                     onClick={() => {
@@ -243,13 +243,13 @@ export function TagsManager({
                         apply(applyTagRename(projects, gallery, tag, v));
                       setRenamingTag(null);
                     }}
-                    className="text-xs uppercase tracking-widest border border-[#C8A96E] text-[#C8A96E] px-3 py-1.5 hover:bg-[#C8A96E] hover:text-[#0A0908] transition-colors"
+                    className="text-xs uppercase tracking-widest border border-[color:var(--adm-accent)] text-[color:var(--adm-accent)] px-3 py-1.5 hover:bg-[color:var(--adm-accent)] hover:text-[color:var(--adm-on-accent)] transition-colors"
                   >
                     Rename {total} item{total === 1 ? "" : "s"}
                   </button>
                   <button
                     onClick={() => setRenamingTag(null)}
-                    className="text-xs uppercase tracking-widest text-[#8A8278] hover:text-[#F2EDE5]"
+                    className="text-xs uppercase tracking-widest text-[color:var(--adm-muted)] hover:text-[color:var(--adm-text)]"
                   >
                     Cancel
                   </button>
@@ -261,7 +261,7 @@ export function TagsManager({
                   <select
                     value={mergeTarget}
                     onChange={(e) => setMergeTarget(e.target.value)}
-                    className="bg-[#0A0908] border border-[#3A3530] text-[#F2EDE5] py-1.5 px-2 text-sm focus:outline-none focus:border-[#C8A96E] transition-colors flex-1 min-w-[180px]"
+                    className="bg-[color:var(--adm-input)] border border-[color:var(--adm-line-strong)] text-[color:var(--adm-text)] py-1.5 px-2 text-sm focus:outline-none focus:border-[color:var(--adm-accent)] transition-colors flex-1 min-w-[180px]"
                   >
                     <option value="">Merge into…</option>
                     {tags
@@ -279,13 +279,13 @@ export function TagsManager({
                       apply(applyTagMerge(projects, gallery, [tag], mergeTarget));
                       setMergingTag(null);
                     }}
-                    className="text-xs uppercase tracking-widest border border-[#C8A96E] text-[#C8A96E] px-3 py-1.5 hover:bg-[#C8A96E] hover:text-[#0A0908] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="text-xs uppercase tracking-widest border border-[color:var(--adm-accent)] text-[color:var(--adm-accent)] px-3 py-1.5 hover:bg-[color:var(--adm-accent)] hover:text-[color:var(--adm-on-accent)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     Merge {total} item{total === 1 ? "" : "s"}
                   </button>
                   <button
                     onClick={() => setMergingTag(null)}
-                    className="text-xs uppercase tracking-widest text-[#8A8278] hover:text-[#F2EDE5]"
+                    className="text-xs uppercase tracking-widest text-[color:var(--adm-muted)] hover:text-[color:var(--adm-text)]"
                   >
                     Cancel
                   </button>
@@ -294,7 +294,7 @@ export function TagsManager({
 
               {deleting && (
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[#F2EDE5] text-sm">
+                  <span className="text-[color:var(--adm-text)] text-sm">
                     Remove &quot;{tag}&quot; from {total} item{total === 1 ? "" : "s"}?
                   </span>
                   <button
@@ -302,13 +302,13 @@ export function TagsManager({
                       apply(applyTagDelete(projects, gallery, tag));
                       setConfirmDelete(null);
                     }}
-                    className="text-xs uppercase tracking-widest border border-red-400 text-red-400 px-3 py-1.5 hover:bg-red-400 hover:text-[#0A0908] transition-colors"
+                    className="text-xs uppercase tracking-widest border border-red-400 text-red-400 px-3 py-1.5 hover:bg-red-400 hover:text-[color:var(--adm-on-accent)] transition-colors"
                   >
                     Yes, delete
                   </button>
                   <button
                     onClick={() => setConfirmDelete(null)}
-                    className="text-xs uppercase tracking-widest text-[#8A8278] hover:text-[#F2EDE5]"
+                    className="text-xs uppercase tracking-widest text-[color:var(--adm-muted)] hover:text-[color:var(--adm-text)]"
                   >
                     Cancel
                   </button>

@@ -4,13 +4,27 @@
  */
 import { useEffect, useState, type CSSProperties } from "react";
 import { SafeImage } from "@/components/SafeImage";
+import { CoverMedia, isVideo } from "@/components/CoverMedia";
+import { parseVideoEmbed } from "@/lib/video-embed";
 import { AdminSortableList } from "@/pages/admin-sortable";
 import type { Project, Section, SectionType } from "./types";
+import {
+  ArrowDown,
+  ArrowUp,
+  ChevronDown,
+  ChevronRight,
+  Copy,
+  Lock,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import {
   TextInput,
   TextareaInput,
   CheckboxInput,
   TagsInput,
+  EditorBox,
+  BoxCode,
 } from "./shared";
 import {
   SectionImageUploader,
@@ -18,6 +32,7 @@ import {
   PickFromLibraryButton,
 } from "./AssetLibrary";
 import { parseBriefToProject } from "@/lib/case-study-brief";
+import { MockupSectionEditor } from "./MockupSectionEditor";
 
 // ── Helpers ────────────────────────────────────────────────────────────
 
@@ -27,7 +42,62 @@ const SECTION_TYPES = new Set<SectionType>([
   "video",
   "problem-solution",
   "embed",
+  "mockup",
 ]);
+
+/** Saved passwords come back from the server as hashes, never plain text. */
+function isSavedPasswordHash(v: string | undefined): v is string {
+  return typeof v === "string" && v.startsWith("scrypt$");
+}
+
+function CaseStudyPasswordFields({
+  password,
+  onChange,
+}: {
+  password: string | undefined;
+  onChange: (password: string | undefined) => void;
+}) {
+  const [savedHash, setSavedHash] = useState(() =>
+    isSavedPasswordHash(password) ? password : undefined,
+  );
+  useEffect(() => {
+    if (isSavedPasswordHash(password)) setSavedHash(password);
+  }, [password]);
+  const typed = password && !isSavedPasswordHash(password) ? password : "";
+  const status = typed
+    ? "New custom password — goes live when you Save to Site."
+    : savedHash
+      ? "Custom password saved."
+      : "Using the shared portfolio password (CASE_STUDY_PASSWORD in Vercel).";
+
+  return (
+    <div className="flex flex-col gap-3 pl-7">
+      <p className="text-[color:var(--adm-faint)] text-xs leading-relaxed">
+        Visitors see the title, subtitle, and blurred cover, then a password screen. The case
+        study body never leaves the server until the password is correct.
+      </p>
+      <TextInput
+        label="Custom password (optional)"
+        value={typed}
+        onChange={(v) => onChange(v || savedHash)}
+        placeholder={savedHash ? "Saved — type to replace" : "Leave blank to use the shared password"}
+        hint={status}
+      />
+      {(savedHash || typed) && (
+        <button
+          type="button"
+          onClick={() => {
+            setSavedHash(undefined);
+            onChange(undefined);
+          }}
+          className="text-xs text-[color:var(--adm-accent)] hover:underline w-max"
+        >
+          Use the shared password instead
+        </button>
+      )}
+    </div>
+  );
+}
 
 /** Normalize a sections array from JSON upload (full project or bare array). */
 function normalizeSections(raw: unknown): Section[] | undefined {
@@ -251,7 +321,7 @@ function VisibilityToggle({
 }) {
   return (
     <div className="flex items-center gap-2 flex-wrap">
-      <span className="text-[#8A8278] text-xs uppercase tracking-widest">Show in</span>
+      <span className="text-[color:var(--adm-muted)] text-xs uppercase tracking-widest">Show in</span>
       {(["always", "detail"] as const).map((opt) => (
         <button
           key={opt}
@@ -259,8 +329,8 @@ function VisibilityToggle({
           onClick={() => onChange(opt)}
           className={`text-[10px] uppercase tracking-widest px-2 py-1 border transition-colors ${
             value === opt
-              ? "bg-[#C8A96E] text-[#0A0908] border-[#C8A96E]"
-              : "text-[#8A8278] border-[#3A3530] hover:border-[#C8A96E]"
+              ? "bg-[color:var(--adm-accent)] text-[color:var(--adm-on-accent)] border-[color:var(--adm-accent)]"
+              : "text-[color:var(--adm-muted)] border-[color:var(--adm-line-strong)] hover:border-[color:var(--adm-accent)]"
           }`}
         >
           {opt === "always" ? "Skim (default)" : "See more only"}
@@ -270,9 +340,49 @@ function VisibilityToggle({
   );
 }
 
+const MEDIA_WIDTHS: { value: 1 | 2 | 3; label: string }[] = [
+  { value: 1, label: "Full" },
+  { value: 2, label: "Half" },
+  { value: 3, label: "Third" },
+];
+
+function MediaWidthPicker({
+  value,
+  onChange,
+}: {
+  value?: 1 | 2 | 3;
+  onChange: (v: 1 | 2 | 3 | undefined) => void;
+}) {
+  const current = value ?? 1;
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-[color:var(--adm-muted)] text-xs uppercase tracking-widest">Width</span>
+        {MEDIA_WIDTHS.map((opt) => (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => onChange(opt.value === 1 ? undefined : opt.value)}
+            className={`text-[10px] uppercase tracking-widest px-2 py-1 border transition-colors ${
+              current === opt.value
+                ? "bg-[color:var(--adm-accent)] text-[color:var(--adm-on-accent)] border-[color:var(--adm-accent)]"
+                : "text-[color:var(--adm-muted)] border-[color:var(--adm-line-strong)] hover:border-[color:var(--adm-accent)]"
+            }`}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+      <p className="text-[color:var(--adm-faint)] text-xs">
+        Half and Third sit side by side with the next Half / Third image or video on desktop.
+      </p>
+    </div>
+  );
+}
+
 const CHECKERBOARD: CSSProperties = {
-  backgroundColor: "#2A2622",
-  backgroundImage: "conic-gradient(#3A3530 25%, transparent 0 50%, #3A3530 0 75%, transparent 0)",
+  backgroundColor: "#FFFFFF",
+  backgroundImage: "conic-gradient(#E4E2DC 25%, transparent 0 50%, #E4E2DC 0 75%, transparent 0)",
   backgroundSize: "16px 16px",
 };
 
@@ -297,12 +407,98 @@ function MediaLinkFields({
         value={linkLabel ?? ""}
         onChange={(v) => onChange({ linkLabel: v })}
       />
-      <p className="text-[#4A4540] text-xs leading-relaxed -mt-1">
+      <p className="text-[color:var(--adm-faint)] text-xs leading-relaxed -mt-1">
         Shows a “Click here to try the product →” style link under the media. Use https://… — no iframe.
       </p>
     </>
   );
 }
+
+const SECTION_TYPE_LABEL: Record<SectionType, string> = {
+  text: "Text",
+  image: "Image",
+  video: "Video",
+  mockup: "Mockup",
+  "problem-solution": "Problem / Solution",
+  embed: "Embed",
+};
+
+const ADDABLE_SECTION_TYPES: SectionType[] = ["text", "image", "video", "mockup", "problem-solution", "embed"];
+
+function newSectionId(): string {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
+function createSection(type: SectionType): Section {
+  const id = newSectionId();
+  if (type === "text") return { id, type, visibility: "always", title: "", summary: "", body: "" };
+  if (type === "image") return { id, type, visibility: "always", src: "", caption: "", href: "", linkLabel: "" };
+  if (type === "video") return { id, type, visibility: "always", src: "", caption: "", title: "", href: "", linkLabel: "" };
+  if (type === "embed") return { id, type, visibility: "always", src: "", title: "", caption: "", height: 500 };
+  if (type === "mockup") return { id, type, visibility: "always", title: "", caption: "", screens: [], device: "phone", layout: "single", background: "" };
+  return { id, type, visibility: "always", problem: "", solution: "" };
+}
+
+function sectionDisplayName(sec: Section): string {
+  const raw = sec.title || (sec.type === "problem-solution" ? sec.problem : "") || sec.caption || "";
+  const s = raw.trim().replace(/\s+/g, " ");
+  return s.length > 48 ? `${s.slice(0, 47)}…` : s;
+}
+
+function AddSectionChips({ onPick, onCancel }: { onPick: (t: SectionType) => void; onCancel?: () => void }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {ADDABLE_SECTION_TYPES.map((t) => (
+        <button
+          key={t}
+          type="button"
+          onClick={() => onPick(t)}
+          className="inline-flex items-center gap-1 h-8 px-3 rounded-full border border-[color:var(--adm-line-strong)] text-[13px] text-[color:var(--adm-text)] hover:border-[color:var(--adm-accent)] hover:text-[color:var(--adm-accent)] transition-colors"
+        >
+          <Plus className="h-3.5 w-3.5" aria-hidden />
+          {SECTION_TYPE_LABEL[t]}
+        </button>
+      ))}
+      {onCancel && (
+        <button type="button" onClick={onCancel} className="h-8 px-2 text-[13px] text-[color:var(--adm-faint)] hover:text-[color:var(--adm-text)]">
+          Cancel
+        </button>
+      )}
+    </div>
+  );
+}
+
+function SectionInsertRow({ onPick }: { onPick: (t: SectionType) => void }) {
+  const [open, setOpen] = useState(false);
+  if (open) {
+    return (
+      <div className="rounded-lg border border-dashed border-[color:var(--adm-accent)]/40 bg-[color:var(--adm-accent)]/5 p-3">
+        <AddSectionChips
+          onPick={(t) => {
+            setOpen(false);
+            onPick(t);
+          }}
+          onCancel={() => setOpen(false)}
+        />
+      </div>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={() => setOpen(true)}
+      className="group w-full flex items-center gap-2 py-1 text-xs text-[color:var(--adm-faint)] hover:text-[color:var(--adm-accent)] transition-colors"
+    >
+      <span className="flex-1 h-px bg-[color:var(--adm-line)] group-hover:bg-[color:var(--adm-accent)]/40" />
+      <Plus className="h-3.5 w-3.5" aria-hidden />
+      Add section here
+      <span className="flex-1 h-px bg-[color:var(--adm-line)] group-hover:bg-[color:var(--adm-accent)]/40" />
+    </button>
+  );
+}
+
+const iconBtn =
+  "inline-flex items-center justify-center h-7 w-7 rounded-md text-[color:var(--adm-faint)] hover:bg-[color:var(--adm-subtle)] hover:text-[color:var(--adm-text)] transition-colors disabled:opacity-30 disabled:pointer-events-none";
 
 function SectionsEditor({
   sections,
@@ -311,22 +507,35 @@ function SectionsEditor({
   sections: Section[];
   onChange: (s: Section[]) => void;
 }) {
-  const addSection = (type: SectionType) => {
-    const id = String(Date.now());
-    let newSec: Section;
-    if (type === "text") newSec = { id, type, visibility: "always", title: "", summary: "", body: "" };
-    else if (type === "image") newSec = { id, type, visibility: "always", src: "", caption: "", href: "", linkLabel: "" };
-    else if (type === "video") newSec = { id, type, visibility: "always", src: "", caption: "", title: "", href: "", linkLabel: "" };
-    else if (type === "embed") newSec = { id, type, visibility: "always", src: "", title: "", caption: "", height: 500 };
-    else newSec = { id, type, visibility: "always", problem: "", solution: "" };
-    onChange([newSec, ...sections]);
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
+
+  const insertSection = (type: SectionType, at: number) => {
+    const next = [...sections];
+    next.splice(at, 0, createSection(type));
+    onChange(next);
   };
 
   const update = (idx: number, patch: Partial<Section>) => {
     onChange(sections.map((s, i) => (i === idx ? { ...s, ...patch } : s)));
   };
 
-  const remove = (idx: number) => onChange(sections.filter((_, i) => i !== idx));
+  const remove = (idx: number) => {
+    const sec = sections[idx];
+    if (!sec) return;
+    const name = sectionDisplayName(sec);
+    if (!window.confirm(`Delete S${idx + 1} · ${SECTION_TYPE_LABEL[sec.type]}${name ? ` — ${name}` : ""}?`)) return;
+    onChange(sections.filter((_, i) => i !== idx));
+  };
+
+  const duplicate = (idx: number) => {
+    const sec = sections[idx];
+    if (!sec) return;
+    const copy: Section = JSON.parse(JSON.stringify(sec));
+    copy.id = newSectionId();
+    const next = [...sections];
+    next.splice(idx + 1, 0, copy);
+    onChange(next);
+  };
 
   const move = (idx: number, dir: -1 | 1) => {
     const arr = [...sections];
@@ -336,50 +545,98 @@ function SectionsEditor({
     onChange(arr);
   };
 
+  const toggleCollapsed = (id: string) =>
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const allCollapsed = sections.length > 0 && sections.every((s) => collapsed.has(s.id));
   const detailCount = sections.filter((s) => s.visibility === "detail").length;
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex gap-2 flex-wrap">
-        {(["text", "image", "video", "problem-solution", "embed"] as SectionType[]).map((t) => (
-          <button
-            key={t}
-            type="button"
-            onClick={() => addSection(t)}
-            className="text-sm border border-[#C8A96E] text-[#C8A96E] px-3 py-1.5 hover:bg-[#C8A96E] hover:text-[#0A0908] transition-colors uppercase tracking-widest"
-          >
-            + {t}
-          </button>
-        ))}
-      </div>
-      <p className="text-[#4A4540] text-xs leading-relaxed -mt-2">
-        New blocks land at the top — reorder with ↑ ↓. Mark blocks “See more only” for the expand button.
-        Upload JSON (full project or a bare sections array) to fill these fields automatically.
-        {detailCount > 0 ? ` ${detailCount} block(s) hidden until See more.` : ""}
-      </p>
+    <div className="flex flex-col gap-4">
+      <EditorBox
+        code="S+"
+        title="Add a section"
+        hint={`New sections go to the top. Drag the ⋮⋮ handle to reorder, or use “Add section here” between cards.${
+          detailCount > 0 ? ` ${detailCount} section(s) only show after See more.` : ""
+        }`}
+        actions={
+          sections.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => setCollapsed(allCollapsed ? new Set() : new Set(sections.map((s) => s.id)))}
+              className="h-7 px-2 rounded-md text-xs text-[color:var(--adm-muted)] hover:bg-[color:var(--adm-subtle)] hover:text-[color:var(--adm-text)]"
+            >
+              {allCollapsed ? "Expand all" : "Collapse all"}
+            </button>
+          ) : undefined
+        }
+      >
+        <AddSectionChips onPick={(t) => insertSection(t, 0)} />
+      </EditorBox>
 
       {sections.length === 0 && (
-        <p className="text-[#4A4540] text-sm italic">
-          No sections yet. Add text, image, video, problem-solution, or embed — or Upload JSON / TXT.
+        <p className="text-[color:var(--adm-faint)] text-sm italic">
+          No sections yet. Add one above, or use Upload JSON / TXT.
         </p>
       )}
 
-      {sections.map((sec, idx) => (
-        <div key={sec.id} className="border border-[#272421] p-4 flex flex-col gap-3">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <span className="text-[#C8A96E] text-sm uppercase tracking-widest">
-              {sec.type}
-              {sec.visibility === "detail" ? (
-                <span className="ml-2 text-[10px] text-[#8A8278] normal-case tracking-normal">· see more</span>
-              ) : null}
-            </span>
-            <div className="flex items-center gap-3">
-              <button type="button" onClick={() => move(idx, -1)} className="text-[#4A4540] hover:text-[#F2EDE5] text-sm">↑</button>
-              <button type="button" onClick={() => move(idx, 1)} className="text-[#4A4540] hover:text-[#F2EDE5] text-sm">↓</button>
-              <button type="button" onClick={() => remove(idx)} className="text-[#4A4540] hover:text-red-400 text-sm">Remove</button>
-            </div>
-          </div>
-
+      <AdminSortableList
+        items={sections}
+        onReorder={onChange}
+        renderItem={(sec, idx, dragHandle) => {
+          const name = sectionDisplayName(sec);
+          const isCollapsed = collapsed.has(sec.id);
+          return (
+            <div className="pb-1">
+              {idx > 0 && <SectionInsertRow onPick={(t) => insertSection(t, idx)} />}
+              <EditorBox
+                code={`S${idx + 1}`}
+                leading={dragHandle}
+                title={
+                  <>
+                    {SECTION_TYPE_LABEL[sec.type]}
+                    {name && <span className="font-normal text-[color:var(--adm-muted)]"> — {name}</span>}
+                    {sec.visibility === "detail" && (
+                      <span className="ml-2 align-middle text-[10px] font-medium px-1.5 py-0.5 rounded bg-[color:var(--adm-subtle)] text-[color:var(--adm-muted)]">
+                        See more
+                      </span>
+                    )}
+                  </>
+                }
+                actions={
+                  <>
+                    <button type="button" onClick={() => move(idx, -1)} disabled={idx === 0} className={iconBtn} title="Move up" aria-label="Move up">
+                      <ArrowUp className="h-3.5 w-3.5" />
+                    </button>
+                    <button type="button" onClick={() => move(idx, 1)} disabled={idx === sections.length - 1} className={iconBtn} title="Move down" aria-label="Move down">
+                      <ArrowDown className="h-3.5 w-3.5" />
+                    </button>
+                    <button type="button" onClick={() => duplicate(idx)} className={iconBtn} title="Duplicate" aria-label="Duplicate section">
+                      <Copy className="h-3.5 w-3.5" />
+                    </button>
+                    <button type="button" onClick={() => remove(idx)} className={`${iconBtn} hover:!text-red-600`} title="Delete" aria-label="Delete section">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => toggleCollapsed(sec.id)}
+                      className={iconBtn}
+                      title={isCollapsed ? "Expand" : "Collapse"}
+                      aria-label={isCollapsed ? "Expand section" : "Collapse section"}
+                      aria-expanded={!isCollapsed}
+                    >
+                      {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </button>
+                  </>
+                }
+              >
+              {!isCollapsed && (
+              <>
           <VisibilityToggle
             value={sec.visibility === "detail" ? "detail" : "always"}
             onChange={(v) => update(idx, { visibility: v })}
@@ -400,8 +657,8 @@ function SectionsEditor({
                 }
                 rows={3}
               />
-              <div className="border-t border-[#272421] pt-3 flex flex-col gap-3">
-                <p className="text-[#8A8278] text-[10px] uppercase tracking-widest">
+              <div className="border-t border-[color:var(--adm-line)] pt-3 flex flex-col gap-3">
+                <p className="text-[color:var(--adm-muted)] text-[10px] uppercase tracking-widest">
                   Expanded copy (optional — swaps in when See more is on)
                 </p>
                 <TextInput label="Title when expanded" value={sec.titleDetail ?? ""} onChange={(v) => update(idx, { titleDetail: v })} />
@@ -429,6 +686,7 @@ function SectionsEditor({
                 <SectionImageUploader
                   accept="image/*,.gif,.png,.jpg,.jpeg,.webp"
                   label="↑ Upload image"
+                  usage="section-image"
                   onPicked={(url) => update(idx, { src: url })}
                 />
                 <PickFromLibraryButton
@@ -442,12 +700,13 @@ function SectionsEditor({
                 linkLabel={sec.linkLabel}
                 onChange={(patch) => update(idx, patch)}
               />
+              <MediaWidthPicker value={sec.columns} onChange={(v) => update(idx, { columns: v })} />
               <CheckboxInput
                 label="Transparent background"
                 checked={!!sec.transparent}
                 onChange={(v) => update(idx, { transparent: v })}
               />
-              <p className="text-[#4A4540] text-xs -mt-1">
+              <p className="text-[color:var(--adm-faint)] text-xs -mt-1">
                 For PNG, WebP or GIF files with see-through areas — removes the card behind the image.
               </p>
               {sec.src && (
@@ -470,6 +729,7 @@ function SectionsEditor({
                 <SectionImageUploader
                   accept="video/mp4,video/webm,.mp4,.webm"
                   label="↑ Upload video"
+                  usage="section-video"
                   onPicked={(url) => update(idx, { src: url })}
                 />
                 <PickFromLibraryButton
@@ -483,6 +743,7 @@ function SectionsEditor({
                 linkLabel={sec.linkLabel}
                 onChange={(patch) => update(idx, patch)}
               />
+              <MediaWidthPicker value={sec.columns} onChange={(v) => update(idx, { columns: v })} />
               <CheckboxInput
                 label="Loop (autoplay muted, like a GIF)"
                 checked={!!sec.loop}
@@ -493,8 +754,8 @@ function SectionsEditor({
                 checked={!!sec.transparent}
                 onChange={(v) => update(idx, { transparent: v })}
               />
-              <p className="text-[#4A4540] text-xs leading-relaxed -mt-1">
-                MP4 can’t store transparency — export a <span className="text-[#8A8278]">WebM (VP9 with alpha)</span> for
+              <p className="text-[color:var(--adm-faint)] text-xs leading-relaxed -mt-1">
+                MP4 can’t store transparency — export a <span className="text-[color:var(--adm-muted)]">WebM (VP9 with alpha)</span> for
                 see-through video. Safari may show WebM transparency as a solid background.
               </p>
               {sec.src && (
@@ -504,11 +765,11 @@ function SectionsEditor({
                   playsInline
                   loop={!!sec.loop}
                   autoPlay={!!sec.loop}
-                  className={`h-24 mt-1 w-full ${sec.transparent ? "object-contain" : "object-cover opacity-60 bg-[#0A0908]"}`}
+                  className={`h-24 mt-1 w-full ${sec.transparent ? "object-contain" : "object-cover opacity-60 bg-[color:var(--adm-input)]"}`}
                   style={sec.transparent ? CHECKERBOARD : undefined}
                 />
               )}
-              <p className="text-[#4A4540] text-xs">
+              <p className="text-[color:var(--adm-faint)] text-xs">
                 {sec.loop
                   ? "Loops silently on the case study; visitors can click to pause."
                   : "Plays with controls on the case study (no autoplay) so the page stays stable."}
@@ -521,8 +782,8 @@ function SectionsEditor({
               <TextInput label="Title (optional)" value={sec.title ?? ""} onChange={(v) => update(idx, { title: v })} />
               <TextareaInput label="Problem" value={sec.problem ?? ""} onChange={(v) => update(idx, { problem: v })} rows={3} />
               <TextareaInput label="Solution" value={sec.solution ?? ""} onChange={(v) => update(idx, { solution: v })} rows={3} />
-              <div className="border-t border-[#272421] pt-3 flex flex-col gap-3">
-                <p className="text-[#8A8278] text-[10px] uppercase tracking-widest">
+              <div className="border-t border-[color:var(--adm-line)] pt-3 flex flex-col gap-3">
+                <p className="text-[color:var(--adm-muted)] text-[10px] uppercase tracking-widest">
                   Expanded copy (optional — swaps in when See more is on)
                 </p>
                 <TextareaInput label="Problem when expanded" value={sec.problemDetail ?? ""} onChange={(v) => update(idx, { problemDetail: v })} rows={3} />
@@ -548,13 +809,31 @@ function SectionsEditor({
                 }}
               />
               <TextInput label="Caption (optional)" value={sec.caption ?? ""} onChange={(v) => update(idx, { caption: v })} />
-              <p className="text-[#4A4540] text-xs leading-relaxed">
+              <p className="text-[color:var(--adm-faint)] text-xs leading-relaxed">
                 PubHTML5 viewer URLs only. For live products, use Image/Video + Product CTA link instead of an iframe.
               </p>
             </>
           )}
-        </div>
-      ))}
+
+          {sec.type === "mockup" && (
+            <>
+              <MockupSectionEditor section={sec} onChange={(patch) => update(idx, patch)} />
+              <MediaLinkFields
+                href={sec.href}
+                linkLabel={sec.linkLabel}
+                onChange={(patch) => update(idx, patch)}
+              />
+            </>
+          )}
+              </>
+              )}
+              </EditorBox>
+            </div>
+          );
+        }}
+      />
+
+      {sections.length > 0 && <SectionInsertRow onPick={(t) => insertSection(t, sections.length)} />}
     </div>
   );
 }
@@ -612,55 +891,58 @@ function BriefAutofillPanel({
   };
 
   return (
-    <div className="border border-[#272421] p-4 flex flex-col gap-3">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex items-center justify-between text-left"
-      >
-        <span className="text-[#C8A96E] text-xs uppercase tracking-widest">
-          Fill from brief
-        </span>
-        <span className="text-[#4A4540] text-xs">{open ? "Hide" : "Show"}</span>
-      </button>
+    <EditorBox
+      code="D1"
+      title="Fill from brief"
+      actions={
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          className="h-7 px-2 rounded-md text-xs text-[color:var(--adm-muted)] hover:bg-[color:var(--adm-subtle)] hover:text-[color:var(--adm-text)]"
+        >
+          {open ? "Hide" : "Show"}
+        </button>
+      }
+    >
       {open && (
         <>
-          <p className="text-[#4A4540] text-xs leading-relaxed">
+          <p className="text-[color:var(--adm-faint)] text-xs leading-relaxed">
             Paste a labeled brief. Runs in your browser only — no API key, no network call.
-            Use lines like <span className="text-[#8A8278]">Title:</span>,{" "}
-            <span className="text-[#8A8278]">Role:</span>,{" "}
-            <span className="text-[#8A8278]">Problem:</span>,{" "}
-            <span className="text-[#8A8278]">Solution:</span>,{" "}
-            <span className="text-[#8A8278]">Impact:</span>.
+            Use lines like <span className="text-[color:var(--adm-muted)]">Title:</span>,{" "}
+            <span className="text-[color:var(--adm-muted)]">Role:</span>,{" "}
+            <span className="text-[color:var(--adm-muted)]">Problem:</span>,{" "}
+            <span className="text-[color:var(--adm-muted)]">Solution:</span>,{" "}
+            <span className="text-[color:var(--adm-muted)]">Impact:</span>.
           </p>
           <textarea
             value={brief}
             onChange={(e) => setBrief(e.target.value)}
             rows={8}
             placeholder={`Title: Habiganize\nRole: Product Designer\nUsers: People who quit habit apps in a week\nMethods: Retention research, Figma system, IA\nProblem: Habit apps lose users because quitting costs nothing.\nSolution: Pair check-ins with a pet-care economy.\nImpact: Live multi-platform product; store release next.\nTags: Product Design, UX, Gamification`}
-            className="bg-transparent border border-[#3A3530] text-[#F2EDE5] p-3 text-sm focus:outline-none focus:border-[#C8A96E] transition-colors placeholder:text-[#3A3530] resize-y min-h-[140px]"
+            className="bg-transparent border border-[color:var(--adm-line-strong)] text-[color:var(--adm-text)] p-3 text-sm focus:outline-none focus:border-[color:var(--adm-accent)] transition-colors placeholder:text-[color:var(--adm-placeholder)] resize-y min-h-[140px]"
           />
-          <label className="flex items-center gap-2 text-sm text-[#8A8278] cursor-pointer">
+          <label className="flex items-center gap-2 text-sm text-[color:var(--adm-muted)] cursor-pointer">
             <input
               type="checkbox"
               checked={includeSections}
               onChange={(e) => setIncludeSections(e.target.checked)}
-              className="accent-[#C8A96E]"
+              className="accent-[color:var(--adm-accent)]"
             />
             Also build narrative sections from the brief
           </label>
           <button
             type="button"
             onClick={fillFromBrief}
-            className="self-start text-sm border border-[#C8A96E] text-[#C8A96E] px-3 py-2 hover:bg-[#C8A96E] hover:text-[#0A0908] transition-colors uppercase tracking-widest"
+            className="self-start text-sm border border-[color:var(--adm-accent)] text-[color:var(--adm-accent)] px-3 py-2 hover:bg-[color:var(--adm-accent)] hover:text-[color:var(--adm-on-accent)] transition-colors uppercase tracking-widest"
           >
             Fill case study
           </button>
           {error && <p className="text-red-400 text-xs leading-relaxed">{error}</p>}
-          {hint && <p className="text-[#8A8278] text-xs leading-relaxed">{hint}</p>}
+          {hint && <p className="text-[color:var(--adm-muted)] text-xs leading-relaxed">{hint}</p>}
         </>
       )}
-    </div>
+    </EditorBox>
   );
 }
 
@@ -768,15 +1050,21 @@ export function ProjectsEditor({
   };
 
   const project = data[selectedIdx];
+  const coverEmbed = parseVideoEmbed(project?.coverImage);
 
   return (
-    <div className="flex gap-6 h-full">
-      <div className="w-44 flex-shrink-0 flex flex-col gap-2">
+    <div className="flex gap-5 h-full">
+      <div className="w-52 flex-shrink-0 flex flex-col gap-2 self-start sticky top-[80px]">
+        <div className="flex items-center gap-2 mb-1">
+          <BoxCode code="P" />
+          <span className="text-sm font-semibold text-[color:var(--adm-text)]">Projects</span>
+        </div>
         <button
           onClick={addProject}
-          className="text-sm border border-[#C8A96E] text-[#C8A96E] px-3 py-2 hover:bg-[#C8A96E] hover:text-[#0A0908] transition-colors uppercase tracking-widest mb-2"
+          className="inline-flex items-center justify-center gap-1.5 h-9 rounded-md text-sm font-medium bg-[color:var(--adm-accent)] text-[color:var(--adm-on-accent)] hover:bg-[color:var(--adm-accent-hover)] transition-colors mb-1"
         >
-          + Add Project
+          <Plus className="h-4 w-4" aria-hidden />
+          Add project
         </button>
         <div className="mb-2 flex flex-col gap-1">
           {(
@@ -794,14 +1082,14 @@ export function ProjectsEditor({
                 onClick={() => setVisibilityFilter(opt.id)}
                 className={`flex items-center justify-between gap-2 text-[10px] uppercase tracking-widest px-2 py-1.5 border transition-colors ${
                   active
-                    ? "bg-[#C8A96E] text-[#0A0908] border-[#C8A96E]"
-                    : "text-[#8A8278] border-[#3A3530] hover:border-[#C8A96E]"
+                    ? "bg-[color:var(--adm-accent)] text-[color:var(--adm-on-accent)] border-[color:var(--adm-accent)]"
+                    : "text-[color:var(--adm-muted)] border-[color:var(--adm-line-strong)] hover:border-[color:var(--adm-accent)]"
                 }`}
               >
                 <span>{opt.label}</span>
                 <span
                   className={`tabular-nums text-[9px] px-1.5 py-0.5 rounded ${
-                    active ? "bg-[#0A0908]/20" : "bg-[#1B1815] text-[#4A4540]"
+                    active ? "bg-[color:var(--adm-input)]/20" : "bg-[color:var(--adm-subtle)] text-[color:var(--adm-faint)]"
                   }`}
                 >
                   {opt.count}
@@ -847,17 +1135,25 @@ export function ProjectsEditor({
                   if (realIdx !== -1) setSelectedIdx(realIdx);
                   setSubTab("details");
                 }}
-                className={`flex-1 text-left text-sm px-2 py-2 truncate transition-colors ${
+                className={`flex-1 min-w-0 text-left text-sm px-2.5 py-2 rounded-md truncate transition-colors ${
                   p.id === selectedProjectId
-                    ? "bg-[#C8A96E] text-[#0A0908]"
-                    : "text-[#8A8278] hover:text-[#F2EDE5] border border-[#272421] hover:border-[#3A3530]"
+                    ? "bg-[color:var(--adm-accent)]/10 text-[color:var(--adm-accent)] font-medium"
+                    : "text-[color:var(--adm-muted)] hover:bg-[color:var(--adm-subtle)] hover:text-[color:var(--adm-text)]"
                 }`}
               >
                 {p.title}
                 {p.featured ? " ★" : ""}
+                {p.protected && (
+                  <Lock className="inline w-3 h-3 ml-1.5 -mt-0.5" aria-label="Password protected" />
+                )}
                 {p.archived && (
                   <span className="ml-2 text-[10px] uppercase tracking-widest opacity-70">
                     (archived)
+                  </span>
+                )}
+                {(p.locked || p.deferred) && (
+                  <span className="ml-2 text-[10px] uppercase tracking-widest opacity-70">
+                    (loading…)
                   </span>
                 )}
               </button>
@@ -869,23 +1165,23 @@ export function ProjectsEditor({
       {project && (
         <div className="flex-1 flex flex-col gap-4 overflow-y-auto pr-2">
           <div className="flex items-center justify-between flex-wrap gap-2">
-            <div className="flex gap-3">
+            <div className="inline-flex p-0.5 rounded-lg bg-[color:var(--adm-subtle)] border border-[color:var(--adm-line)]">
               {(["details", "sections"] as const).map((t) => (
                 <button
                   key={t}
                   onClick={() => setSubTab(t)}
-                  className={`text-sm uppercase tracking-widest transition-colors pb-1 ${
+                  className={`h-8 px-3 rounded-md text-sm transition-colors ${
                     subTab === t
-                      ? "text-[#C8A96E] border-b border-[#C8A96E]"
-                      : "text-[#4A4540] hover:text-[#8A8278]"
+                      ? "bg-[color:var(--adm-surface)] text-[color:var(--adm-text)] font-medium shadow-sm"
+                      : "text-[color:var(--adm-muted)] hover:text-[color:var(--adm-text)]"
                   }`}
                 >
-                  {t} {t === "sections" && `(${project.sections?.length ?? 0})`}
+                  {t === "details" ? "Details · D1–D11" : `Sections · ${project.sections?.length ?? 0}`}
                 </button>
               ))}
             </div>
             <div className="flex items-center gap-3">
-              <label className="text-sm text-[#C8A96E] border border-[#C8A96E] px-2 py-1 cursor-pointer hover:bg-[#C8A96E] hover:text-[#0A0908] transition-colors uppercase tracking-widest">
+              <label className="inline-flex items-center h-8 px-3 rounded-md text-sm text-[color:var(--adm-text)] border border-[color:var(--adm-line-strong)] cursor-pointer hover:bg-[color:var(--adm-subtle)] transition-colors">
                 Upload JSON / TXT
                 <input
                   type="file"
@@ -895,10 +1191,15 @@ export function ProjectsEditor({
                 />
               </label>
               <button
-                onClick={() => removeProject(selectedIdx)}
-                className="text-sm text-[#4A4540] hover:text-red-400 transition-colors"
+                onClick={() => {
+                  if (window.confirm(`Delete project “${project.title}”? This only takes effect after Save to site.`)) {
+                    removeProject(selectedIdx);
+                  }
+                }}
+                className="inline-flex items-center gap-1.5 h-8 px-2 rounded-md text-sm text-[color:var(--adm-faint)] hover:bg-red-50 hover:text-red-600 transition-colors"
               >
-                Delete
+                <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                Delete project
               </button>
             </div>
           </div>
@@ -918,16 +1219,17 @@ export function ProjectsEditor({
                   onChange(data.map((p, i) => (i === selectedIdx ? next : p)));
                 }}
               />
-              <TextInput label="Title" value={project.title} onChange={(v) => updateProject(selectedIdx, { title: v })} />
-              <TextInput
-                label="Slug (URL path)"
-                value={project.slug}
-                onChange={(v) => updateProject(selectedIdx, { slug: v })}
-                hint="Used in the URL: /work/your-slug"
-              />
+              <EditorBox code="D2" title="Title & URL">
+                <TextInput label="Title" value={project.title} onChange={(v) => updateProject(selectedIdx, { title: v })} />
+                <TextInput
+                  label="Slug (URL path)"
+                  value={project.slug}
+                  onChange={(v) => updateProject(selectedIdx, { slug: v })}
+                  hint="Used in the URL: /work/your-slug"
+                />
+              </EditorBox>
 
-              <div className="border border-[#272421] p-4 flex flex-col gap-4">
-                <p className="text-[#C8A96E] text-xs uppercase tracking-widest">Case study hero</p>
+              <EditorBox code="D3" title="Case study hero">
                 <TextInput
                   label="Subtitle"
                   value={project.subtitle}
@@ -942,13 +1244,13 @@ export function ProjectsEditor({
                   hint="Short text on Work page cards on hover. Leave blank to reuse the subtitle."
                   placeholder="Optional — shown on Work cards only"
                 />
-              </div>
+              </EditorBox>
 
-              <div className="border border-[#272421] p-4 flex flex-col gap-4">
-                <p className="text-[#C8A96E] text-xs uppercase tracking-widest">Metadata strip (Role · Users · Methods)</p>
-                <p className="text-[#4A4540] text-xs leading-relaxed -mt-2">
-                  These three fields appear under the title on the case study page.
-                </p>
+              <EditorBox
+                code="D4"
+                title="Metadata strip (Role · Users · Methods)"
+                hint="These fields appear under the title on the case study page."
+              >
                 <TextInput
                   label="Role"
                   value={project.type}
@@ -971,44 +1273,125 @@ export function ProjectsEditor({
                   placeholder="e.g. IA audit, usability testing, wireframes"
                 />
                 <TextInput label="Year" value={project.year} onChange={(v) => updateProject(selectedIdx, { year: v })} />
-              </div>
+              </EditorBox>
 
-              {/* Cover image / video upload */}
-              <div className="flex flex-col gap-2">
-                <label className="text-[#8A8278] text-xs uppercase tracking-widest">Cover Image / Video</label>
-                <p className="text-[#4A4540] text-xs leading-relaxed">Hero media at the top of the case study and on Work cards.</p>
+              <EditorBox
+                code="D5"
+                title="Cover image / video"
+                hint="Hero media at the top of the case study and on Work cards. Upload an image or video, or paste a YouTube / Vimeo / Instagram link. Videos play muted on cards; the case study adds play/pause, sound, and a full-screen player."
+              >
                 <input
                   type="text"
                   value={project.coverImage}
-                  onChange={(e) => updateProject(selectedIdx, { coverImage: e.target.value })}
-                  placeholder="Paste URL (jpg, png, gif, mp4…)"
-                  className="bg-transparent border-b border-[#3A3530] text-[#F2EDE5] py-2 text-sm focus:outline-none focus:border-[#C8A96E] transition-colors placeholder:text-[#3A3530]"
+                  onChange={(e) =>
+                    updateProject(selectedIdx, { coverImage: e.target.value, coverMime: undefined })
+                  }
+                  placeholder="Paste URL (jpg, png, mp4, webm) or a YouTube / Vimeo / Instagram link"
+                  className="bg-[color:var(--adm-input)] border border-[color:var(--adm-line-strong)] rounded-md text-[color:var(--adm-text)] px-3 py-2 text-sm focus:outline-none focus:border-[color:var(--adm-accent)] transition-colors placeholder:text-[color:var(--adm-placeholder)]"
                 />
                 <div className="flex items-center gap-2 flex-wrap">
                   <UploadToLibraryDashed
-                    label="↑ Upload file — image / gif / mp4"
+                    label="↑ Upload file — image / gif / mp4 / webm"
+                    usage="project-cover"
                     accept="image/*,video/mp4,video/webm,.gif,.mp4,.webm"
-                    onUploaded={(url) =>
-                      updateProject(selectedIdx, { coverImage: url })
+                    onUploaded={(url, meta) =>
+                      updateProject(selectedIdx, { coverImage: url, coverMime: meta?.mime || undefined })
                     }
                   />
                   <PickFromLibraryButton
-                    onPick={(url) => updateProject(selectedIdx, { coverImage: url })}
+                    onPick={(url, meta) =>
+                      updateProject(selectedIdx, { coverImage: url, coverMime: meta?.mime || undefined })
+                    }
                   />
                 </div>
                 {project.coverImage && (
-                  <div className="rounded overflow-hidden border border-[#3A3530]" style={{ maxHeight: "130px" }}>
-                    {/\.(mp4|webm|ogg|mov)(\?|$)/i.test(project.coverImage) || project.coverImage.startsWith("data:video") ? (
-                      <video src={project.coverImage} autoPlay loop muted playsInline className="w-full object-cover" style={{ maxHeight: "130px" }} />
-                    ) : (
-                      <SafeImage src={project.coverImage} alt="cover preview" className="w-full object-cover" style={{ maxHeight: "130px" }} />
-                    )}
+                  <div className="rounded overflow-hidden border border-[color:var(--adm-line-strong)]" style={{ maxHeight: "130px" }}>
+                    <CoverMedia
+                      src={project.coverImage}
+                      alt="cover preview"
+                      mimeHint={project.coverMime}
+                      poster={project.coverPoster}
+                      className="w-full object-cover"
+                      style={coverEmbed ? { height: "130px" } : { maxHeight: "130px" }}
+                    />
                   </div>
                 )}
-              </div>
+                {coverEmbed && (
+                  <p className="text-[color:var(--adm-faint)] text-xs leading-relaxed">
+                    {coverEmbed.provider === "instagram"
+                      ? "Instagram link — Instagram can't autoplay inside a cover, so cards and the case study show the poster below with a play button that opens the Instagram player. Add a poster image."
+                      : coverEmbed.provider === "youtube"
+                        ? "YouTube link — plays muted and looping as the cover. The YouTube thumbnail is used as the poster unless you set one."
+                        : "Vimeo link — plays muted and looping as the cover. Add a poster so the card isn't blank while Vimeo loads. Vimeo may still show its player controls unless the video's account is on a paid Vimeo plan."}
+                  </p>
+                )}
+                {(isVideo(project.coverImage, project.coverMime) || coverEmbed) && (
+                  <div className="flex flex-col gap-3 pt-2 border-t border-[color:var(--adm-line)]">
+                    <div className={`flex flex-col gap-2 ${coverEmbed?.provider === "instagram" ? "hidden" : ""}`}>
+                      <span className="text-[color:var(--adm-muted)] text-xs uppercase tracking-widest">
+                        Video on Work / Home cards
+                      </span>
+                      <div className="flex gap-2 flex-wrap">
+                        {(
+                          [
+                            { value: "loop" as const, label: "Always loop" },
+                            { value: "hover" as const, label: "Play on hover" },
+                          ] as const
+                        ).map(({ value, label }) => {
+                          const active = (project.coverPlayback ?? "loop") === value;
+                          return (
+                            <button
+                              key={value}
+                              type="button"
+                              onClick={() =>
+                                updateProject(selectedIdx, {
+                                  coverPlayback: value === "loop" ? undefined : value,
+                                })
+                              }
+                              className={`text-xs uppercase tracking-widest px-3 py-1.5 border transition-colors ${
+                                active
+                                  ? "bg-[color:var(--adm-accent)] text-[color:var(--adm-on-accent)] border-[color:var(--adm-accent)]"
+                                  : "text-[color:var(--adm-muted)] border-[color:var(--adm-line-strong)] hover:border-[color:var(--adm-accent)]"
+                              }`}
+                            >
+                              {label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <p className="text-[color:var(--adm-faint)] text-xs leading-relaxed">
+                        Play on hover shows the poster (or first frame) until a visitor hovers the card. On phones it plays when the card scrolls into view. Ignored when a separate hover video is set in D7.
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <span className="text-[color:var(--adm-muted)] text-xs uppercase tracking-widest">
+                        Poster image (optional)
+                      </span>
+                      <input
+                        type="text"
+                        value={project.coverPoster ?? ""}
+                        onChange={(e) => updateProject(selectedIdx, { coverPoster: e.target.value || undefined })}
+                        placeholder="Still frame shown before the video loads and on the password screen"
+                        className="bg-[color:var(--adm-input)] border border-[color:var(--adm-line-strong)] rounded-md text-[color:var(--adm-text)] px-3 py-2 text-sm focus:outline-none focus:border-[color:var(--adm-accent)] transition-colors placeholder:text-[color:var(--adm-placeholder)]"
+                      />
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <UploadToLibraryDashed
+                          label="↑ Upload poster"
+                          usage="project-cover"
+                          accept="image/*"
+                          onUploaded={(url) => updateProject(selectedIdx, { coverPoster: url })}
+                        />
+                        <PickFromLibraryButton
+                          type="image"
+                          onPick={(url) => updateProject(selectedIdx, { coverPoster: url })}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </EditorBox>
 
-              <div className="flex flex-col gap-2">
-                <label className="text-[#8A8278] text-xs uppercase tracking-widest">Card layout (Work / Home grid)</label>
+              <EditorBox code="D6" title="Card layout (Work / Home grid)">
                 <div className="flex gap-2 flex-wrap">
                   {(
                     [
@@ -1028,8 +1411,8 @@ export function ProjectsEditor({
                         }
                         className={`text-xs uppercase tracking-widest px-3 py-1.5 border transition-colors ${
                           active
-                            ? "bg-[#C8A96E] text-[#0A0908] border-[#C8A96E]"
-                            : "text-[#8A8278] border-[#3A3530] hover:border-[#C8A96E]"
+                            ? "bg-[color:var(--adm-accent)] text-[color:var(--adm-on-accent)] border-[color:var(--adm-accent)]"
+                            : "text-[color:var(--adm-muted)] border-[color:var(--adm-line-strong)] hover:border-[color:var(--adm-accent)]"
                         }`}
                       >
                         {label}
@@ -1037,27 +1420,27 @@ export function ProjectsEditor({
                     );
                   })}
                 </div>
-                <p className="text-[#4A4540] text-xs leading-relaxed">
+                <p className="text-[color:var(--adm-faint)] text-xs leading-relaxed">
                   Vertical = one 4:5 card. Horizontal = the width of two cards plus the gap between them, same height.
                 </p>
-              </div>
+              </EditorBox>
 
-              {/* Hover preview video + live URL */}
-              <div className="flex flex-col gap-2">
-                <label className="text-[#8A8278] text-xs uppercase tracking-widest">Hover Preview Video</label>
-                <p className="text-[#4A4540] text-xs leading-relaxed">
-                  Short muted loop that plays after a long hover on Work/Home cards. Leave empty to keep the static cover.
-                </p>
+              <EditorBox
+                code="D7"
+                title="Hover video & live link"
+                hint="Hover video: short muted loop that plays after a long hover on Work/Home cards. Leave empty to keep the static cover."
+              >
                 <input
                   type="text"
                   value={project.hoverVideo ?? ""}
                   onChange={(e) => updateProject(selectedIdx, { hoverVideo: e.target.value })}
                   placeholder="Paste mp4/webm URL"
-                  className="bg-transparent border-b border-[#3A3530] text-[#F2EDE5] py-2 text-sm focus:outline-none focus:border-[#C8A96E] transition-colors placeholder:text-[#3A3530]"
+                  className="bg-[color:var(--adm-input)] border border-[color:var(--adm-line-strong)] rounded-md text-[color:var(--adm-text)] px-3 py-2 text-sm focus:outline-none focus:border-[color:var(--adm-accent)] transition-colors placeholder:text-[color:var(--adm-placeholder)]"
                 />
                 <div className="flex items-center gap-2 flex-wrap">
                   <UploadToLibraryDashed
                     label="↑ Upload hover video"
+                    usage="hover-video"
                     accept="video/mp4,video/webm,.mp4,.webm"
                     onUploaded={(url) => updateProject(selectedIdx, { hoverVideo: url })}
                   />
@@ -1066,30 +1449,31 @@ export function ProjectsEditor({
                     onPick={(url) => updateProject(selectedIdx, { hoverVideo: url })}
                   />
                 </div>
-              </div>
-              <TextInput
-                label="Live product URL"
-                value={project.liveUrl ?? ""}
-                onChange={(v) => updateProject(selectedIdx, { liveUrl: v })}
-                hint="Powers the floating VIEW LIVE badge on the case study page."
-                placeholder="https://…"
-              />
+                <TextInput
+                  label="Live product URL"
+                  value={project.liveUrl ?? ""}
+                  onChange={(v) => updateProject(selectedIdx, { liveUrl: v })}
+                  hint="Powers the floating VIEW LIVE badge on the case study page."
+                  placeholder="https://…"
+                />
+              </EditorBox>
 
-              <div className="flex flex-col gap-2">
-                <label className="text-[#8A8278] text-xs uppercase tracking-widest">Logo (Studio marquee)</label>
-                <p className="text-[#4A4540] text-xs leading-relaxed">
-                  Square mark for the looping logo strip at the bottom of the Work page. Leave blank to skip this project.
-                </p>
+              <EditorBox
+                code="D8"
+                title="Logo (Studio marquee)"
+                hint="Square mark for the looping logo strip at the bottom of the Work page. Leave blank to skip this project."
+              >
                 <input
                   type="text"
                   value={project.logo ?? ""}
                   onChange={(e) => updateProject(selectedIdx, { logo: e.target.value })}
                   placeholder="Paste logo URL"
-                  className="bg-transparent border-b border-[#3A3530] text-[#F2EDE5] py-2 text-sm focus:outline-none focus:border-[#C8A96E] transition-colors placeholder:text-[#3A3530]"
+                  className="bg-[color:var(--adm-input)] border border-[color:var(--adm-line-strong)] rounded-md text-[color:var(--adm-text)] px-3 py-2 text-sm focus:outline-none focus:border-[color:var(--adm-accent)] transition-colors placeholder:text-[color:var(--adm-placeholder)]"
                 />
                 <div className="flex items-center gap-2 flex-wrap">
                   <UploadToLibraryDashed
                     label="↑ Upload logo"
+                    usage="logo"
                     accept="image/*"
                     onUploaded={(url) => updateProject(selectedIdx, { logo: url })}
                   />
@@ -1101,19 +1485,22 @@ export function ProjectsEditor({
                 {project.logo && (
                   <SafeImage src={project.logo} alt="logo preview" className="h-12 w-auto object-contain" fallbackAspect="1 / 1" />
                 )}
-              </div>
-              <TagsInput
-                label="Tags"
-                tags={project.tags ?? []}
-                suggestions={tagSuggestions}
-                onChange={(tags) => updateProject(selectedIdx, { tags })}
-              />
+              </EditorBox>
 
-              <div className="border border-[#272421] p-4 flex flex-col gap-4">
-                <p className="text-[#C8A96E] text-xs uppercase tracking-widest">Case study body (Overview · Problem · Solution · Impact)</p>
-                <p className="text-[#4A4540] text-xs leading-relaxed -mt-2">
-                  These blocks render above your custom sections on the case study page. Scroll past the cover image to see them. Empty fields are hidden.
-                </p>
+              <EditorBox code="D9" title="Tags">
+                <TagsInput
+                  label="Tags"
+                  tags={project.tags ?? []}
+                  suggestions={tagSuggestions}
+                  onChange={(tags) => updateProject(selectedIdx, { tags })}
+                />
+              </EditorBox>
+
+              <EditorBox
+                code="D10"
+                title="Case study body (Overview · Problem · Solution · Impact)"
+                hint="These blocks render above your custom sections on the case study page. Empty fields are hidden."
+              >
                 <TextareaInput
                   label="Overview"
                   value={project.description}
@@ -1142,14 +1529,28 @@ export function ProjectsEditor({
                   hint="Results / outcomes block below Problem & Solution."
                   rows={3}
                 />
-              </div>
+              </EditorBox>
 
-              <CheckboxInput label="★ Show on homepage Selected Work" checked={project.featured} onChange={(v) => updateProject(selectedIdx, { featured: v })} />
-              <CheckboxInput
-                label="Archive (hide from public site)"
-                checked={Boolean(project.archived)}
-                onChange={(v) => updateProject(selectedIdx, { archived: v })}
-              />
+              <EditorBox code="D11" title="Visibility">
+                <CheckboxInput label="★ Show on homepage Selected Work" checked={project.featured} onChange={(v) => updateProject(selectedIdx, { featured: v })} />
+                <CheckboxInput
+                  label="Archive (hide from public site)"
+                  checked={Boolean(project.archived)}
+                  onChange={(v) => updateProject(selectedIdx, { archived: v })}
+                />
+                <CheckboxInput
+                  label="Password protect this case study"
+                  checked={Boolean(project.protected)}
+                  onChange={(v) => updateProject(selectedIdx, { protected: v })}
+                />
+                {project.protected && (
+                  <CaseStudyPasswordFields
+                    key={project.id}
+                    password={project.password}
+                    onChange={(password) => updateProject(selectedIdx, { password })}
+                  />
+                )}
+              </EditorBox>
             </div>
           )}
 

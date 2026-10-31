@@ -17,6 +17,8 @@ import {
   maxAssetBytesForFileType,
   formatMaxMb,
 } from "@/lib/asset-limits";
+import { guidelineSummary, type MediaUsage } from "@/lib/media-guidelines";
+import { UploadCancelledError } from "./MediaPrepModal";
 
 // ── Constants ──────────────────────────────────────────────────────────
 
@@ -179,7 +181,7 @@ export function AssetThumb({
         muted
         playsInline
         preload="metadata"
-        className={"w-full h-full object-cover bg-[#0A0908] " + className}
+        className={"w-full h-full object-cover bg-[color:var(--adm-input)] " + className}
       />
     );
   }
@@ -188,7 +190,7 @@ export function AssetThumb({
       src={url}
       alt={asset.filename}
       loading="lazy"
-      className={"w-full h-full object-cover bg-[#0A0908] " + className}
+      className={"w-full h-full object-cover bg-[color:var(--adm-input)] " + className}
     />
   );
 }
@@ -208,8 +210,8 @@ export function PickFromLibraryButton({
   if (!open) return null;
   const cls =
     size === "sm"
-      ? "text-xs border border-[#3A3530] text-[#8A8278] px-2 py-1 hover:border-[#C8A96E] hover:text-[#C8A96E] uppercase tracking-widest"
-      : "text-sm border border-[#3A3530] text-[#8A8278] px-3 py-1.5 hover:border-[#C8A96E] hover:text-[#C8A96E] uppercase tracking-widest";
+      ? "text-xs border border-[color:var(--adm-line-strong)] text-[color:var(--adm-muted)] px-2 py-1 hover:border-[color:var(--adm-accent)] hover:text-[color:var(--adm-accent)] uppercase tracking-widest"
+      : "text-sm border border-[color:var(--adm-line-strong)] text-[color:var(--adm-muted)] px-3 py-1.5 hover:border-[color:var(--adm-accent)] hover:text-[color:var(--adm-accent)] uppercase tracking-widest";
   return (
     <button type="button" onClick={() => open(onPick, { type })} className={cls}>
       ⌘ {label}
@@ -217,14 +219,24 @@ export function PickFromLibraryButton({
   );
 }
 
+function UploadHint({ usage }: { usage?: MediaUsage }) {
+  return (
+    <p className="text-[10px] text-[color:var(--adm-faint)] leading-snug">
+      {guidelineSummary(usage)} · crop & adjust after picking
+    </p>
+  );
+}
+
 export function SectionImageUploader({
   onPicked,
   accept = "image/*,video/mp4,video/webm,.gif,.mp4,.webm",
   label = "↑ Upload to library",
+  usage,
 }: {
   onPicked: (url: string) => void;
   accept?: string;
   label?: string;
+  usage?: MediaUsage;
 }) {
   const upload = useAssetUpload();
   const [busy, setBusy] = useState(false);
@@ -235,8 +247,8 @@ export function SectionImageUploader({
       <label
         className={`text-sm border px-3 py-1.5 uppercase tracking-widest cursor-pointer inline-flex items-center justify-center ${
           busy
-            ? "border-[#3A3530] text-[#4A4540] cursor-wait"
-            : "border-[#C8A96E] text-[#C8A96E] hover:bg-[#C8A96E] hover:text-[#0A0908]"
+            ? "border-[color:var(--adm-line-strong)] text-[color:var(--adm-faint)] cursor-wait"
+            : "border-[color:var(--adm-accent)] text-[color:var(--adm-accent)] hover:bg-[color:var(--adm-accent)] hover:text-[color:var(--adm-on-accent)]"
         }`}
       >
         {busy ? "Uploading…" : label}
@@ -252,16 +264,19 @@ export function SectionImageUploader({
             setBusy(true);
             setErr("");
             try {
-              const url = await upload(f);
+              const url = await upload(f, { usage });
               onPicked(url);
             } catch (e2) {
-              setErr(e2 instanceof Error ? e2.message : "Upload failed.");
+              if (!(e2 instanceof UploadCancelledError)) {
+                setErr(e2 instanceof Error ? e2.message : "Upload failed.");
+              }
             } finally {
               setBusy(false);
             }
           }}
         />
       </label>
+      <UploadHint usage={usage} />
       {err && <p className="text-xs text-red-400">{err}</p>}
     </div>
   );
@@ -271,10 +286,12 @@ export function UploadToLibraryDashed({
   label,
   accept,
   onUploaded,
+  usage,
 }: {
   label: string;
   accept: string;
   onUploaded: (url: string, meta?: { mime?: string }) => void;
+  usage?: MediaUsage;
 }) {
   const upload = useAssetUpload();
   const [busy, setBusy] = useState(false);
@@ -285,8 +302,8 @@ export function UploadToLibraryDashed({
       <label
         className={`flex items-center gap-2 px-3 py-2 border border-dashed transition-colors rounded text-[11px] uppercase tracking-widest ${
           busy
-            ? "border-[#3A3530] text-[#4A4540] cursor-wait"
-            : "border-[#3A3530] hover:border-[#C8A96E] text-[#8A8278] cursor-pointer"
+            ? "border-[color:var(--adm-line-strong)] text-[color:var(--adm-faint)] cursor-wait"
+            : "border-[color:var(--adm-line-strong)] hover:border-[color:var(--adm-accent)] text-[color:var(--adm-muted)] cursor-pointer"
         }`}
       >
         <span>{busy ? "Uploading…" : label}</span>
@@ -302,16 +319,20 @@ export function UploadToLibraryDashed({
             setBusy(true);
             setErr("");
             try {
-              const url = await upload(f);
-              onUploaded(url, { mime: f.type });
+              let mime = f.type;
+              const url = await upload(f, { usage, onPrepared: (p) => (mime = p.type) });
+              onUploaded(url, { mime });
             } catch (e2) {
-              setErr(e2 instanceof Error ? e2.message : "Upload failed.");
+              if (!(e2 instanceof UploadCancelledError)) {
+                setErr(e2 instanceof Error ? e2.message : "Upload failed.");
+              }
             } finally {
               setBusy(false);
             }
           }}
         />
       </label>
+      <UploadHint usage={usage} />
       {err && <p className="text-xs text-red-400">{err}</p>}
     </div>
   );
@@ -347,32 +368,32 @@ export function AssetPickerModal({
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-      <div className="w-full max-w-4xl max-h-[85vh] flex flex-col bg-[#0F0D0B] border border-[#272421]">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[#272421]">
-          <h2 className="font-serif text-xl text-[#F2EDE5]">
+      <div className="w-full max-w-4xl max-h-[85vh] flex flex-col bg-[color:var(--adm-surface)] border border-[color:var(--adm-line)]">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[color:var(--adm-line)]">
+          <h2 className="font-serif text-xl text-[color:var(--adm-text)]">
             Insert from library
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="text-[#8A8278] hover:text-[#F2EDE5] text-2xl leading-none"
+            className="text-[color:var(--adm-muted)] hover:text-[color:var(--adm-text)] text-2xl leading-none"
             aria-label="Close"
           >
             ×
           </button>
         </div>
-        <div className="flex flex-wrap items-center gap-3 px-4 py-3 border-b border-[#272421]">
+        <div className="flex flex-wrap items-center gap-3 px-4 py-3 border-b border-[color:var(--adm-line)]">
           <input
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by filename…"
-            className="flex-1 min-w-[180px] bg-transparent border border-[#3A3530] text-[#F2EDE5] px-3 py-1.5 text-sm focus:outline-none focus:border-[#C8A96E]"
+            className="flex-1 min-w-[180px] bg-transparent border border-[color:var(--adm-line-strong)] text-[color:var(--adm-text)] px-3 py-1.5 text-sm focus:outline-none focus:border-[color:var(--adm-accent)]"
           />
           <select
             value={type}
             onChange={(e) => setType(e.target.value as AssetType)}
-            className="bg-[#0F0D0B] border border-[#3A3530] text-[#F2EDE5] px-2 py-1.5 text-sm"
+            className="bg-[color:var(--adm-surface)] border border-[color:var(--adm-line-strong)] text-[color:var(--adm-text)] px-2 py-1.5 text-sm"
           >
             <option value="all">All types</option>
             <option value="image">Images</option>
@@ -382,20 +403,20 @@ export function AssetPickerModal({
           <button
             type="button"
             onClick={onRefresh}
-            className="border border-[#3A3530] text-[#8A8278] px-3 py-1.5 hover:border-[#C8A96E] hover:text-[#C8A96E] text-xs uppercase tracking-widest"
+            className="border border-[color:var(--adm-line-strong)] text-[color:var(--adm-muted)] px-3 py-1.5 hover:border-[color:var(--adm-accent)] hover:text-[color:var(--adm-accent)] text-xs uppercase tracking-widest"
           >
             Refresh
           </button>
         </div>
         <div className="flex-1 overflow-y-auto p-4">
-          {loading && <p className="text-[#8A8278] text-sm">Loading…</p>}
+          {loading && <p className="text-[color:var(--adm-muted)] text-sm">Loading…</p>}
           {error && (
             <p className="text-red-400 text-sm border border-red-900/40 bg-red-950/20 px-3 py-2 mb-3">
               {error}
             </p>
           )}
           {!loading && assets.length === 0 && !error && (
-            <p className="text-[#8A8278] text-sm">
+            <p className="text-[color:var(--adm-muted)] text-sm">
               No assets yet. Upload some in the Assets tab first.
             </p>
           )}
@@ -405,13 +426,13 @@ export function AssetPickerModal({
                 key={a.id}
                 type="button"
                 onClick={() => onPick(a)}
-                className="group flex flex-col gap-1 text-left border border-[#272421] hover:border-[#C8A96E] transition-colors p-1"
+                className="group flex flex-col gap-1 text-left border border-[color:var(--adm-line)] hover:border-[color:var(--adm-accent)] transition-colors p-1"
               >
                 <div className="aspect-square overflow-hidden">
                   <AssetThumb asset={a} />
                 </div>
                 <div
-                  className="text-[10px] text-[#8A8278] truncate px-1"
+                  className="text-[10px] text-[color:var(--adm-muted)] truncate px-1"
                   title={a.filename}
                 >
                   {a.filename}
@@ -477,8 +498,8 @@ export function AssetsEditor({
     <div className="flex flex-col gap-5">
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h2 className="text-[#F2EDE5] text-lg font-serif">Asset Library</h2>
-          <p className="text-[#8A8278] text-xs mt-1 max-w-xl">
+          <h2 className="text-[color:var(--adm-text)] text-lg font-serif">Asset Library</h2>
+          <p className="text-[color:var(--adm-muted)] text-xs mt-1 max-w-xl">
             Upload, organise, and insert media. Every image or video you upload
             here is stored on the server and can be picked from any editor.
           </p>
@@ -489,8 +510,8 @@ export function AssetsEditor({
       <label
         className={`flex items-center justify-center gap-2 px-6 py-5 border-2 border-dashed transition-colors rounded cursor-pointer ${
           drag
-            ? "border-[#C8A96E] bg-[#C8A96E]/10"
-            : "border-[#3A3530] hover:border-[#C8A96E]"
+            ? "border-[color:var(--adm-accent)] bg-[color:var(--adm-accent)]/10"
+            : "border-[color:var(--adm-line-strong)] hover:border-[color:var(--adm-accent)]"
         }`}
         onDragOver={(e) => {
           e.preventDefault();
@@ -510,8 +531,13 @@ export function AssetsEditor({
           }
         }}
       >
-        <span className="text-[#8A8278] text-sm uppercase tracking-widest">
-          ↑ Drop files here or click to upload
+        <span className="flex flex-col items-center gap-1 text-center">
+          <span className="text-[color:var(--adm-muted)] text-sm uppercase tracking-widest">
+            ↑ Drop files here or click to upload
+          </span>
+          <span className="text-[color:var(--adm-faint)] text-[11px]">
+            {guidelineSummary("general")}. Images open in the crop & adjust editor before uploading.
+          </span>
         </span>
         <input
           type="file"
@@ -538,19 +564,19 @@ export function AssetsEditor({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search by filename…"
-          className="flex-1 min-w-[180px] bg-transparent border border-[#3A3530] text-[#F2EDE5] px-3 py-1.5 text-sm focus:outline-none focus:border-[#C8A96E]"
+          className="flex-1 min-w-[180px] bg-transparent border border-[color:var(--adm-line-strong)] text-[color:var(--adm-text)] px-3 py-1.5 text-sm focus:outline-none focus:border-[color:var(--adm-accent)]"
         />
         <select
           value={type}
           onChange={(e) => setType(e.target.value as AssetType)}
-          className="bg-[#0F0D0B] border border-[#3A3530] text-[#F2EDE5] px-2 py-1.5 text-sm"
+          className="bg-[color:var(--adm-surface)] border border-[color:var(--adm-line-strong)] text-[color:var(--adm-text)] px-2 py-1.5 text-sm"
         >
           <option value="all">All types</option>
           <option value="image">Images</option>
           <option value="gif">GIFs</option>
           <option value="video">Videos</option>
         </select>
-        <span className="text-[#4A4540] text-xs uppercase tracking-widest">
+        <span className="text-[color:var(--adm-faint)] text-xs uppercase tracking-widest">
           {total} {total === 1 ? "item" : "items"}
         </span>
       </div>
@@ -562,7 +588,7 @@ export function AssetsEditor({
       )}
 
       {!loading && assets.length === 0 && !error ? (
-        <div className="text-[#8A8278] text-sm border border-dashed border-[#3A3530] p-8 text-center">
+        <div className="text-[color:var(--adm-muted)] text-sm border border-dashed border-[color:var(--adm-line-strong)] p-8 text-center">
           No assets yet. Upload some above.
         </div>
       ) : (
@@ -570,7 +596,7 @@ export function AssetsEditor({
           {assets.map((a) => (
             <div
               key={a.id}
-              className="border border-[#272421] bg-[#0A0908] flex flex-col"
+              className="border border-[color:var(--adm-line)] bg-[color:var(--adm-input)] flex flex-col"
             >
               <div className="aspect-square overflow-hidden">
                 <AssetThumb asset={a} />
@@ -594,21 +620,21 @@ export function AssetsEditor({
                       type="text"
                       value={renameValue}
                       onChange={(e) => setRenameValue(e.target.value)}
-                      className="bg-transparent border border-[#3A3530] text-[#F2EDE5] px-2 py-1 text-xs"
+                      className="bg-transparent border border-[color:var(--adm-line-strong)] text-[color:var(--adm-text)] px-2 py-1 text-xs"
                       autoFocus
                     />
                     <div className="flex gap-1">
                       <button
                         type="submit"
                         disabled={busyId === a.id}
-                        className="text-[10px] uppercase tracking-widest text-[#C8A96E] border border-[#C8A96E] px-2 py-1"
+                        className="text-[10px] uppercase tracking-widest text-[color:var(--adm-accent)] border border-[color:var(--adm-accent)] px-2 py-1"
                       >
                         Save
                       </button>
                       <button
                         type="button"
                         onClick={() => setRenaming(null)}
-                        className="text-[10px] uppercase tracking-widest text-[#8A8278] border border-[#3A3530] px-2 py-1"
+                        className="text-[10px] uppercase tracking-widest text-[color:var(--adm-muted)] border border-[color:var(--adm-line-strong)] px-2 py-1"
                       >
                         Cancel
                       </button>
@@ -616,24 +642,24 @@ export function AssetsEditor({
                   </form>
                 ) : (
                   <span
-                    className="text-[#F2EDE5] truncate"
+                    className="text-[color:var(--adm-text)] truncate"
                     title={a.filename}
                   >
                     {a.filename}
                   </span>
                 )}
-                <span className="text-[#4A4540] text-[10px] uppercase tracking-widest">
+                <span className="text-[color:var(--adm-faint)] text-[10px] uppercase tracking-widest">
                   {assetTypeOf(a.mime)} · {formatBytes(a.size)}
                   {a.width && a.height ? ` · ${a.width}×${a.height}` : ""}
                 </span>
-                <span className="text-[#4A4540] text-[10px]">
+                <span className="text-[color:var(--adm-faint)] text-[10px]">
                   {formatDate(a.createdAt)}
                 </span>
                 <div className="flex flex-wrap gap-1 mt-1">
                   <button
                     type="button"
                     onClick={() => onCopy(a)}
-                    className="text-[10px] uppercase tracking-widest text-[#8A8278] border border-[#3A3530] px-2 py-1 hover:text-[#C8A96E] hover:border-[#C8A96E]"
+                    className="text-[10px] uppercase tracking-widest text-[color:var(--adm-muted)] border border-[color:var(--adm-line-strong)] px-2 py-1 hover:text-[color:var(--adm-accent)] hover:border-[color:var(--adm-accent)]"
                   >
                     {copied === a.id ? "Copied!" : "Copy URL"}
                   </button>
@@ -643,11 +669,11 @@ export function AssetsEditor({
                       setRenaming(a.id);
                       setRenameValue(a.filename);
                     }}
-                    className="text-[10px] uppercase tracking-widest text-[#8A8278] border border-[#3A3530] px-2 py-1 hover:text-[#C8A96E] hover:border-[#C8A96E]"
+                    className="text-[10px] uppercase tracking-widest text-[color:var(--adm-muted)] border border-[color:var(--adm-line-strong)] px-2 py-1 hover:text-[color:var(--adm-accent)] hover:border-[color:var(--adm-accent)]"
                   >
                     Rename
                   </button>
-                  <label className="text-[10px] uppercase tracking-widest text-[#8A8278] border border-[#3A3530] px-2 py-1 hover:text-[#C8A96E] hover:border-[#C8A96E] cursor-pointer">
+                  <label className="text-[10px] uppercase tracking-widest text-[color:var(--adm-muted)] border border-[color:var(--adm-line-strong)] px-2 py-1 hover:text-[color:var(--adm-accent)] hover:border-[color:var(--adm-accent)] cursor-pointer">
                     Replace
                     <input
                       type="file"

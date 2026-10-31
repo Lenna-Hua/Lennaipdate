@@ -84,15 +84,15 @@ export function InboxEditor({
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h2 className="font-serif text-2xl text-[#F2EDE5]">Inbox</h2>
-          <p className="text-[#8A8278] text-sm mt-1">
+          <h2 className="font-serif text-2xl text-[color:var(--adm-text)]">Inbox</h2>
+          <p className="text-[color:var(--adm-muted)] text-sm mt-1">
             Messages submitted through the contact form. Newest first.
           </p>
         </div>
         <button
           onClick={onRefresh}
           disabled={loading}
-          className="border border-[#3A3530] text-[#8A8278] px-3 py-2 hover:border-[#C8A96E] hover:text-[#C8A96E] transition-colors text-xs uppercase tracking-widest disabled:opacity-50"
+          className="border border-[color:var(--adm-line-strong)] text-[color:var(--adm-muted)] px-3 py-2 hover:border-[color:var(--adm-accent)] hover:text-[color:var(--adm-accent)] transition-colors text-xs uppercase tracking-widest disabled:opacity-50"
         >
           {loading ? "Loading…" : "Refresh"}
         </button>
@@ -103,12 +103,12 @@ export function InboxEditor({
         </div>
       )}
       {!loading && messages.length === 0 && !error ? (
-        <div className="text-[#8A8278] text-sm border border-dashed border-[#3A3530] p-8 text-center">
+        <div className="text-[color:var(--adm-muted)] text-sm border border-dashed border-[color:var(--adm-line-strong)] p-8 text-center">
           No messages yet. Submissions to the contact form will appear here.
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
-          <ul className="border border-[#272421] divide-y divide-[#272421] max-h-[60vh] overflow-y-auto">
+          <ul className="border border-[color:var(--adm-line)] divide-y divide-[color:var(--adm-line)] max-h-[60vh] overflow-y-auto">
             {messages.map((m) => {
               const unread = !m.readAt;
               const active = m.id === selectedId;
@@ -118,27 +118,27 @@ export function InboxEditor({
                     type="button"
                     onClick={() => setSelectedId(m.id)}
                     className={`w-full text-left px-3 py-3 flex flex-col gap-1 transition-colors ${
-                      active ? "bg-[#1B1815]" : "hover:bg-[#161310]"
+                      active ? "bg-[color:var(--adm-subtle)]" : "hover:bg-[color:var(--adm-surface)]"
                     }`}
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span
-                        className={`text-sm truncate ${unread ? "text-[#F2EDE5] font-medium" : "text-[#8A8278]"}`}
+                        className={`text-sm truncate ${unread ? "text-[color:var(--adm-text)] font-medium" : "text-[color:var(--adm-muted)]"}`}
                       >
                         {m.name || "(no name)"}
                       </span>
                       {unread && (
-                        <span className="text-[10px] uppercase tracking-widest bg-[#C8A96E] text-[#0A0908] px-1.5 py-0.5">
+                        <span className="text-[10px] uppercase tracking-widest bg-[color:var(--adm-accent)] text-[color:var(--adm-on-accent)] px-1.5 py-0.5">
                           New
                         </span>
                       )}
                     </div>
-                    <div className="text-xs text-[#6A6058] truncate">{m.email}</div>
-                    <div className="text-xs text-[#4A4540] truncate">
+                    <div className="text-xs text-[color:var(--adm-muted)] truncate">{m.email}</div>
+                    <div className="text-xs text-[color:var(--adm-faint)] truncate">
                       {m.message.slice(0, 70)}
                       {m.message.length > 70 ? "…" : ""}
                     </div>
-                    <div className="text-[10px] text-[#4A4540] uppercase tracking-widest">
+                    <div className="text-[10px] text-[color:var(--adm-faint)] uppercase tracking-widest">
                       {formatDate(m.createdAt)}
                     </div>
                   </button>
@@ -146,33 +146,33 @@ export function InboxEditor({
               );
             })}
           </ul>
-          <div className="border border-[#272421] p-4 md:p-6 min-h-[300px]">
+          <div className="border border-[color:var(--adm-line)] p-4 md:p-6 min-h-[300px]">
             {selected ? (
               <div className="flex flex-col gap-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="text-[#F2EDE5] font-medium">{selected.name}</div>
+                    <div className="text-[color:var(--adm-text)] font-medium">{selected.name}</div>
                     <a
                       href={`mailto:${selected.email}`}
-                      className="text-[#C8A96E] text-sm hover:underline break-all"
+                      className="text-[color:var(--adm-accent)] text-sm hover:underline break-all"
                     >
                       {selected.email}
                     </a>
-                    <div className="text-xs text-[#8A8278] mt-1">
+                    <div className="text-xs text-[color:var(--adm-muted)] mt-1">
                       {formatDate(selected.createdAt)}
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <a
                       href={`mailto:${encodeURIComponent(selected.email)}?subject=${encodeURIComponent("Re: your message")}`}
-                      className="bg-[#C8A96E] text-[#0A0908] px-3 py-2 hover:bg-[#E2C99A] transition-colors text-xs uppercase tracking-widest font-medium"
+                      className="bg-[color:var(--adm-accent)] text-[color:var(--adm-on-accent)] px-3 py-2 hover:bg-[color:var(--adm-accent-hover)] transition-colors text-xs uppercase tracking-widest font-medium"
                     >
                       Reply
                     </a>
                     <button
                       onClick={() => handleToggleRead(selected)}
                       disabled={busyId === selected.id}
-                      className="border border-[#3A3530] text-[#8A8278] px-3 py-2 hover:border-[#C8A96E] hover:text-[#C8A96E] transition-colors text-xs uppercase tracking-widest disabled:opacity-50"
+                      className="border border-[color:var(--adm-line-strong)] text-[color:var(--adm-muted)] px-3 py-2 hover:border-[color:var(--adm-accent)] hover:text-[color:var(--adm-accent)] transition-colors text-xs uppercase tracking-widest disabled:opacity-50"
                     >
                       Mark {selected.readAt ? "Unread" : "Read"}
                     </button>
@@ -185,16 +185,16 @@ export function InboxEditor({
                     </button>
                   </div>
                 </div>
-                <div className="border-t border-[#272421] pt-4">
-                  <div className="text-[#8A8278] text-xs uppercase tracking-widest mb-2">
+                <div className="border-t border-[color:var(--adm-line)] pt-4">
+                  <div className="text-[color:var(--adm-muted)] text-xs uppercase tracking-widest mb-2">
                     Message
                   </div>
-                  <div className="text-[#E8E2D8] whitespace-pre-wrap break-words">
+                  <div className="text-[color:var(--adm-text)] whitespace-pre-wrap break-words">
                     {selected.message}
                   </div>
                 </div>
                 {(selected.ip || selected.userAgent) && (
-                  <div className="border-t border-[#272421] pt-3 text-[10px] text-[#4A4540] uppercase tracking-widest space-y-1">
+                  <div className="border-t border-[color:var(--adm-line)] pt-3 text-[10px] text-[color:var(--adm-faint)] uppercase tracking-widest space-y-1">
                     {selected.ip && <div>IP: {selected.ip}</div>}
                     {selected.userAgent && (
                       <div className="break-all normal-case tracking-normal">
@@ -205,7 +205,7 @@ export function InboxEditor({
                 )}
               </div>
             ) : (
-              <div className="text-[#8A8278] text-sm">Select a message to view it.</div>
+              <div className="text-[color:var(--adm-muted)] text-sm">Select a message to view it.</div>
             )}
           </div>
         </div>

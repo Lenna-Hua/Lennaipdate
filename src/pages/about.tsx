@@ -6,7 +6,7 @@ import experienceSeed from "@/data/experience.json";
 import educationSeed from "@/data/education.json";
 import filesSeed from "@/data/files.json";
 import { useContent } from "@/lib/use-content";
-
+import { useFloatStagger } from "@/lib/motion";
 import { resolveResumeUrl, type ResumeMeta } from "@/lib/resume-url";
 
 type FilesShape = { resume?: ResumeMeta };
@@ -19,10 +19,6 @@ import type { About as AboutData, CommunityItem, EducationItem } from "@/compone
 const BLUE = "#1F67F1";
 const ACCENTS = [BLUE];
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 32 },
-  show:   { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] } },
-};
 const fadeLeft = {
   hidden: { opacity: 0, x: -28 },
   show:   { opacity: 1, x: 0,  transition: { duration: 0.65, ease: [0.16, 1, 0.3, 1] } },
@@ -31,9 +27,6 @@ const fadeRight = {
   hidden: { opacity: 0, x: 28 },
   show:   { opacity: 1, x: 0,  transition: { duration: 0.65, ease: [0.16, 1, 0.3, 1] } },
 };
-const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.09 } } };
-const VP = { once: true, margin: "-80px" };
-
 function StackedExpCard({
   exp,
   index,
@@ -150,6 +143,7 @@ function CommunityCard({ item }: { item: CommunityItem }) {
   const images = (item.images ?? []).filter((src) => src?.trim());
   const [active, setActive] = useState(0);
   const cover = images[Math.min(active, images.length - 1)];
+  const { item: fadeUp } = useFloatStagger();
 
   return (
     <motion.article
@@ -225,6 +219,7 @@ export default function About() {
   const educationData = useContent("education", educationSeed) as EducationItem[];
   const communityItems = (aboutData.communityItems ?? []).filter((c) => c.title?.trim());
   const filesContent = useContent("files", filesSeed) as FilesShape;
+  const { container: stagger, item: fadeUp, viewport: VP } = useFloatStagger();
   return (
     <div className="w-full flex flex-col gap-24 md:gap-32 pt-12 md:pt-24 pb-24">
 

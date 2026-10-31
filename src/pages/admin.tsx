@@ -1,4 +1,22 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
+import type { LucideIcon } from "lucide-react";
+import {
+  Briefcase,
+  Building2,
+  ChevronDown,
+  Contact as ContactIcon,
+  ExternalLink,
+  FileText,
+  FolderOpen,
+  GraduationCap,
+  House,
+  Images,
+  Inbox,
+  PanelRight,
+  Tag,
+  Type,
+  User,
+} from "lucide-react";
 import projectsDataRaw from "@/data/projects.json";
 import aboutDataRaw from "@/data/about.json";
 import experienceDataRaw from "@/data/experience.json";
@@ -41,7 +59,7 @@ import {
 
 import { TagsManager, deriveTagStats } from "@/components/admin/TagsManager";
 import { ProjectsEditor } from "@/components/admin/ProjectEditor";
-import { GalleryEditor } from "@/components/admin/GalleryEditor";
+import { StudioTabEditor } from "@/components/admin/StudioTabEditor";
 import { InboxEditor } from "@/components/admin/MessageInbox";
 import { PreflightPanel, computePreflight } from "@/components/admin/PreflightCheck";
 import {
@@ -54,6 +72,7 @@ import {
   resolveAssetUrl,
   MAX_ASSET_BYTES,
 } from "@/components/admin/AssetLibrary";
+import { useMediaPrep, UploadCancelledError } from "@/components/admin/MediaPrepModal";
 import { maxAssetBytesForFileType, formatMaxMb, MAX_FUNCTION_UPLOAD_BYTES } from "@/lib/asset-limits";
 import { AboutEditor } from "@/components/admin/AboutEditor";
 import { ExperienceEditor } from "@/components/admin/ExperienceEditor";
@@ -61,7 +80,6 @@ import { EducationEditor } from "@/components/admin/EducationEditor";
 import { IdentityContactEditor } from "@/components/admin/IdentityContactEditor";
 import { FilesEditor } from "@/components/admin/FilesEditor";
 import { HomepageEditor } from "@/components/admin/HomepageEditor";
-import { StudioEditor } from "@/components/admin/StudioEditor";
 import { AppearanceEditor } from "@/components/admin/AppearanceEditor";
 import {
   LivePreviewPane,
@@ -69,6 +87,7 @@ import {
 } from "@/components/admin/LivePreviewPane";
 import { mergeStudio } from "@/lib/studio-content";
 import { mergeAppearance } from "@/lib/fonts";
+import { migrateBigGalleryToProjects } from "@/lib/gallery-migration";
 
 // ── Constants ──────────────────────────────────────────────────────────
 
@@ -175,6 +194,17 @@ const defaultData: ContentData = {
   appearance: appearanceDataRaw as Appearance,
 };
 
+/**
+ * The bundle only ships card stubs for case studies (see vite.config.ts), so
+ * swap any stub for the full project from the server before it can be edited.
+ */
+function mergeServerProjects(local: Project[], server: Project[]): Project[] {
+  return local.map((p) => {
+    if (!p.locked && !p.deferred) return p;
+    return server.find((s) => s.id === p.id) ?? server.find((s) => s.slug === p.slug) ?? p;
+  });
+}
+
 function loadDraft(): ContentData {
   const fresh = JSON.parse(JSON.stringify(defaultData)) as ContentData;
   try {
@@ -202,6 +232,16 @@ function loadDraft(): ContentData {
     // fall through to default
   }
   return fresh;
+}
+
+/** Draft plus how many gallery "big projects" were just moved into Projects. */
+function loadInitialData(): { data: ContentData; movedBigProjects: number } {
+  const draft = loadDraft();
+  const moved = migrateBigGalleryToProjects(draft.projects ?? [], draft.gallery ?? []);
+  return {
+    data: { ...draft, projects: moved.projects, gallery: moved.gallery },
+    movedBigProjects: moved.migrated,
+  };
 }
 
 // ── Inline image handling (migration) ──────────────────────────────────
@@ -312,7 +352,6 @@ const PREVIEW_PATH_FOR_TAB: Partial<Record<AdminTab, string>> = {
   about: "/about",
   experience: "/about",
   education: "/about",
-  gallery: "/studio",
   studio: "/studio",
   homepage: "/",
   identity: "/about",
@@ -320,6 +359,29 @@ const PREVIEW_PATH_FOR_TAB: Partial<Record<AdminTab, string>> = {
 
 /** Tabs whose edits never show on the public site. */
 const TABS_WITHOUT_PREVIEW = new Set<AdminTab>(["assets", "inbox"]);
+
+/** "Pages" follows the public nav order (Home → Work → Studio → About). */
+const TAB_GROUPS: { label: string; tabs: AdminTab[] }[] = [
+  { label: "Pages", tabs: ["homepage", "projects", "studio", "about"] },
+  { label: "Profile", tabs: ["experience", "education", "identity", "files"] },
+  { label: "Site settings", tabs: ["tags", "appearance"] },
+  { label: "Library", tabs: ["assets", "inbox"] },
+];
+
+const TAB_ICONS: Partial<Record<AdminTab, LucideIcon>> = {
+  projects: Briefcase,
+  tags: Tag,
+  about: User,
+  experience: Building2,
+  education: GraduationCap,
+  identity: ContactIcon,
+  homepage: House,
+  studio: Images,
+  appearance: Type,
+  files: FileText,
+  assets: FolderOpen,
+  inbox: Inbox,
+};
 
 function buildPreviewPages(data: ContentData): PreviewPage[] {
   const pages: PreviewPage[] = [
@@ -334,7 +396,7 @@ function buildPreviewPages(data: ContentData): PreviewPage[] {
   }
   for (const g of data.gallery) {
     if (g.archived || !g.slug) continue;
-    pages.push({ group: "Studio pieces", label: g.title || g.slug, path: `/studio/${g.slug}` });
+    pages.push({ group: "Artworks", label: g.title || g.slug, path: `/studio/${g.slug}` });
   }
   return pages;
 }
@@ -349,7 +411,8 @@ export default function Admin() {
   const [error, setError] = useState("");
   const isAuthenticated = Boolean(sessionToken);
   const [activeTab, setActiveTab] = useState<AdminTab>("projects");
-  const [data, setData] = useState<ContentData>(() => loadDraft());
+  const [initial] = useState(loadInitialData);
+  const [data, setData] = useState<ContentData>(initial.data);
   const [livePreview, setLivePreview] = useState(
     () => safeStorage.getItem(LIVE_PREVIEW_KEY) === "1",
   );
@@ -376,6 +439,7 @@ export default function Admin() {
   const [pickerSearch, setPickerSearch] = useState("");
   const [pickerType, setPickerType] = useState<AssetType>("all");
   const pickerCallbackRef = useRef<((url: string) => void) | null>(null);
+  const mediaPrep = useMediaPrep();
 
   const handleLogout = () => {
     safeStorage.removeItem(TOKEN_KEY);
@@ -414,6 +478,35 @@ export default function Admin() {
 
   useEffect(() => {
     if (sessionToken) void fetchMessages(sessionToken);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionToken]);
+
+  const fetchServerProjects = async (token: string): Promise<Project[] | null> => {
+    try {
+      const url = `${import.meta.env.BASE_URL}api/admin/content?section=projects`;
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.status === 401) {
+        handleLogout();
+        return null;
+      }
+      if (!res.ok) return null;
+      const body = (await res.json().catch(() => null)) as unknown;
+      return Array.isArray(body) ? (body as Project[]) : null;
+    } catch {
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    if (!sessionToken) return;
+    let cancelled = false;
+    void fetchServerProjects(sessionToken).then((server) => {
+      if (cancelled || !server) return;
+      setData((prev) => ({ ...prev, projects: mergeServerProjects(prev.projects, server) }));
+    });
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionToken]);
 
@@ -471,11 +564,13 @@ export default function Admin() {
 
   const handleAssetUpload = async (files: File[]) => {
     const errors: string[] = [];
-    for (const file of files) {
+    for (const [index, original] of files.entries()) {
       try {
+        const file = await mediaPrep.prepare(original, { usage: "general", batch: { index, total: files.length } });
+        if (!file) continue;
         await uploadAssetFile(file, sessionToken);
       } catch (e) {
-        errors.push(e instanceof Error ? e.message : `Failed: ${file.name}`);
+        errors.push(e instanceof Error ? e.message : `Failed: ${original.name}`);
       }
     }
     await fetchAssets(sessionToken);
@@ -519,7 +614,9 @@ export default function Admin() {
     setAssetsTotal((n) => Math.max(0, n - 1));
   };
 
-  const handleAssetReplace = async (id: string, file: File) => {
+  const handleAssetReplace = async (id: string, picked: File) => {
+    const file = await mediaPrep.prepare(picked, { usage: "general" });
+    if (!file) return;
     if (!/^image\//.test(file.type) && !/^video\//.test(file.type)) {
       throw new Error(`Unsupported file type: ${file.type || "unknown"}.`);
     }
@@ -550,7 +647,10 @@ export default function Admin() {
     setAssets((prev) => prev.map((a) => (a.id === id ? body.asset! : a)));
   };
 
-  const handleLibraryUpload: AssetUploadFn = async (file) => {
+  const handleLibraryUpload: AssetUploadFn = async (picked, opts) => {
+    const file = await mediaPrep.prepare(picked, { usage: opts?.usage, batch: opts?.batch });
+    if (!file) throw new UploadCancelledError();
+    opts?.onPrepared?.(file);
     const asset = await uploadAssetFile(file, sessionToken);
     void fetchAssets(sessionToken, {
       search: assetSearch,
@@ -574,6 +674,15 @@ export default function Admin() {
   useEffect(() => {
     clearLegacyPasswordStorage();
   }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated || initial.movedBigProjects === 0) return;
+    setSavedMsg(
+      `Moved ${initial.movedBigProjects} gallery big project(s) into Projects. Click Save to site to publish.`,
+    );
+    const handle = setTimeout(() => setSavedMsg(""), 9000);
+    return () => clearTimeout(handle);
+  }, [isAuthenticated, initial.movedBigProjects]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -790,6 +899,14 @@ export default function Admin() {
       setTimeout(() => setSavedMsg(""), 4000);
       return;
     }
+    const incompleteProject = (normalizedData.projects ?? []).find((p) => p.locked || p.deferred);
+    if (incompleteProject) {
+      setSavedMsg(
+        `Error: "${incompleteProject.title}" is still loading from the server. Reload Admin and try again.`,
+      );
+      setTimeout(() => setSavedMsg(""), 7000);
+      return;
+    }
     const inlineMedia = findInlineMediaInGallery(normalizedData.gallery ?? []);
     if (inlineMedia) {
       setSavedMsg(
@@ -853,6 +970,18 @@ export default function Admin() {
         savedSections.push(section);
       }
 
+      // The server hashes new case study passwords — keep the hash, not the plain text, locally.
+      const serverProjects = await fetchServerProjects(sessionToken);
+      if (serverProjects) {
+        normalizedData = {
+          ...normalizedData,
+          projects: normalizedData.projects.map((p) => {
+            const saved = serverProjects.find((s) => s.id === p.id);
+            return saved ? { ...p, password: saved.password } : p;
+          }),
+        };
+        setData(normalizedData);
+      }
       safeStorage.setItem(STORAGE_KEY, JSON.stringify(normalizedData));
       setSavedMsg(
         autoFixedGallerySlugs > 0
@@ -874,6 +1003,10 @@ export default function Admin() {
     if (tab === "identity") {
       content = { identity: data.identity, contact: data.contact };
       filename = "identity_contact.json";
+    }
+    if (tab === "studio") {
+      content = { studio: data.studio, gallery: data.gallery };
+      filename = "studio_artworks.json";
     }
     const blob = new Blob([JSON.stringify(content, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -915,27 +1048,30 @@ export default function Admin() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="bg-[#141210] p-12 border border-[#272421] w-full max-w-md flex flex-col gap-8">
-          <h1 className="font-serif text-3xl text-[#F2EDE5]">Admin Access</h1>
-          <form onSubmit={handleLogin} className="flex flex-col gap-6">
-            <div className="flex flex-col gap-2">
-              <label className="text-[#8A8278] text-sm uppercase tracking-widest">Password</label>
+      <div className="admin-theme min-h-screen flex items-center justify-center px-4">
+        <div className="bg-[color:var(--adm-surface)] p-10 border border-[color:var(--adm-line)] rounded-2xl shadow-sm w-full max-w-sm flex flex-col gap-6">
+          <div>
+            <h1 className="text-2xl font-semibold text-[color:var(--adm-text)]">Content Manager</h1>
+            <p className="text-sm text-[color:var(--adm-muted)] mt-1">Sign in to edit your portfolio.</p>
+          </div>
+          <form onSubmit={handleLogin} className="flex flex-col gap-5">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[13px] font-medium text-[color:var(--adm-text)]">Password</label>
               <input
                 type="password"
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="bg-transparent border-b border-[#3A3530] text-[#F2EDE5] py-2 focus:outline-none focus:border-[#C8A96E] transition-colors"
+                className="bg-[color:var(--adm-input)] border border-[color:var(--adm-line-strong)] rounded-md px-3 py-2 text-[color:var(--adm-text)] focus:outline-none focus:border-[color:var(--adm-accent)] focus:ring-2 focus:ring-[color:var(--adm-accent)]/15 transition-colors"
                 autoFocus
               />
-              {error && <span className="text-[#C8A96E] text-sm mt-1">{error}</span>}
+              {error && <span className="text-red-600 text-sm mt-1">{error}</span>}
             </div>
             <button
               type="submit"
-              className="bg-[#C8A96E] text-[#0A0908] py-3 px-6 uppercase tracking-widest hover:bg-[#E2C99A] transition-colors font-medium"
+              className="bg-[color:var(--adm-accent)] text-[color:var(--adm-on-accent)] py-2.5 px-6 rounded-md hover:bg-[color:var(--adm-accent-hover)] transition-colors font-medium"
             >
-              Login
+              Log in
             </button>
           </form>
         </div>
@@ -943,27 +1079,13 @@ export default function Admin() {
     );
   }
 
-  const tabs: AdminTab[] = [
-    "projects",
-    "about",
-    "experience",
-    "education",
-    "gallery",
-    "tags",
-    "identity",
-    "files",
-    "homepage",
-    "studio",
-    "appearance",
-    "assets",
-    "inbox",
-  ];
-
   const tabLabel = (tab: AdminTab): string => {
     if (tab === "identity") return "Identity & Contact";
     if (tab === "files") return "Files";
     if (tab === "homepage") return "Home & Entry";
-    if (tab === "studio") return "Studio Page";
+    if (tab === "projects") return "Projects";
+    if (tab === "studio") return "Studio";
+    if (tab === "about") return "About";
     if (tab === "appearance") return "Fonts & Look";
     if (tab === "inbox") return "Inbox";
     if (tab === "assets") return "Assets";
@@ -977,88 +1099,138 @@ export default function Admin() {
 
   const showLivePreview = livePreview && !TABS_WITHOUT_PREVIEW.has(activeTab);
 
+  const busy = isSaving || isMigratingInlineMedia;
+
   return (
-    <div className="w-full flex flex-col gap-8 pt-12 pb-24">
-      <div className="flex flex-wrap justify-between items-start border-b border-[#272421] pb-6 gap-4">
-        <div>
-          <h1 className="font-serif text-4xl text-[#F2EDE5]">Content Manager</h1>
-          <p className="text-[#8A8278] text-sm mt-1">
-            Edit content below, then click Save to Site to publish to the live database instantly.
-          </p>
+    <div className="admin-theme min-h-screen flex flex-col">
+      {mediaPrep.modal}
+      <header className="sticky top-0 z-40 h-14 shrink-0 flex items-center gap-3 px-4 bg-[color:var(--adm-surface)] border-b border-[color:var(--adm-line)]">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-[15px] font-semibold text-[color:var(--adm-text)] whitespace-nowrap">Content Manager</span>
+          <span className="text-[color:var(--adm-placeholder)]">/</span>
+          <span className="text-sm text-[color:var(--adm-muted)] capitalize truncate">{tabLabel(activeTab)}</span>
         </div>
-        <div className="flex gap-3 flex-wrap items-center">
-          {savedMsg && (
-            <span className={`text-sm ${savedMsg.startsWith("Error") || savedMsg.startsWith("Network") ? "text-red-400" : "text-[#C8A96E]"}`}>
-              {savedMsg}
-            </span>
-          )}
-          <button
-            type="button"
-            onClick={toggleLivePreview}
-            aria-pressed={livePreview}
-            className={`hidden lg:inline-block border px-4 py-2 transition-colors text-sm uppercase tracking-widest ${
-              livePreview
-                ? "border-[#C8A96E] text-[#C8A96E] bg-[#C8A96E]/10"
-                : "border-[#3A3530] text-[#8A8278] hover:border-[#C8A96E] hover:text-[#C8A96E]"
+        <div className="flex-1" />
+        {savedMsg && (
+          <span
+            role="status"
+            className={`hidden md:block text-xs truncate max-w-[280px] ${
+              savedMsg.startsWith("Error") || savedMsg.startsWith("Network") ? "text-red-600" : "text-[color:var(--adm-muted)]"
             }`}
           >
-            {livePreview ? "Hide Live Preview" : "Live Preview"}
-          </button>
-          <button
-            onClick={handleSaveDraft}
-            disabled={isSaving || isMigratingInlineMedia}
-            className="border border-[#3A3530] text-[#8A8278] px-4 py-2 hover:border-[#C8A96E] hover:text-[#C8A96E] transition-colors text-sm uppercase tracking-widest"
-          >
-            Save Draft
-          </button>
-          <button
-            onClick={handleRunPreflight}
-            disabled={isSaving || isMigratingInlineMedia}
-            className="border border-[#3A3530] text-[#8A8278] px-4 py-2 hover:border-[#C8A96E] hover:text-[#C8A96E] transition-colors text-sm uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Preflight
-          </button>
-          <button
-            onClick={handleMigrateInlineGalleryMedia}
-            disabled={isSaving || isMigratingInlineMedia}
-            className="border border-[#3A3530] text-[#8A8278] px-4 py-2 hover:border-[#C8A96E] hover:text-[#C8A96E] transition-colors text-sm uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isMigratingInlineMedia ? "Migrating…" : "Migrate Inline Gallery Media"}
-          </button>
-          <button
-            onClick={handleDryRunMigration}
-            disabled={isSaving || isMigratingInlineMedia || isDryRunning}
-            className="border border-[#3A3530] text-[#8A8278] px-4 py-2 hover:border-[#C8A96E] hover:text-[#C8A96E] transition-colors text-sm uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isDryRunning ? "Scanning…" : "Dry Run Migration"}
-          </button>
-          <button
-            onClick={handleSaveToSite}
-            disabled={isSaving || isMigratingInlineMedia}
-            className="bg-[#C8A96E] text-[#0A0908] px-4 py-2 hover:bg-[#E2C99A] transition-colors text-sm uppercase tracking-widest font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSaving ? "Saving…" : "Save to Site"}
-          </button>
-          <button
-            onClick={() =>
-              handleExport(
-                activeTab === "inbox" || activeTab === "assets" || activeTab === "tags"
-                  ? undefined
-                  : activeTab,
-              )
-            }
-            className="border border-[#272421] text-[#4A4540] px-4 py-2 hover:border-[#3A3530] hover:text-[#8A8278] transition-colors text-sm uppercase tracking-widest"
-          >
-            Export JSON
-          </button>
-          <button
-            onClick={handleLogout}
-            className="border border-[#272421] text-[#4A4540] px-4 py-2 hover:border-[#3A3530] hover:text-[#8A8278] transition-colors text-sm uppercase tracking-widest"
-          >
-            Logout
-          </button>
-        </div>
-      </div>
+            {savedMsg}
+          </span>
+        )}
+        <button
+          type="button"
+          onClick={toggleLivePreview}
+          aria-pressed={livePreview}
+          title={livePreview ? "Hide live preview" : "Show live preview"}
+          className={`hidden lg:inline-flex items-center gap-1.5 h-9 px-3 rounded-md text-sm transition-colors ${
+            livePreview
+              ? "bg-[color:var(--adm-accent)]/10 text-[color:var(--adm-accent)]"
+              : "text-[color:var(--adm-muted)] hover:bg-[color:var(--adm-subtle)] hover:text-[color:var(--adm-text)]"
+          }`}
+        >
+          <PanelRight className="h-4 w-4" aria-hidden />
+          Preview
+        </button>
+        <a
+          href={import.meta.env.BASE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hidden sm:inline-flex items-center gap-1.5 h-9 px-3 rounded-md text-sm text-[color:var(--adm-muted)] hover:bg-[color:var(--adm-subtle)] hover:text-[color:var(--adm-text)] transition-colors"
+        >
+          <ExternalLink className="h-4 w-4" aria-hidden />
+          View site
+        </a>
+        <AdminToolsMenu
+          items={[
+            { label: "Preflight check", onClick: handleRunPreflight, disabled: busy },
+            {
+              label: isMigratingInlineMedia ? "Migrating…" : "Migrate inline gallery media",
+              onClick: handleMigrateInlineGalleryMedia,
+              disabled: busy,
+            },
+            {
+              label: isDryRunning ? "Scanning…" : "Dry run migration",
+              onClick: handleDryRunMigration,
+              disabled: busy || isDryRunning,
+            },
+            {
+              label: "Export JSON",
+              onClick: () =>
+                handleExport(
+                  activeTab === "inbox" || activeTab === "assets" || activeTab === "tags"
+                    ? undefined
+                    : activeTab,
+                ),
+            },
+            { label: "Log out", onClick: handleLogout, divider: true },
+          ]}
+        />
+        <button
+          type="button"
+          onClick={handleSaveDraft}
+          disabled={busy}
+          className="h-9 px-3 rounded-md border border-[color:var(--adm-line-strong)] text-sm text-[color:var(--adm-text)] hover:bg-[color:var(--adm-subtle)] transition-colors disabled:opacity-50"
+        >
+          Save draft
+        </button>
+        <button
+          type="button"
+          onClick={handleSaveToSite}
+          disabled={busy}
+          className="h-9 px-4 rounded-md bg-[color:var(--adm-accent)] text-[color:var(--adm-on-accent)] text-sm font-medium hover:bg-[color:var(--adm-accent-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isSaving ? "Saving…" : "Save to site"}
+        </button>
+      </header>
+
+      <div className="flex flex-1 min-h-0">
+      <nav
+        aria-label="Admin sections"
+        className="sticky top-14 h-[calc(100vh-3.5rem)] w-14 md:w-56 shrink-0 overflow-y-auto bg-[color:var(--adm-surface)] border-r border-[color:var(--adm-line)] py-3"
+      >
+        {TAB_GROUPS.map((group) => (
+          <div key={group.label} className="mb-2 last:mb-0">
+            <p className="hidden md:block px-4 pb-1 pt-2 text-[11px] font-medium text-[color:var(--adm-faint)]">
+              {group.label}
+            </p>
+            <ul className="px-2 flex flex-col gap-0.5">
+              {group.tabs.map((tab) => {
+                const Icon = TAB_ICONS[tab];
+                const active = activeTab === tab;
+                return (
+                  <li key={tab}>
+                    <button
+                      type="button"
+                      onClick={() => selectTab(tab)}
+                      aria-current={active ? "page" : undefined}
+                      title={tabLabel(tab)}
+                      className={`relative w-full flex items-center justify-center md:justify-start gap-3 h-9 px-2.5 rounded-md text-left text-sm capitalize transition-colors ${
+                        active
+                          ? "bg-[color:var(--adm-accent)]/10 text-[color:var(--adm-accent)] font-medium"
+                          : "text-[color:var(--adm-muted)] hover:bg-[color:var(--adm-subtle)] hover:text-[color:var(--adm-text)]"
+                      }`}
+                    >
+                      {Icon && <Icon className="h-4 w-4 shrink-0" aria-hidden />}
+                      <span className="hidden md:block flex-1 truncate">{tabLabel(tab)}</span>
+                      {tab === "inbox" && unreadCount > 0 && (
+                        <span className="absolute md:static top-0.5 right-0.5 text-[10px] font-semibold bg-[color:var(--adm-accent)] text-[color:var(--adm-on-accent)] rounded-full px-1.5 py-0.5 min-w-[18px] text-center leading-none">
+                          {unreadCount}
+                        </span>
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
+      </nav>
+
+      <main className="flex-1 min-w-0 flex flex-col gap-6 p-4 md:p-6">
 
       {/* Preflight Panel */}
       {showPreflightPanel && preflightInfo && (
@@ -1070,17 +1242,17 @@ export default function Admin() {
 
       {/* Dry Run Results */}
       {dryRunResults && (
-        <div className="border border-[#3A3530] rounded-lg p-5 bg-[#0F0E0C]">
+        <div className="border border-[color:var(--adm-line-strong)] rounded-lg p-5 bg-[color:var(--adm-surface)]">
           <div className="flex justify-between items-center mb-3">
-            <h3 className="text-[#F2EDE5] text-lg font-medium">
+            <h3 className="text-[color:var(--adm-text)] text-lg font-medium">
               Migration Dry Run{" "}
-              <span className="text-[#C8A96E] text-sm ml-2">
+              <span className="text-[color:var(--adm-accent)] text-sm ml-2">
                 {dryRunResults.totalMedia} file(s) would be migrated
               </span>
             </h3>
             <button
               onClick={() => setDryRunResults(null)}
-              className="text-[#8A8278] hover:text-[#F2EDE5] text-sm"
+              className="text-[color:var(--adm-muted)] hover:text-[color:var(--adm-text)] text-sm"
             >
               ✕ Close
             </button>
@@ -1090,44 +1262,23 @@ export default function Admin() {
           ) : (
             <div className="space-y-1">
               {dryRunResults.items.map((item, i) => (
-                <div key={i} className="flex items-center gap-3 text-sm bg-[#1A1917] rounded px-3 py-2">
-                  <span className="text-[#C8A96E]">{i + 1}.</span>
-                  <span className="text-[#F2EDE5]">{item.label}</span>
-                  <span className="text-[#8A8278]">→ {item.field}</span>
-                  <span className="text-[#8A8278]">({item.fileName})</span>
-                  <span className="text-[#C8A96E] ml-auto">{item.sizeFormatted}</span>
+                <div key={i} className="flex items-center gap-3 text-sm bg-[color:var(--adm-subtle)] rounded px-3 py-2">
+                  <span className="text-[color:var(--adm-accent)]">{i + 1}.</span>
+                  <span className="text-[color:var(--adm-text)]">{item.label}</span>
+                  <span className="text-[color:var(--adm-muted)]">→ {item.field}</span>
+                  <span className="text-[color:var(--adm-muted)]">({item.fileName})</span>
+                  <span className="text-[color:var(--adm-accent)] ml-auto">{item.sizeFormatted}</span>
                 </div>
               ))}
             </div>
           )}
           {dryRunResults.totalMedia > 0 && (
-            <p className="text-[#8A8278] text-xs mt-3">
-              Click <span className="text-[#C8A96E]">Migrate Inline Gallery Media</span> to upload these files, then <span className="text-[#C8A96E]">Save to Site</span>.
+            <p className="text-[color:var(--adm-muted)] text-xs mt-3">
+              Click <span className="text-[color:var(--adm-accent)]">Migrate Inline Gallery Media</span> to upload these files, then <span className="text-[color:var(--adm-accent)]">Save to Site</span>.
             </p>
           )}
         </div>
       )}
-
-      <div className="flex gap-2 border-b border-[#272421] pb-4 overflow-x-auto">
-        {tabs.map((tab) => (
-          <button
-            key={tab}
-            onClick={() => selectTab(tab)}
-            className={`px-4 py-2 uppercase tracking-widest text-sm transition-colors capitalize whitespace-nowrap inline-flex items-center gap-2 ${
-              activeTab === tab
-                ? "text-[#C8A96E] border-b-2 border-[#C8A96E]"
-                : "text-[#8A8278] hover:text-[#F2EDE5]"
-            }`}
-          >
-            {tabLabel(tab)}
-            {tab === "inbox" && unreadCount > 0 && (
-              <span className="text-[10px] font-semibold bg-[#C8A96E] text-[#0A0908] rounded-full px-1.5 py-0.5 min-w-[18px] text-center leading-none">
-                {unreadCount}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
 
       <AssetPickerContext.Provider value={openAssetPicker}>
       <AssetUploadContext.Provider value={handleLibraryUpload}>
@@ -1179,7 +1330,7 @@ export default function Admin() {
             : undefined
         }
       >
-      <div className="bg-[#141210] border border-[#272421] p-6 md:p-8 min-h-[500px] min-w-0">
+      <div className="bg-[color:var(--adm-surface)] border border-[color:var(--adm-line)] rounded-xl p-4 md:p-6 min-h-[500px] min-w-0">
         {activeTab === "projects" && (
           <ProjectsEditor
             data={data.projects}
@@ -1215,13 +1366,6 @@ export default function Admin() {
             onChange={(d) => updateSection("education", d)}
           />
         )}
-        {activeTab === "gallery" && (
-          <GalleryEditor
-            data={data.gallery}
-            onChange={(d) => updateSection("gallery", d)}
-            tagSuggestions={allTagSuggestions}
-          />
-        )}
         {activeTab === "identity" && (
           <IdentityContactEditor
             identity={data.identity}
@@ -1245,10 +1389,13 @@ export default function Admin() {
           />
         )}
         {activeTab === "studio" && (
-          <StudioEditor
-            data={mergeStudio(data.studio)}
-            onChange={(d) => updateSection("studio", d)}
+          <StudioTabEditor
+            gallery={data.gallery}
+            studio={mergeStudio(data.studio)}
+            onGalleryChange={(d) => updateSection("gallery", d)}
+            onStudioChange={(d) => updateSection("studio", d)}
             onPreview={() => openDraftPreview("/studio")}
+            tagSuggestions={allTagSuggestions}
           />
         )}
         {activeTab === "appearance" && (
@@ -1297,7 +1444,7 @@ export default function Admin() {
         )}
       </div>
       {showLivePreview && (
-        <aside className="hidden lg:block sticky top-[112px] h-[calc(100vh-128px)]">
+        <aside className="hidden lg:block sticky top-[80px] h-[calc(100vh-104px)]">
           <LivePreviewPane
             draft={data}
             path={previewPath}
@@ -1312,12 +1459,77 @@ export default function Admin() {
       </AssetUploadContext.Provider>
       </AssetPickerContext.Provider>
 
-      <div className="border border-[#272421] p-4 text-[#4A4540] text-sm">
-        <strong className="text-[#8A8278]">Workflow:</strong> Edit content above
-        {" → "}<span className="text-[#C8A96E]">Save to Site</span> (writes to the live database and updates the site)
-        {" — or — "}Save Draft (browser only)
-        {" → "}Export JSON (manual backup).
+      <p className="text-[color:var(--adm-faint)] text-xs">
+        <span className="text-[color:var(--adm-muted)] font-medium">Workflow:</span> edit content, then{" "}
+        <span className="text-[color:var(--adm-accent)]">Save to site</span> to publish. Save draft keeps changes in this
+        browser only; Tools → Export JSON makes a manual backup.
+      </p>
+      </main>
       </div>
+    </div>
+  );
+}
+
+function AdminToolsMenu({
+  items,
+}: {
+  items: { label: string; onClick: () => void; disabled?: boolean; divider?: boolean }[];
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className="inline-flex items-center gap-1 h-9 px-3 rounded-md text-sm text-[color:var(--adm-muted)] hover:bg-[color:var(--adm-subtle)] hover:text-[color:var(--adm-text)] transition-colors"
+      >
+        Tools
+        <ChevronDown className="h-3.5 w-3.5" aria-hidden />
+      </button>
+      {open && (
+        <div
+          role="menu"
+          className="absolute right-0 top-full mt-1 w-60 py-1 rounded-lg border border-[color:var(--adm-line)] bg-[color:var(--adm-surface)] shadow-lg z-50"
+        >
+          {items.map((item) => (
+            <div key={item.label}>
+              {item.divider && <div className="my-1 border-t border-[color:var(--adm-line)]" />}
+              <button
+                type="button"
+                role="menuitem"
+                disabled={item.disabled}
+                onClick={() => {
+                  setOpen(false);
+                  item.onClick();
+                }}
+                className="w-full text-left px-3 py-2 text-sm text-[color:var(--adm-text)] hover:bg-[color:var(--adm-subtle)] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {item.label}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

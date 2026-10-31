@@ -1,13 +1,29 @@
 import { useParams, Link } from "wouter";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useState, useEffect, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import projectsSeed from "@/data/projects.json";
 import identitySeed from "@/data/identity.json";
 import contactSeed from "@/data/contact.json";
 import { useContent } from "@/lib/use-content";
 import { BRAND_EASE } from "@/lib/brand";
+import { useFloatIn } from "@/lib/motion";
+import { Pause, Play, Volume2, VolumeX } from "lucide-react";
 import { SafeImage } from "@/components/SafeImage";
+import { CoverVideo, EmbedCover, isVideo } from "@/components/CoverMedia";
+import {
+  canPlayInBackground,
+  embedAspect,
+  embedProviderLabel,
+  embedSupportsSound,
+  parseVideoEmbed,
+  playerEmbedUrl,
+} from "@/lib/video-embed";
 import { RotatingLiveBadge } from "@/components/RotatingLiveBadge";
+import { MockupStage } from "@/components/DeviceMockup";
+import { CaseStudyLock } from "@/components/CaseStudyLock";
+import { isMockupDevice, isMockupLayout, type ScreenMeta } from "@/lib/device-mockup";
+import { fetchCaseStudy, unlockCaseStudy } from "@/lib/case-study-access";
 
 function ClampedText({ children, lines = 5 }: { children: React.ReactNode; lines?: number }) {
   const [expanded, setExpanded] = useState(false);
@@ -47,7 +63,7 @@ function ClampedText({ children, lines = 5 }: { children: React.ReactNode; lines
   );
 }
 
-type SectionType = "text" | "image" | "video" | "problem-solution" | "embed";
+type SectionType = "text" | "image" | "video" | "problem-solution" | "embed" | "mockup";
 
 interface ContentSection {
   id: string;
@@ -78,6 +94,14 @@ interface ContentSection {
   height?: number;
   transparent?: boolean;
   loop?: boolean;
+  columns?: 1 | 2 | 3;
+  screens?: string[];
+  device?: string;
+  layout?: string;
+  background?: string;
+  screenMeta?: ScreenMeta[];
+  interactive?: boolean;
+  mockupWidth?: number;
 }
 
 interface Project {
@@ -95,6 +119,8 @@ interface Project {
   solution: string;
   impact: string;
   coverImage: string;
+  coverMime?: string;
+  coverPoster?: string;
   hoverVideo?: string;
   liveUrl?: string;
   year: string;
@@ -104,10 +130,75 @@ interface Project {
   sections?: ContentSection[];
   /** @deprecated Prefer sections[].visibility — kept for older DB rows. */
   detailSections?: ContentSection[];
+  /** Card-only stub: the server wants a password before sending the body. */
+  locked?: boolean;
+  /** Card-only stub from the bundled seed: the body comes from the API. */
+  deferred?: boolean;
 }
 
 // `projects` is resolved per-render from useContent inside CaseStudy() so
 // admin edits are reflected after the runtime hydration fetch completes.
+
+type CaseStudyGate =
+  | { status: "ready" }
+  | { status: "loading" }
+  | { status: "locked" }
+  | { status: "error"; message: string };
+
+/**
+ * Swaps a locked/deferred stub for the full case study from the API.
+ * Public projects resolve immediately; protected ones wait for a password.
+ */
+function useFullProject(base: Project | undefined) {
+  const slug = base?.slug;
+  const needsFetch = Boolean(base && (base.locked || base.deferred));
+  const [fetched, setFetched] = useState<
+    { slug: string; project?: Project; gate: CaseStudyGate } | null
+  >(null);
+  const [attempt, setAttempt] = useState(0);
+
+  useEffect(() => {
+    if (!needsFetch || !slug) return;
+    let cancelled = false;
+    setFetched({ slug, gate: { status: "loading" } });
+    void fetchCaseStudy<Project>(slug).then((result) => {
+      if (cancelled) return;
+      if (result.status === "ok") {
+        setFetched({ slug, project: result.project, gate: { status: "ready" } });
+      } else if (result.status === "locked") {
+        setFetched({ slug, gate: { status: "locked" } });
+      } else {
+        setFetched({ slug, gate: { status: "error", message: result.message } });
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [needsFetch, slug, attempt]);
+
+  const unlock = useCallback(
+    async (password: string): Promise<string | null> => {
+      if (!slug) return "Case study not found.";
+      const result = await unlockCaseStudy<Project>(slug, password);
+      if (!result.ok) return result.message;
+      setFetched({ slug, project: result.project, gate: { status: "ready" } });
+      return null;
+    },
+    [slug],
+  );
+  const retry = useCallback(() => setAttempt((n) => n + 1), []);
+
+  if (!base || !needsFetch) {
+    return { project: base, gate: { status: "ready" } as CaseStudyGate, unlock, retry };
+  }
+  const current = fetched?.slug === slug ? fetched : null;
+  return {
+    project: current?.project ?? base,
+    gate: current?.gate ?? ({ status: "loading" } as CaseStudyGate),
+    unlock,
+    retry,
+  };
+}
 
 function buildSocials(contact: typeof contactSeed): Array<{ label: string; title: string; href: string }> {
   const out: Array<{ label: string; title: string; href: string }> = [];
@@ -123,7 +214,21 @@ function buildSocials(contact: typeof contactSeed): Array<{ label: string; title
   return out;
 }
 
-function Lightbox({ src, caption, onClose }: { src: string; caption?: string; onClose: () => void }) {
+type LightboxProps = {
+  src: string;
+  caption?: string;
+  mime?: string;
+  onClose: () => void;
+};
+
+/** Portaled to <body> so the fixed site header can't stack above it. */
+function Lightbox(props: LightboxProps) {
+  return createPortal(<LightboxContent {...props} />, document.body);
+}
+
+function LightboxContent({ src, caption, mime, onClose }: LightboxProps) {
+  const embed = parseVideoEmbed(src);
+  const video = Boolean(embed) || isVideo(src, mime);
   const [zoom, setZoom] = useState(1);
   const closeRef = useRef<HTMLButtonElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -161,6 +266,72 @@ function Lightbox({ src, caption, onClose }: { src: string; caption?: string; on
     e.stopPropagation();
     setZoom(z => Math.min(4, Math.max(0.5, z - e.deltaY * 0.001)));
   }, []);
+
+  if (video) {
+    return (
+      <motion.div
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={caption || "Video lightbox"}
+        className="fixed inset-0 z-[200] flex flex-col items-center justify-center"
+        style={{ background: "rgba(5,5,5,0.95)", backdropFilter: "blur(6px)" }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+      >
+        <button
+          ref={closeRef}
+          onClick={onClose}
+          className="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-white/10 hover:bg-white/25 text-white flex items-center justify-center transition-colors text-lg"
+          aria-label="Close"
+        >✕</button>
+        {embed ? (
+          <motion.iframe
+            src={playerEmbedUrl(embed)}
+            title={caption || `${embedProviderLabel(embed)} video`}
+            allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+            allowFullScreen
+            referrerPolicy="strict-origin-when-cross-origin"
+            className="rounded-xl bg-black"
+            style={
+              embed.provider === "instagram"
+                ? { width: "min(92vw, 480px)", height: "85vh", border: 0 }
+                : {
+                    width: `min(92vw, ${(85 * embedAspect(embed)).toFixed(2)}vh)`,
+                    aspectRatio: embedAspect(embed),
+                    border: 0,
+                  }
+            }
+            initial={{ scale: 0.93, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.93, opacity: 0 }}
+            transition={{ duration: 0.28, ease: BRAND_EASE }}
+            onClick={e => e.stopPropagation()}
+          />
+        ) : (
+          <motion.video
+            src={src}
+            controls
+            autoPlay
+            loop
+            playsInline
+            className="rounded-xl"
+            style={{ maxWidth: "92vw", maxHeight: "85vh" }}
+            initial={{ scale: 0.93, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.93, opacity: 0 }}
+            transition={{ duration: 0.28, ease: BRAND_EASE }}
+            onClick={e => e.stopPropagation()}
+          />
+        )}
+        <p className="absolute bottom-5 left-0 right-0 text-center text-white/40 text-sm font-sans pointer-events-none">
+          {caption ? `${caption} · ` : ""}Click outside to close
+        </p>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div
@@ -248,6 +419,131 @@ function Lightbox({ src, caption, onClose }: { src: string; caption?: string; on
   );
 }
 
+const COVER_CONTROL_CLASS =
+  "w-10 h-10 rounded-full bg-black/55 hover:bg-black/75 text-white backdrop-blur-sm flex items-center justify-center transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white";
+
+/**
+ * Case study hero cover: image, video file, or YouTube / Vimeo / Instagram link.
+ * Click to expand; playable covers get play/pause and (where supported) sound.
+ */
+function CaseStudyCover({ project, onExpand }: { project: Project; onExpand: () => void }) {
+  const [errored, setErrored] = useState(false);
+  const embed = parseVideoEmbed(project.coverImage);
+  const video = !embed && isVideo(project.coverImage, project.coverMime);
+  const backgroundEmbed = embed && canPlayInBackground(embed) ? embed : null;
+  const playable = video || Boolean(backgroundEmbed);
+  const hasSound = video || Boolean(backgroundEmbed && embedSupportsSound(backgroundEmbed));
+  const videoRef = useRef<HTMLVideoElement>(null);
+  /** null = default (play unless reduced motion); otherwise the visitor's explicit choice. */
+  const [choice, setChoice] = useState<"play" | "pause" | null>(null);
+  const [playing, setPlaying] = useState(false);
+  const [muted, setMuted] = useState(true);
+
+  useEffect(() => {
+    if (videoRef.current) videoRef.current.muted = muted;
+  }, [muted]);
+
+  const togglePlay = () => setChoice(playing ? "pause" : "play");
+
+  const toggleSound = () => {
+    setMuted(!muted);
+    if (muted && !playing) setChoice("play");
+  };
+
+  const expand = () => {
+    setMuted(true);
+    onExpand();
+  };
+
+  const kind = embed || video ? "video" : "image";
+  const label = `Expand cover ${kind}: ${project.title}`;
+  const playState = {
+    allowPlay: choice !== "pause",
+    ignoreReducedMotion: choice === "play",
+    onPlayingChange: setPlaying,
+  };
+
+  return (
+    <motion.div
+      className="w-full overflow-hidden rounded-xl group relative bg-card"
+      initial={{ opacity: 0, scale: 1.02 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ delay: 0.2, duration: 1, ease: BRAND_EASE }}
+      style={{ aspectRatio: "16/7" }}
+    >
+      {embed ? (
+        <EmbedCover
+          embed={embed}
+          poster={project.coverPoster}
+          label={project.title}
+          muted={muted}
+          className="w-full h-full"
+          {...playState}
+        />
+      ) : video ? (
+        <CoverVideo
+          ref={videoRef}
+          src={project.coverImage}
+          poster={project.coverPoster}
+          label={project.title}
+          onError={() => setErrored(true)}
+          className="w-full h-full object-cover"
+          {...playState}
+        />
+      ) : (
+        <SafeImage
+          src={project.coverImage}
+          alt={project.title}
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+          onError={() => setErrored(true)}
+        />
+      )}
+      {!errored && (
+        <button
+          type="button"
+          onClick={expand}
+          aria-label={label}
+          className="absolute inset-0 bg-black/0 hover:bg-black/25 focus-visible:bg-black/25 transition-colors duration-300 flex items-center justify-center rounded-xl cursor-zoom-in focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        >
+          {embed && !backgroundEmbed ? (
+            <span className="flex items-center gap-2 text-white text-sm uppercase tracking-widest font-sans bg-black/60 px-5 py-2.5 rounded-full">
+              <Play className="w-4 h-4 fill-current" aria-hidden="true" />
+              Play video
+            </span>
+          ) : (
+            <span className="opacity-0 group-hover:opacity-100 transition-opacity text-white text-sm uppercase tracking-widest font-sans bg-black/60 px-4 py-2 rounded-full">
+              Click to expand
+            </span>
+          )}
+        </button>
+      )}
+      {playable && !errored && (
+        <div className="absolute bottom-4 left-4 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={togglePlay}
+            aria-label={playing ? "Pause cover video" : "Play cover video"}
+            className={COVER_CONTROL_CLASS}
+          >
+            {playing ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
+          </button>
+          {hasSound ? (
+            <button
+              type="button"
+              onClick={toggleSound}
+              aria-label={muted ? "Unmute cover video" : "Mute cover video"}
+              aria-pressed={!muted}
+              className={COVER_CONTROL_CLASS}
+            >
+              {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+            </button>
+          ) : null}
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
 function useTOC(sections: ContentSection[]) {
   const tocItems = sections.filter(s => s.title);
   const [activeId, setActiveId] = useState(tocItems[0]?.id ?? "");
@@ -312,6 +608,26 @@ function MediaCta({ href, linkLabel }: { href?: string; linkLabel?: string }) {
   );
 }
 
+type SectionRow = { key: string; sections: ContentSection[]; shared: boolean };
+
+const SHARED_ROW_SPAN: Record<2 | 3, string> = { 2: "md:col-span-3", 3: "md:col-span-2" };
+
+function sharesRow(s: ContentSection): s is ContentSection & { columns: 2 | 3 } {
+  return (s.type === "image" || s.type === "video") && (s.columns === 2 || s.columns === 3);
+}
+
+/** Consecutive Half / Third image or video sections go into one 6-column grid. */
+function groupSectionRows(sections: ContentSection[]): SectionRow[] {
+  const rows: SectionRow[] = [];
+  for (const s of sections) {
+    const shared = sharesRow(s);
+    const last = rows[rows.length - 1];
+    if (shared && last?.shared) last.sections.push(s);
+    else rows.push({ key: s.id, sections: [s], shared });
+  }
+  return rows;
+}
+
 /** Resolve skim vs expanded without remounting a second document tree when possible. */
 function resolveDisplaySections(
   project: Project | undefined,
@@ -366,7 +682,54 @@ function SectionBlock({
   if (section.type === "embed") {
     return <EmbedSection section={section} />;
   }
+  if (section.type === "mockup") {
+    return <MockupSection section={section} onImageClick={onImageClick} />;
+  }
   return <SectionBlockText section={section} expanded={expanded} />;
+}
+
+function MockupSection({
+  section,
+  onImageClick,
+}: {
+  section: ContentSection;
+  onImageClick: (src: string, caption?: string) => void;
+}) {
+  const floatIn = useFloatIn();
+  const screens = (section.screens ?? []).filter(Boolean);
+  if (!screens.length) return null;
+  const device = isMockupDevice(section.device) ? section.device : "phone";
+  const layout = isMockupLayout(section.layout) ? section.layout : "single";
+  return (
+    <motion.div
+      id={`cs-${section.id}`}
+      className="flex flex-col gap-3"
+      {...floatIn}
+    >
+      {section.title && (
+        <h2 className="font-display font-black uppercase text-xl md:text-2xl text-primary leading-tight tracking-tight">
+          {section.title}
+        </h2>
+      )}
+      <MockupStage
+        device={device}
+        layout={layout}
+        screens={section.screens ?? []}
+        meta={section.screenMeta}
+        background={section.background}
+        width={section.mockupWidth}
+        interactive={!!section.interactive}
+        alt={section.caption || section.title}
+        onScreenClick={(src) => onImageClick(src, section.caption)}
+      />
+      {section.caption && (
+        <p className="text-sm font-sans text-muted-foreground italic">
+          {section.caption}
+        </p>
+      )}
+      <MediaCta href={section.href} linkLabel={section.linkLabel} />
+    </motion.div>
+  );
 }
 
 function pickExpanded<T>(expanded: boolean, skim: T | undefined, detail: T | undefined): T | undefined {
@@ -378,6 +741,7 @@ function pickExpanded<T>(expanded: boolean, skim: T | undefined, detail: T | und
 }
 
 function EmbedSection({ section }: { section: ContentSection }) {
+  const floatIn = useFloatIn();
   const src = section.src?.trim() ?? "";
   const allowed = isAllowedEmbedSrc(src);
   const height =
@@ -387,10 +751,7 @@ function EmbedSection({ section }: { section: ContentSection }) {
     <motion.div
       id={`cs-${section.id}`}
       className="flex flex-col gap-3"
-      initial={{ opacity: 0, y: 24 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.65, ease: BRAND_EASE }}
+      {...floatIn}
     >
       {section.title && (
         <h2 className="font-display font-black uppercase text-xl md:text-2xl text-primary leading-tight tracking-tight">
@@ -480,6 +841,7 @@ function ImageSection({
   section: ContentSection;
   onImageClick: (src: string, caption?: string) => void;
 }) {
+  const floatIn = useFloatIn();
   const [errored, setErrored] = useState(false);
   const isVideo =
     section.type === "video" ||
@@ -492,10 +854,7 @@ function ImageSection({
       <motion.div
         id={`cs-${section.id}`}
         className="flex flex-col gap-3"
-        initial={{ opacity: 0, y: 24 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.65, ease: BRAND_EASE }}
+        {...floatIn}
       >
         {section.title && (
           <h2 className="font-display font-black uppercase text-xl md:text-2xl text-primary leading-tight tracking-tight">
@@ -519,10 +878,7 @@ function ImageSection({
     <motion.div
       id={`cs-${section.id}`}
       className="flex flex-col gap-3"
-      initial={{ opacity: 0, y: 24 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.65, ease: BRAND_EASE }}
+      {...floatIn}
     >
       {section.title && (
         <h2 className="font-display font-black uppercase text-xl md:text-2xl text-primary leading-tight tracking-tight">
@@ -570,6 +926,7 @@ function SectionBlockText({
   section: ContentSection;
   expanded: boolean;
 }) {
+  const floatIn = useFloatIn();
   const title = pickExpanded(expanded, section.title, section.titleDetail);
   const summary = pickExpanded(expanded, section.summary, section.summaryDetail);
   const body = pickExpanded(expanded, section.body, section.bodyDetail);
@@ -582,10 +939,7 @@ function SectionBlockText({
       <motion.div
         id={`cs-${section.id}`}
         className="grid grid-cols-1 md:grid-cols-2 gap-4"
-        initial={{ opacity: 0, y: 24 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.65, ease: BRAND_EASE }}
+        {...floatIn}
       >
         <div className="bg-card border border-border p-5 md:p-6 flex flex-col gap-3 rounded-xl">
           <span className="text-primary text-xs uppercase tracking-[0.4em] font-sans font-bold">Problem</span>
@@ -603,10 +957,7 @@ function SectionBlockText({
     <motion.div
       id={`cs-${section.id}`}
       className="flex flex-col gap-4"
-      initial={{ opacity: 0, y: 24 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.65, ease: BRAND_EASE }}
+      {...floatIn}
     >
       {(title || summary) && (
         <div className="flex flex-col lg:flex-row lg:gap-10 gap-3 border-b border-border pb-5">
@@ -657,15 +1008,13 @@ function SectionBlockText({
 }
 
 function FallbackSections({ project }: { project: Project }) {
+  const floatIn = useFloatIn();
   return (
     <>
       {project.description && (
         <motion.div
           className="flex flex-col gap-5"
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.65 }}
+          {...floatIn}
         >
           <div className="flex flex-col lg:flex-row lg:gap-10 gap-3 border-b border-border pb-5">
             <h3 className="font-display font-black uppercase text-xl text-primary lg:w-48 flex-shrink-0 tracking-tight">
@@ -687,10 +1036,7 @@ function FallbackSections({ project }: { project: Project }) {
       {(project.challenge || project.solution) && (
         <motion.div
           className="grid grid-cols-1 md:grid-cols-2 gap-4"
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.65 }}
+          {...floatIn}
         >
           {project.challenge && (
             <div className="bg-card border border-border p-5 md:p-6 flex flex-col gap-3 rounded-xl">
@@ -709,10 +1055,7 @@ function FallbackSections({ project }: { project: Project }) {
       {project.impact && (
         <motion.div
           className="bg-card border border-border p-8 md:p-12 flex flex-col gap-4 rounded-xl"
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.65 }}
+          {...floatIn}
         >
           <span className="text-primary text-sm uppercase tracking-[0.4em] font-sans font-bold">Impact</span>
           <p className="text-foreground text-base md:text-lg leading-relaxed font-sans">{project.impact}</p>
@@ -722,7 +1065,7 @@ function FallbackSections({ project }: { project: Project }) {
   );
 }
 
-export default function CaseStudy() {
+export default function CaseStudy({ full = false }: { full?: boolean }) {
   const projects = useContent("projects", projectsSeed) as Project[];
   const visibleProjects = projects.filter((p) => !p.archived);
   const identityData = useContent("identity", identitySeed) as typeof identitySeed;
@@ -730,17 +1073,12 @@ export default function CaseStudy() {
   const socials = buildSocials(contactData);
   const params = useParams();
   const currentIdx = visibleProjects.findIndex(p => p.slug === params.slug);
-  const project = visibleProjects[currentIdx];
+  const { project, gate, unlock, retry } = useFullProject(visibleProjects[currentIdx]);
   const prevProject = currentIdx > 0 ? visibleProjects[currentIdx - 1] : null;
   const nextProject = currentIdx < visibleProjects.length - 1 ? visibleProjects[currentIdx + 1] : null;
   const hasSections = Boolean(project?.sections?.length);
-  const [lightbox, setLightbox] = useState<{ src: string; caption?: string } | null>(null);
-  const [coverErrored, setCoverErrored] = useState(false);
-  const [showDetail, setShowDetail] = useState(false);
-  useEffect(() => {
-    setCoverErrored(false);
-    setShowDetail(false);
-  }, [params.slug]);
+  const [lightbox, setLightbox] = useState<{ src: string; caption?: string; mime?: string } | null>(null);
+  const showDetail = full;
   const { sections: displaySections, hasExpandable: hasDetailSections } = resolveDisplaySections(
     project,
     showDetail,
@@ -761,6 +1099,46 @@ export default function CaseStudy() {
     );
   }
 
+  if (gate.status === "locked") {
+    return (
+      <CaseStudyLock
+        title={project.title}
+        subtitle={project.subtitle}
+        coverImage={project.coverImage}
+        coverMime={project.coverMime}
+        coverPoster={project.coverPoster}
+        contactEmail={contactData.email?.trim()}
+        onUnlock={unlock}
+      />
+    );
+  }
+
+  if (gate.status === "loading") {
+    return (
+      <div className="flex flex-col gap-6 w-full max-w-5xl mx-auto py-12 animate-pulse" role="status" aria-label="Loading case study">
+        <div className="h-10 w-3/4 rounded bg-muted" />
+        <div className="h-4 w-full rounded bg-muted" />
+        <div className="h-4 w-5/6 rounded bg-muted" />
+        <div className="w-full rounded-xl bg-muted" style={{ aspectRatio: "16/7" }} />
+        <span className="sr-only">Loading case study…</span>
+      </div>
+    );
+  }
+
+  if (gate.status === "error") {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4 text-center">
+        <p className="text-muted-foreground font-sans">{gate.message}</p>
+        <div className="flex gap-4">
+          <button type="button" onClick={retry} className="text-primary text-sm font-sans underline">
+            Try again
+          </button>
+          <Link href="/work" className="text-primary text-sm font-sans underline">Back to Work</Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full flex flex-col gap-16 md:gap-20 pb-24">
       {project.liveUrl?.trim() ? (
@@ -776,6 +1154,7 @@ export default function CaseStudy() {
           <Lightbox
             src={lightbox.src}
             caption={lightbox.caption}
+            mime={lightbox.mime}
             onClose={() => setLightbox(null)}
           />
         )}
@@ -877,44 +1256,14 @@ export default function CaseStudy() {
         </motion.div>
       </section>
 
-      {/* ── Cover image (clickable) ── */}
       {project.coverImage && (
-        <motion.div
-          className={`w-full overflow-hidden rounded-xl group relative bg-card ${coverErrored ? "" : "cursor-zoom-in"}`}
-          initial={{ opacity: 0, scale: 1.02 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2, duration: 1, ease: BRAND_EASE }}
-          style={{ aspectRatio: "16/7" }}
-          onClick={() => {
-            if (coverErrored) return;
-            setLightbox({ src: project.coverImage, caption: project.title });
-          }}
-          role="button"
-          tabIndex={0}
-          aria-label={`Expand cover image: ${project.title}`}
-          onKeyDown={e => {
-            if (coverErrored) return;
-            if (e.key === "Enter") setLightbox({ src: project.coverImage, caption: project.title });
-          }}
-        >
-          {(/\.(mp4|webm|ogg|mov)(\?|$)/i.test(project.coverImage) || project.coverImage.startsWith("data:video")) ? (
-            <video src={project.coverImage} autoPlay loop muted playsInline className="w-full h-full object-cover" />
-          ) : (
-            <SafeImage
-              src={project.coverImage}
-              alt={project.title}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
-              onError={() => setCoverErrored(true)}
-            />
-          )}
-          {!coverErrored && (
-            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors duration-300 flex items-center justify-center rounded-xl">
-              <span className="opacity-0 group-hover:opacity-100 transition-opacity text-white text-sm uppercase tracking-widest font-sans bg-black/60 px-4 py-2 rounded-full">
-                Click to expand
-              </span>
-            </div>
-          )}
-        </motion.div>
+        <CaseStudyCover
+          key={project.slug}
+          project={project}
+          onExpand={() =>
+            setLightbox({ src: project.coverImage, caption: project.title, mime: project.coverMime })
+          }
+        />
       )}
 
       {/* ── TOC sidebar + content ── */}
@@ -984,14 +1333,28 @@ export default function CaseStudy() {
         {/* Main content */}
         <div className="flex flex-col gap-12 md:gap-16">
           {hasSections
-            ? displaySections.map(s => (
-                <SectionBlock
-                  key={s.id}
-                  section={s}
-                  expanded={showDetail}
-                  onImageClick={(src, cap) => setLightbox({ src, caption: cap })}
-                />
-              ))
+            ? groupSectionRows(displaySections).map(row =>
+                row.shared ? (
+                  <div key={row.key} className="grid grid-cols-1 md:grid-cols-6 gap-4 md:gap-6 items-start">
+                    {row.sections.map(s => (
+                      <div key={s.id} className={sharesRow(s) ? SHARED_ROW_SPAN[s.columns] : undefined}>
+                        <SectionBlock
+                          section={s}
+                          expanded={showDetail}
+                          onImageClick={(src, cap) => setLightbox({ src, caption: cap })}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <SectionBlock
+                    key={row.key}
+                    section={row.sections[0]!}
+                    expanded={showDetail}
+                    onImageClick={(src, cap) => setLightbox({ src, caption: cap })}
+                  />
+                ),
+              )
             : <FallbackSections project={project} />}
 
           {hasDetailSections && (
@@ -1001,24 +1364,14 @@ export default function CaseStudy() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, ease: BRAND_EASE }}
             >
-              <button
-                type="button"
-                onClick={() => {
-                  const expanding = !showDetail;
-                  setShowDetail(expanding);
-                  if (expanding) {
-                    // Expand grows content above this button; stay at the top so reading starts from the beginning.
-                    requestAnimationFrame(() => {
-                      window.scrollTo({ top: 0, behavior: "smooth" });
-                    });
-                  }
-                }}
+              <Link
+                href={showDetail ? `/work/${project.slug}` : `/work/${project.slug}/full`}
                 id="cs-detail-toggle"
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-full border-2 border-primary bg-primary/10 text-primary font-sans text-sm font-bold uppercase tracking-[0.2em] hover:bg-primary hover:text-primary-foreground transition-colors"
               >
                 {showDetail ? "Show less" : "See more detail"}
                 <span aria-hidden="true">{showDetail ? "↑" : "↓"}</span>
-              </button>
+              </Link>
               <p className="text-muted-foreground text-xs font-sans text-center max-w-md">
                 {showDetail
                   ? "Full case study with research, Figma system, and product deep-dive."

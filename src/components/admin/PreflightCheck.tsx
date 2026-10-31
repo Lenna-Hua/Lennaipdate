@@ -136,9 +136,9 @@ export function PreflightPanel({
   onClose: () => void;
 }) {
   return (
-    <div className="border border-[#3A3530] rounded-lg p-5 bg-[#0F0E0C]">
+    <div className="border border-[color:var(--adm-line-strong)] rounded-lg p-5 bg-[color:var(--adm-surface)]">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-[#F2EDE5] text-lg font-medium">
+        <h3 className="text-[color:var(--adm-text)] text-lg font-medium">
           Preflight Check{" "}
           {info.allClear ? (
             <span className="text-emerald-400 text-sm ml-2">✓ All Clear</span>
@@ -148,7 +148,7 @@ export function PreflightPanel({
         </h3>
         <button
           onClick={onClose}
-          className="text-[#8A8278] hover:text-[#F2EDE5] text-sm"
+          className="text-[color:var(--adm-muted)] hover:text-[color:var(--adm-text)] text-sm"
         >
           ✕ Close
         </button>
@@ -156,15 +156,15 @@ export function PreflightPanel({
 
       {/* Storage Backend */}
       <div className="mb-4 text-sm">
-        <span className="text-[#8A8278]">Storage backend:</span>{" "}
-        <span className="text-[#C8A96E] font-medium">{info.storageBackend}</span>
+        <span className="text-[color:var(--adm-muted)]">Storage backend:</span>{" "}
+        <span className="text-[color:var(--adm-accent)] font-medium">{info.storageBackend}</span>
       </div>
 
       {/* Section Sizes */}
       <div className="mb-4">
-        <h4 className="text-[#8A8278] text-xs uppercase tracking-widest mb-2">
+        <h4 className="text-[color:var(--adm-muted)] text-xs uppercase tracking-widest mb-2">
           Section Payload Sizes{" "}
-          <span className="text-[#F2EDE5] normal-case">({info.totalFormatted} total)</span>
+          <span className="text-[color:var(--adm-text)] normal-case">({info.totalFormatted} total)</span>
         </h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
           {info.sectionSizes.map((s) => (
@@ -173,11 +173,11 @@ export function PreflightPanel({
               className={`flex justify-between items-center px-3 py-2 rounded text-sm ${
                 s.bytes > SECTION_WARN_BYTES
                   ? "bg-amber-500/10 border border-amber-500/30"
-                  : "bg-[#1A1917]"
+                  : "bg-[color:var(--adm-subtle)]"
               }`}
             >
-              <span className="text-[#F2EDE5] capitalize">{s.name}</span>
-              <span className={s.bytes > SECTION_WARN_BYTES ? "text-amber-400" : "text-[#8A8278]"}>
+              <span className="text-[color:var(--adm-text)] capitalize">{s.name}</span>
+              <span className={s.bytes > SECTION_WARN_BYTES ? "text-amber-400" : "text-[color:var(--adm-muted)]"}>
                 {s.formatted}
               </span>
             </div>
@@ -192,7 +192,7 @@ export function PreflightPanel({
 
       {/* Inline Media */}
       <div>
-        <h4 className="text-[#8A8278] text-xs uppercase tracking-widest mb-2">
+        <h4 className="text-[color:var(--adm-muted)] text-xs uppercase tracking-widest mb-2">
           Inline Base64 Media{" "}
           <span className="normal-case">
             ({info.inlineMedia.length} found{info.inlineMedia.length > 0 ? " — must migrate before saving" : ""})
@@ -205,9 +205,9 @@ export function PreflightPanel({
             {info.inlineMedia.map((m, i) => (
               <div key={i} className="flex items-center gap-2 text-sm bg-red-500/10 border border-red-500/20 rounded px-3 py-2">
                 <span className="text-red-400">●</span>
-                <span className="text-[#8A8278]">{m.section}</span>
-                <span className="text-[#F2EDE5]">→ {m.itemLabel}</span>
-                <span className="text-[#8A8278]">→ {m.field}</span>
+                <span className="text-[color:var(--adm-muted)]">{m.section}</span>
+                <span className="text-[color:var(--adm-text)]">→ {m.itemLabel}</span>
+                <span className="text-[color:var(--adm-muted)]">→ {m.field}</span>
               </div>
             ))}
           </div>

@@ -11,7 +11,7 @@ import { SafeImage } from "@/components/SafeImage";
 import { AdminSortableList } from "@/pages/admin-sortable";
 
 const BTN =
-  "text-sm border border-[#C8A96E] text-[#C8A96E] px-3 py-2 hover:bg-[#C8A96E] hover:text-[#0A0908] transition-colors uppercase tracking-widest";
+  "text-sm border border-[color:var(--adm-accent)] text-[color:var(--adm-accent)] px-3 py-2 hover:bg-[color:var(--adm-accent)] hover:text-[color:var(--adm-on-accent)] transition-colors uppercase tracking-widest";
 
 function CommunityEditor({
   intro,
@@ -32,7 +32,7 @@ function CommunityEditor({
 
   return (
     <div className="flex flex-col gap-4">
-      <label className="text-[#8A8278] text-sm uppercase tracking-widest">
+      <label className="text-[color:var(--adm-muted)] text-sm uppercase tracking-widest">
         Community &amp; Volunteer
       </label>
       <TextareaInput
@@ -46,18 +46,18 @@ function CommunityEditor({
         items={items}
         onReorder={onItemsChange}
         renderItem={(item, idx, dragHandle) => (
-          <div className="border border-[#272421] p-5 flex flex-col gap-4">
+          <div className="border border-[color:var(--adm-line)] p-5 flex flex-col gap-4">
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-2">
                 {dragHandle}
-                <span className="text-[#C8A96E] text-sm uppercase tracking-widest">
+                <span className="text-[color:var(--adm-accent)] text-sm uppercase tracking-widest">
                   Entry {idx + 1}
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => onItemsChange(items.filter((_, i) => i !== idx))}
-                className="text-sm text-[#4A4540] hover:text-red-400"
+                className="text-sm text-[color:var(--adm-faint)] hover:text-red-400"
               >
                 Remove
               </button>
@@ -91,7 +91,7 @@ function CommunityEditor({
             />
 
             <div className="flex flex-col gap-2">
-              <span className="text-[#8A8278] text-xs uppercase tracking-widest">
+              <span className="text-[color:var(--adm-muted)] text-xs uppercase tracking-widest">
                 Photos (first is the cover)
               </span>
               {(item.images ?? []).length > 0 && (
@@ -99,7 +99,7 @@ function CommunityEditor({
                   {(item.images ?? []).map((src, i) => (
                     <div
                       key={`${src}-${i}`}
-                      className="relative w-20 h-20 border border-[#3A3530] overflow-hidden"
+                      className="relative w-20 h-20 border border-[color:var(--adm-line-strong)] overflow-hidden"
                     >
                       <SafeImage src={src} alt="" className="w-full h-full object-cover" fallbackAspect="1 / 1" />
                       <button
@@ -119,6 +119,7 @@ function CommunityEditor({
               <div className="flex items-center gap-2 flex-wrap">
                 <UploadToLibraryDashed
                   label="↑ Upload photo"
+                  usage="photo"
                   accept="image/*,.jpg,.jpeg,.png,.webp,.gif"
                   onUploaded={(url) => addImage(idx, url)}
                 />
@@ -156,13 +157,13 @@ export function AboutEditor({
 
   return (
     <div className="flex flex-col gap-6">
-      <p className="text-[#8A8278] text-sm border border-[#272421] p-3">
+      <p className="text-[color:var(--adm-muted)] text-sm border border-[color:var(--adm-line)] p-3">
         About page order: Info (portrait + bio, here) → Capabilities (Skills, here) → Experience
         (Experience tab) → Community &amp; Volunteer (here) → Education (Education tab) → Let&apos;s
         Talk (Identity &amp; Contact tab).
       </p>
       <div className="flex flex-col gap-2 max-w-md">
-        <label className="text-[#8A8278] text-xs uppercase tracking-widest">
+        <label className="text-[color:var(--adm-muted)] text-xs uppercase tracking-widest">
           About portrait
         </label>
         <input
@@ -170,11 +171,12 @@ export function AboutEditor({
           value={photo}
           onChange={(e) => onChange({ ...data, photo: e.target.value })}
           placeholder="Paste image URL or upload below"
-          className="bg-transparent border-b border-[#3A3530] text-[#F2EDE5] py-2 text-sm focus:outline-none focus:border-[#C8A96E] transition-colors"
+          className="bg-transparent border-b border-[color:var(--adm-line-strong)] text-[color:var(--adm-text)] py-2 text-sm focus:outline-none focus:border-[color:var(--adm-accent)] transition-colors"
         />
         <div className="flex items-center gap-2 flex-wrap">
           <UploadToLibraryDashed
             label="↑ Upload portrait"
+            usage="portrait"
             accept="image/*,.jpg,.jpeg,.png,.webp,.gif"
             onUploaded={(url) => onChange({ ...data, photo: url })}
           />
@@ -185,7 +187,7 @@ export function AboutEditor({
             <button
               type="button"
               onClick={() => onChange({ ...data, photo: "" })}
-              className="text-sm text-[#4A4540] hover:text-red-400 transition-colors"
+              className="text-sm text-[color:var(--adm-faint)] hover:text-red-400 transition-colors"
             >
               Clear
             </button>
@@ -193,7 +195,7 @@ export function AboutEditor({
         </div>
         {photo ? (
           <div
-            className="rounded overflow-hidden border border-[#3A3530] mt-1"
+            className="rounded overflow-hidden border border-[color:var(--adm-line-strong)] mt-1"
             style={{ maxWidth: "220px", aspectRatio: "3 / 4" }}
           >
             <SafeImage
@@ -204,7 +206,7 @@ export function AboutEditor({
             />
           </div>
         ) : (
-          <p className="text-[#4A4540] text-xs">
+          <p className="text-[color:var(--adm-faint)] text-xs">
             No portrait set — the About page will show a placeholder until you upload one.
           </p>
         )}
@@ -216,7 +218,7 @@ export function AboutEditor({
           value={data.yearsExperience ?? "3+"}
           onChange={(v) => onChange({ ...data, yearsExperience: v })}
         />
-        <p className="text-[#4A4540] text-xs">
+        <p className="text-[color:var(--adm-faint)] text-xs">
           Shown on Home and About (e.g. 3+, 4+). Use Preview to check before publishing, or Save to Site to go live.
         </p>
         <div className="flex flex-wrap gap-2 pt-1">
@@ -224,7 +226,7 @@ export function AboutEditor({
             <button
               type="button"
               onClick={() => onPreviewHome(data)}
-              className="text-sm border border-[#C8A96E] text-[#C8A96E] px-3 py-2 hover:bg-[#C8A96E] hover:text-[#0A0908] transition-colors uppercase tracking-widest"
+              className="text-sm border border-[color:var(--adm-accent)] text-[color:var(--adm-accent)] px-3 py-2 hover:bg-[color:var(--adm-accent)] hover:text-[color:var(--adm-on-accent)] transition-colors uppercase tracking-widest"
             >
               Preview Home
             </button>
@@ -233,7 +235,7 @@ export function AboutEditor({
             <button
               type="button"
               onClick={() => onPreviewAbout(data)}
-              className="text-sm border border-[#C8A96E] text-[#C8A96E] px-3 py-2 hover:bg-[#C8A96E] hover:text-[#0A0908] transition-colors uppercase tracking-widest"
+              className="text-sm border border-[color:var(--adm-accent)] text-[color:var(--adm-accent)] px-3 py-2 hover:bg-[color:var(--adm-accent)] hover:text-[color:var(--adm-on-accent)] transition-colors uppercase tracking-widest"
             >
               Preview About
             </button>
@@ -242,7 +244,7 @@ export function AboutEditor({
       </div>
 
       <div className="flex flex-col gap-3">
-        <label className="text-[#8A8278] text-sm uppercase tracking-widest">Bio Paragraphs</label>
+        <label className="text-[color:var(--adm-muted)] text-sm uppercase tracking-widest">Bio Paragraphs</label>
         {data.bio.map((para, i) => (
           <div key={i} className="relative">
             <textarea
@@ -253,11 +255,11 @@ export function AboutEditor({
                 onChange({ ...data, bio: updated });
               }}
               rows={3}
-              className="w-full bg-[#0A0908] border border-[#3A3530] text-[#F2EDE5] py-2 px-3 text-sm focus:outline-none focus:border-[#C8A96E] transition-colors resize-y"
+              className="w-full bg-[color:var(--adm-input)] border border-[color:var(--adm-line-strong)] text-[color:var(--adm-text)] py-2 px-3 text-sm focus:outline-none focus:border-[color:var(--adm-accent)] transition-colors resize-y"
             />
             <button
               onClick={() => onChange({ ...data, bio: data.bio.filter((_, j) => j !== i) })}
-              className="absolute top-2 right-2 text-[#4A4540] hover:text-red-400 text-sm"
+              className="absolute top-2 right-2 text-[color:var(--adm-faint)] hover:text-red-400 text-sm"
             >
               Remove
             </button>
@@ -265,14 +267,14 @@ export function AboutEditor({
         ))}
         <button
           onClick={() => onChange({ ...data, bio: [...data.bio, ""] })}
-          className="self-start text-sm border border-[#C8A96E] text-[#C8A96E] px-3 py-2 hover:bg-[#C8A96E] hover:text-[#0A0908] transition-colors uppercase tracking-widest"
+          className="self-start text-sm border border-[color:var(--adm-accent)] text-[color:var(--adm-accent)] px-3 py-2 hover:bg-[color:var(--adm-accent)] hover:text-[color:var(--adm-on-accent)] transition-colors uppercase tracking-widest"
         >
           + Add Paragraph
         </button>
       </div>
 
       <div className="flex flex-col gap-3">
-        <label className="text-[#8A8278] text-sm uppercase tracking-widest">
+        <label className="text-[color:var(--adm-muted)] text-sm uppercase tracking-widest">
           Skills (JSON format — array of {"{category, items[]}"}
           )
         </label>
@@ -287,7 +289,7 @@ export function AboutEditor({
             }
           }}
           rows={12}
-          className="w-full bg-[#0A0908] border border-[#3A3530] text-[#F2EDE5] py-2 px-3 text-sm font-mono focus:outline-none focus:border-[#C8A96E] transition-colors resize-y"
+          className="w-full bg-[color:var(--adm-input)] border border-[color:var(--adm-line-strong)] text-[color:var(--adm-text)] py-2 px-3 text-sm font-mono focus:outline-none focus:border-[color:var(--adm-accent)] transition-colors resize-y"
         />
       </div>
 

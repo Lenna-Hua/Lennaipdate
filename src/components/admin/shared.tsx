@@ -1,7 +1,7 @@
 /**
  * Shared UI primitives used across admin panel editor components.
  */
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import type { AssetType } from "./types";
 
 // ── Utility helpers ────────────────────────────────────────────────────
@@ -59,6 +59,56 @@ export function extForMime(mime: string): string {
   return "bin";
 }
 
+// ── Layout components ──────────────────────────────────────────────────
+
+export function BoxCode({ code }: { code: string }) {
+  return (
+    <span className="inline-flex items-center justify-center min-w-[2rem] h-6 px-1.5 rounded-md bg-[color:var(--adm-accent)]/10 text-[color:var(--adm-accent)] text-[11px] font-bold tracking-wide">
+      {code}
+    </span>
+  );
+}
+
+/** Named editing card: the code (e.g. "D2") lets you call a box out by name. */
+export function EditorBox({
+  code,
+  title,
+  hint,
+  actions,
+  leading,
+  children,
+  className = "",
+}: {
+  code: string;
+  title: ReactNode;
+  hint?: string;
+  actions?: ReactNode;
+  leading?: ReactNode;
+  children?: ReactNode;
+  className?: string;
+}) {
+  return (
+    <section
+      id={`box-${code.toLowerCase()}`}
+      data-box={code}
+      className={`bg-[color:var(--adm-surface)] border border-[color:var(--adm-line)] rounded-xl shadow-[0_1px_2px_rgba(0,0,0,0.04)] ${className}`}
+    >
+      <header className="flex items-center gap-2.5 px-4 py-3 border-b border-[color:var(--adm-line)]">
+        {leading}
+        <BoxCode code={code} />
+        <h3 className="flex-1 min-w-0 truncate text-sm font-semibold text-[color:var(--adm-text)]">{title}</h3>
+        {actions && <div className="flex items-center gap-1 shrink-0">{actions}</div>}
+      </header>
+      {(hint || children) && (
+        <div className="p-4 flex flex-col gap-4">
+          {hint && <p className="text-[color:var(--adm-faint)] text-xs leading-relaxed -mb-1">{hint}</p>}
+          {children}
+        </div>
+      )}
+    </section>
+  );
+}
+
 // ── Input components ───────────────────────────────────────────────────
 
 export function TextInput({
@@ -77,16 +127,16 @@ export function TextInput({
 }) {
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-[#8A8278] text-sm uppercase tracking-widest">{label}</label>
+      <label className="text-[color:var(--adm-text)] text-[13px] font-medium">{label}</label>
       {hint && (
-        <p className="text-[#4A4540] text-xs leading-relaxed -mt-0.5 mb-0.5">{hint}</p>
+        <p className="text-[color:var(--adm-faint)] text-xs leading-relaxed -mt-0.5 mb-0.5">{hint}</p>
       )}
       <input
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="bg-transparent border-b border-[#3A3530] text-[#F2EDE5] py-2 text-sm focus:outline-none focus:border-[#C8A96E] transition-colors placeholder:text-[#3A3530]"
+        className="bg-[color:var(--adm-input)] border border-[color:var(--adm-line-strong)] rounded-md text-[color:var(--adm-text)] px-3 py-2 text-sm focus:outline-none focus:border-[color:var(--adm-accent)] focus:ring-2 focus:ring-[color:var(--adm-accent)]/15 transition-colors placeholder:text-[color:var(--adm-placeholder)]"
       />
     </div>
   );
@@ -109,16 +159,16 @@ export function TextareaInput({
 }) {
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-[#8A8278] text-sm uppercase tracking-widest">{label}</label>
+      <label className="text-[color:var(--adm-text)] text-[13px] font-medium">{label}</label>
       {hint && (
-        <p className="text-[#4A4540] text-xs leading-relaxed -mt-0.5 mb-0.5">{hint}</p>
+        <p className="text-[color:var(--adm-faint)] text-xs leading-relaxed -mt-0.5 mb-0.5">{hint}</p>
       )}
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
         rows={rows}
         placeholder={placeholder}
-        className="bg-[#0A0908] border border-[#3A3530] text-[#F2EDE5] py-2 px-3 text-sm focus:outline-none focus:border-[#C8A96E] transition-colors resize-y placeholder:text-[#3A3530]"
+        className="bg-[color:var(--adm-input)] border border-[color:var(--adm-line-strong)] text-[color:var(--adm-text)] py-2 px-3 text-sm focus:outline-none focus:border-[color:var(--adm-accent)] focus:ring-2 focus:ring-[color:var(--adm-accent)]/15 transition-colors resize-y placeholder:text-[color:var(--adm-placeholder)]"
       />
     </div>
   );
@@ -139,9 +189,9 @@ export function CheckboxInput({
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="w-4 h-4 accent-[#C8A96E]"
+        className="w-4 h-4 accent-[color:var(--adm-accent)]"
       />
-      <span className="text-[#8A8278] text-sm uppercase tracking-widest">{label}</span>
+      <span className="text-[color:var(--adm-text)] text-sm">{label}</span>
     </label>
   );
 }
@@ -177,18 +227,18 @@ export function TagsInput({
     .slice(0, 8);
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-[#8A8278] text-sm uppercase tracking-widest">{label}</label>
-      <div className="flex flex-wrap gap-2 border-b border-[#3A3530] py-2 focus-within:border-[#C8A96E] transition-colors relative">
+      <label className="text-[color:var(--adm-text)] text-[13px] font-medium">{label}</label>
+      <div className="flex flex-wrap gap-2 border-b border-[color:var(--adm-line-strong)] py-2 focus-within:border-[color:var(--adm-accent)] transition-colors relative">
         {tags.map((t, i) => (
           <span
             key={`${t}-${i}`}
-            className="inline-flex items-center gap-1.5 bg-[#1B1815] border border-[#3A3530] text-[#F2EDE5] text-xs px-2 py-1 rounded"
+            className="inline-flex items-center gap-1.5 bg-[color:var(--adm-subtle)] border border-[color:var(--adm-line-strong)] text-[color:var(--adm-text)] text-xs px-2 py-1 rounded"
           >
             {t}
             <button
               type="button"
               onClick={() => remove(i)}
-              className="text-[#8A8278] hover:text-red-400 leading-none text-base"
+              className="text-[color:var(--adm-muted)] hover:text-red-400 leading-none text-base"
               aria-label={`Remove ${t}`}
             >
               ×
@@ -210,10 +260,10 @@ export function TagsInput({
             }
           }}
           placeholder={tags.length ? "" : "Type a tag and press Enter…"}
-          className="flex-1 min-w-[140px] bg-transparent text-[#F2EDE5] text-sm focus:outline-none"
+          className="flex-1 min-w-[140px] bg-transparent text-[color:var(--adm-text)] text-sm focus:outline-none"
         />
         {focused && matching.length > 0 && (
-          <div className="absolute left-0 right-0 top-full mt-1 z-20 bg-[#0A0908] border border-[#3A3530] rounded shadow-lg max-h-56 overflow-y-auto">
+          <div className="absolute left-0 right-0 top-full mt-1 z-20 bg-[color:var(--adm-input)] border border-[color:var(--adm-line-strong)] rounded shadow-lg max-h-56 overflow-y-auto">
             {matching.map((s) => (
               <button
                 key={s}
@@ -222,7 +272,7 @@ export function TagsInput({
                   e.preventDefault();
                   commit(s);
                 }}
-                className="w-full text-left px-3 py-1.5 text-sm text-[#F2EDE5] hover:bg-[#1B1815]"
+                className="w-full text-left px-3 py-1.5 text-sm text-[color:var(--adm-text)] hover:bg-[color:var(--adm-subtle)]"
               >
                 {s}
               </button>

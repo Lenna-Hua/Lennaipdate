@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { BRAND } from "@/lib/brand";
+import { useLiteMotion } from "@/lib/motion";
 
 const DOTS = [
   { left: "6%",  top: "18%", size: 14, delay: 0,   dur: 3.2 },
@@ -21,6 +22,9 @@ const STARS = [
 const BLUE = BRAND.blue;
 
 export function FloatingDecor({ opacity = 1 }: { opacity?: number }) {
+  const lite = useLiteMotion();
+  if (lite) return null;
+
   return (
     <div
       aria-hidden="true"

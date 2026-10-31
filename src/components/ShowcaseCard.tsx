@@ -99,7 +99,6 @@ export const ShowcaseCard = memo(function ShowcaseCard({
         transform: `rotate(${tilt}deg)`,
         background: frameBg,
         padding: layout === "landscape" ? "14px 14px 18px" : "12px 12px 16px",
-        borderRadius: layout === "landscape" ? 4 : 14,
         boxShadow: isDark
           ? "-10px 14px 28px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.06)"
           : "-10px 12px 24px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04)",
@@ -118,11 +117,10 @@ export const ShowcaseCard = memo(function ShowcaseCard({
             : "flex flex-col gap-3 w-full"
         }
       >
-        {/* Media pane — rounded inset, never clipped by outer put-frame */}
+        {/* Media pane — inset, never clipped by outer put-frame */}
         <div
           className="relative overflow-hidden bg-muted/40"
           style={{
-            borderRadius: layout === "landscape" ? 2 : 8,
             width: layout === "landscape" ? undefined : "100%",
             flex: layout === "landscape" ? "1 1 62%" : undefined,
             aspectRatio: layout === "landscape" ? "4 / 3" : "16 / 10",

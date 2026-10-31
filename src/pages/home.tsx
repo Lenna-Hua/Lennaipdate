@@ -9,6 +9,7 @@ import contactSeed from "@/data/contact.json";
 import homepageSeed from "@/data/homepage.json";
 import studioSeed from "@/data/studio.json";
 import { useContent } from "@/lib/use-content";
+import { useFloatIn, useFloatStagger } from "@/lib/motion";
 import { FloatingDecor } from "@/components/FloatingDecor";
 import {
   PinterestCard,
@@ -16,7 +17,7 @@ import {
   type PinterestCardProject,
 } from "@/components/PinterestCard";
 import { RotatingLiveBadge } from "@/components/RotatingLiveBadge";
-import { CoverMedia } from "@/components/CoverMedia";
+import { CoverMedia, type CoverPlayback } from "@/components/CoverMedia";
 import { ArtworkModal, ArtworksSlideshow } from "@/components/ArtworksSlideshow";
 import { useTheme } from "@/context/ThemeContext";
 import { mergeStudio } from "@/lib/studio-content";
@@ -24,6 +25,9 @@ import type { CardLayout, GalleryItem, Studio } from "@/components/admin/types";
 
 type Project = (typeof projectsSeed)[number] & {
   archived?: boolean;
+  coverMime?: string;
+  coverPoster?: string;
+  coverPlayback?: CoverPlayback;
   hoverVideo?: string;
   liveUrl?: string;
   cardDescription?: string;
@@ -54,21 +58,10 @@ function buildStats(location: string, yearsExperience = "3+") {
   return stats;
 }
 
-const item = {
-  hidden: { opacity: 0, y: 32 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] },
-  },
-};
-const container = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.1 } },
-};
-const VP = { once: true, margin: "-80px" };
-
 export default function Home() {
+  const { container, item, viewport: VP } = useFloatStagger();
+  const floatHeading = useFloatIn({ distance: 40 });
+  const floatSection = useFloatIn();
   const projectsData = useContent("projects", projectsSeed) as Project[];
   const galleryData = useContent("gallery", gallerySeed) as GalleryItem[];
   const aboutData = useContent("about", aboutSeed) as typeof aboutSeed;
@@ -94,6 +87,9 @@ export default function Home() {
         slug: p.slug,
         title: p.title,
         coverImage: p.coverImage,
+        coverMime: p.coverMime,
+        coverPoster: p.coverPoster,
+        coverPlayback: p.coverPlayback,
         year: p.year,
         tags: p.tags ?? [],
         type: p.type,
@@ -104,8 +100,9 @@ export default function Home() {
         liveUrl: p.liveUrl,
         cardLayout: p.cardLayout,
       }));
+    const workSlugs = new Set(projectsData.map((p) => p.slug));
     const fromStudio: PinterestCardProject[] = galleryData
-      .filter((g) => !g.archived && g.featured)
+      .filter((g) => !g.archived && g.featured && !workSlugs.has(g.slug))
       .map((g) => ({
         id: g.id,
         slug: g.slug,
@@ -269,7 +266,8 @@ export default function Home() {
 
       {/* ── Featured Projects ── */}
       <section className="flex flex-col gap-12">
-        <div
+        <motion.div
+          {...floatHeading}
           className="flex justify-between items-end pb-6"
           style={{ borderBottom: `2px solid ${BLUE}55` }}
         >
@@ -286,7 +284,7 @@ export default function Home() {
           >
             {hp.selectedWorkLinkLabel}
           </Link>
-        </div>
+        </motion.div>
 
         <motion.div
           variants={container}
@@ -309,7 +307,7 @@ export default function Home() {
 
       {/* ── Studio slideshow ── */}
       {hp.showStudioBand !== false && artworks.length > 0 && (
-        <section className="flex flex-col gap-12">
+        <motion.section {...floatSection} className="flex flex-col gap-12">
           <AnimatePresence>
             {modalItem && (
               <ArtworkModal item={modalItem} onClose={() => setModalItem(null)} />
@@ -338,15 +336,12 @@ export default function Home() {
             onOpen={setModalItem}
             cardSize={studio.artworksCardSize}
           />
-        </section>
+        </motion.section>
       )}
 
       {/* ── Brief About ── */}
       <motion.section
-        initial={{ opacity: 0, y: 32 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={VP}
-        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+        {...floatSection}
         className="p-8 md:p-16 rounded-2xl flex flex-col md:flex-row gap-12 justify-between"
         style={{ background: BLUE + "10", border: `2px solid ${BLUE}35` }}
       >

@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
-import { CoverMedia } from "@/components/CoverMedia";
+import { Lock, Play } from "lucide-react";
+import { CoverMedia, isPlayableCover, type CoverPlayback } from "@/components/CoverMedia";
 import { BRAND_DECK, BRAND_RGB } from "@/lib/brand";
 import type { CardLayout } from "@/components/admin/types";
 
@@ -28,6 +29,10 @@ export type PinterestCardProject = {
   slug: string;
   title: string;
   coverImage: string;
+  coverMime?: string;
+  coverPoster?: string;
+  /** Video covers only. Defaults to "loop". */
+  coverPlayback?: CoverPlayback;
   year: string;
   tags: string[];
   /** Badge text (Work `type` or Studio `role`). */
@@ -41,6 +46,8 @@ export type PinterestCardProject = {
   liveUrl?: string;
   /** "horizontal" fills two grid columns plus the gap between them. */
   cardLayout?: CardLayout;
+  /** Password-protected case study — shows a lock badge. */
+  protected?: boolean;
 };
 
 /**
@@ -67,11 +74,14 @@ export const PinterestCard = memo(function PinterestCard({
   project,
   i,
   isDark,
+  aspectClass = "aspect-[4/5]",
 }: {
   project: PinterestCardProject;
   i: number;
   isDark: boolean;
   featured?: boolean;
+  /** Tailwind aspect/size classes for a single-column card cell. */
+  aspectClass?: string;
 }) {
   const accent = ACCENTS[i % ACCENTS.length];
   const rgb = ACCENT_RGB[accent] ?? "31,103,241";
@@ -89,6 +99,11 @@ export const PinterestCard = memo(function PinterestCard({
   const videoRef = useRef<HTMLVideoElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showVideo, setShowVideo] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const playOnHover =
+    isPlayableCover(project.coverImage, project.coverMime) &&
+    project.coverPlayback === "hover" &&
+    !hasHoverVideo;
 
   const clearHoverTimer = useCallback(() => {
     if (timerRef.current) {
@@ -99,6 +114,7 @@ export const PinterestCard = memo(function PinterestCard({
 
   const stopVideo = useCallback(() => {
     clearHoverTimer();
+    setHovered(false);
     setShowVideo(false);
     const v = videoRef.current;
     if (v) {
@@ -112,6 +128,7 @@ export const PinterestCard = memo(function PinterestCard({
   }, [clearHoverTimer]);
 
   const onEnter = useCallback(() => {
+    setHovered(true);
     if (!hasHoverVideo) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     clearHoverTimer();
@@ -134,12 +151,12 @@ export const PinterestCard = memo(function PinterestCard({
       }
     >
       {horizontal ? (
-        <div aria-hidden="true" className="col-start-1 row-start-1 aspect-[4/5]" />
+        <div aria-hidden="true" className={`col-start-1 row-start-1 ${aspectClass}`} />
       ) : null}
       {/* Dual-tone floating grain glow — high-feather gradient blur under card */}
       <div
         aria-hidden="true"
-        className="absolute -inset-10 rounded-[2.5rem] pointer-events-none transition-opacity duration-700 opacity-60 group-hover:opacity-100 group-focus-within:opacity-100"
+        className="card-glow absolute -inset-10 rounded-[1.5rem] pointer-events-none transition-opacity duration-700 opacity-60 group-hover:opacity-100 group-focus-within:opacity-100"
         style={{
           background: isDark
             ? `radial-gradient(ellipse 70% 65% at 30% 55%, rgba(${glowA},0.38) 0%, rgba(${glowA},0.12) 35%, transparent 70%),
@@ -153,7 +170,7 @@ export const PinterestCard = memo(function PinterestCard({
       />
       <div
         aria-hidden="true"
-        className="absolute -inset-6 rounded-[2rem] pointer-events-none mix-blend-overlay transition-opacity duration-700 opacity-25 group-hover:opacity-45 group-focus-within:opacity-45"
+        className="card-grain absolute -inset-6 rounded-[1rem] pointer-events-none mix-blend-overlay transition-opacity duration-700 opacity-25 group-hover:opacity-45 group-focus-within:opacity-45"
         style={{
           backgroundImage: `
             radial-gradient(ellipse 75% 65% at 50% 55%, rgba(255,255,255,0.55) 0%, transparent 70%),
@@ -171,8 +188,8 @@ export const PinterestCard = memo(function PinterestCard({
 
       <a
         href={href}
-        className={`group/card relative z-10 flex flex-col rounded-2xl overflow-hidden cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 ${
-          horizontal ? "col-start-1 col-span-2 row-start-1" : "aspect-[4/5]"
+        className={`group/card relative z-10 flex flex-col rounded-lg overflow-hidden cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 ${
+          horizontal ? "col-start-1 col-span-2 row-start-1" : aspectClass
         }`}
         style={{
           outlineColor: accent,
@@ -193,6 +210,10 @@ export const PinterestCard = memo(function PinterestCard({
               src={project.coverImage}
               alt={project.title}
               loading="lazy"
+              mimeHint={project.coverMime}
+              poster={project.coverPoster}
+              playback={project.coverPlayback}
+              active={hovered && !showVideo}
               className={`w-full h-full object-cover transition-[transform,opacity] duration-700 group-hover:scale-[1.04] group-focus-within:scale-[1.04] ${
                 showVideo ? "opacity-0" : "opacity-100"
               }`}
@@ -244,12 +265,12 @@ export const PinterestCard = memo(function PinterestCard({
         {/* ── Subtle border ─────────────────────────────────────── */}
         <div
           aria-hidden="true"
-          className="absolute inset-0 rounded-2xl pointer-events-none transition-all duration-500"
+          className="absolute inset-0 rounded-lg pointer-events-none transition-all duration-500"
           style={{ border: `1px solid rgba(${rgb}, 0.15)` }}
         />
         <div
           aria-hidden="true"
-          className="absolute inset-0 rounded-2xl pointer-events-none opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-all duration-500"
+          className="absolute inset-0 rounded-lg pointer-events-none opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-all duration-500"
           style={{
             border: `1.5px solid rgba(${glowA}, 0.4)`,
             boxShadow: `0 0 48px rgba(${glowA}, 0.16), 0 0 90px rgba(${glowB}, 0.10)`,
@@ -264,8 +285,30 @@ export const PinterestCard = memo(function PinterestCard({
           >
             {project.type}
           </span>
+          {project.protected ? (
+            <span
+              className="flex items-center gap-1 text-[8px] sm:text-[9px] uppercase tracking-wide font-sans font-bold px-2.5 py-1.5 rounded-full backdrop-blur-sm whitespace-nowrap leading-none shrink-0 ml-auto"
+              style={badgeStyle}
+            >
+              <Lock className="w-2.5 h-2.5" aria-hidden="true" />
+              Protected
+            </span>
+          ) : null}
+          {playOnHover ? (
+            <span
+              className={`hidden [@media(hover:hover)]:flex items-center justify-center w-6 h-6 rounded-full backdrop-blur-sm shrink-0 transition-opacity duration-300 ${
+                project.protected ? "" : "ml-auto"
+              } ${hovered ? "opacity-0" : "opacity-100"}`}
+              style={badgeStyle}
+              aria-hidden="true"
+            >
+              <Play className="w-2.5 h-2.5 fill-current" />
+            </span>
+          ) : null}
           <span
-            className="text-[8px] sm:text-[9px] font-mono font-bold px-2.5 py-1.5 rounded-full backdrop-blur-sm whitespace-nowrap leading-none shrink-0 ml-auto"
+            className={`text-[8px] sm:text-[9px] font-mono font-bold px-2.5 py-1.5 rounded-full backdrop-blur-sm whitespace-nowrap leading-none shrink-0 ${
+              project.protected ? "" : playOnHover ? "[@media(hover:none)]:ml-auto" : "ml-auto"
+            }`}
             style={badgeStyle}
           >
             {project.year}

@@ -12,6 +12,7 @@ import contactSeed from "@/data/contact.json";
 import { useContent } from "@/lib/use-content";
 import { CursorBlockField } from "@/components/CursorBlockField";
 import { SafeImage } from "@/components/SafeImage";
+import { coverStillSrc } from "@/components/CoverMedia";
 import { lockEntryDark, unlockEntryDark } from "@/context/ThemeContext";
 import { BRAND, BRAND_EASE, BRAND_HOVER } from "@/lib/brand";
 
@@ -77,10 +78,12 @@ const DESIGN_PREVIEWS: PreviewItem[] = [
   { key: "kijiji-trust-safety",     dx:  160, dy: -70,  rotate:  7, delay: 0.08 },
   { key: "freshii-moderated-study", dx: -140, dy:  110, rotate:  5, delay: 0.16 },
 ].map((slot) => {
-  const project = projectsData.find((p) => p.slug === slot.key);
+  const project = projectsData.find((p) => p.slug === slot.key) as
+    | { coverImage: string; coverMime?: string; coverPoster?: string; title: string }
+    | undefined;
   return {
     ...slot,
-    src: project?.coverImage ?? "",
+    src: project ? coverStillSrc(project.coverImage, project.coverMime, project.coverPoster) : "",
     alt: project?.title ?? slot.key,
   };
 });

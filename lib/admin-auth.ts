@@ -29,14 +29,14 @@ function getTokenSecret(): string {
   return requireSecret("ADMIN_TOKEN_SECRET");
 }
 
-function sign(payload: string): string {
+export function signPayload(payload: string): string {
   return crypto.createHmac("sha256", getTokenSecret()).update(payload).digest("base64url");
 }
 
 export function issueAdminToken(): string {
   const exp = Date.now() + TOKEN_TTL_MS;
   const payload = `admin.${exp}`;
-  return `${payload}.${sign(payload)}`;
+  return `${payload}.${signPayload(payload)}`;
 }
 
 export function verifyAdminToken(token: unknown): boolean {
@@ -49,7 +49,7 @@ export function verifyAdminToken(token: unknown): boolean {
   if (!Number.isFinite(exp) || exp < Date.now()) return false;
   let expected: string;
   try {
-    expected = sign(`${scope}.${expStr}`);
+    expected = signPayload(`${scope}.${expStr}`);
   } catch {
     return false;
   }

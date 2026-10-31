@@ -62,7 +62,7 @@ function SortableItemWrapper({
     <button
       {...attributes}
       {...listeners}
-      className="touch-none cursor-grab active:cursor-grabbing flex-shrink-0 p-1 text-[#4A4540] hover:text-[#8A8278] transition-colors"
+      className="touch-none cursor-grab active:cursor-grabbing flex-shrink-0 p-1 text-[color:var(--adm-faint)] hover:text-[color:var(--adm-muted)] transition-colors"
       aria-label="Drag to reorder"
       tabIndex={-1}
     >

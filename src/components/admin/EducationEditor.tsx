@@ -29,17 +29,17 @@ export function EducationEditor({
         items={data}
         onReorder={onChange}
         renderItem={(item, idx, dragHandle) => (
-          <div className="border border-[#272421] p-6 flex flex-col gap-4">
+          <div className="border border-[color:var(--adm-line)] p-6 flex flex-col gap-4">
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-2">
                 {dragHandle}
-                <span className="text-[#C8A96E] text-sm uppercase tracking-widest">
+                <span className="text-[color:var(--adm-accent)] text-sm uppercase tracking-widest">
                   Entry {idx + 1}
                 </span>
               </div>
               <button
                 onClick={() => onChange(data.filter((_, i) => i !== idx))}
-                className="text-sm text-[#4A4540] hover:text-red-400"
+                className="text-sm text-[color:var(--adm-faint)] hover:text-red-400"
               >
                 Remove
               </button>
@@ -81,7 +81,7 @@ export function EducationEditor({
       />
       <button
         onClick={addItem}
-        className="self-start text-sm border border-[#C8A96E] text-[#C8A96E] px-3 py-2 hover:bg-[#C8A96E] hover:text-[#0A0908] transition-colors uppercase tracking-widest"
+        className="self-start text-sm border border-[color:var(--adm-accent)] text-[color:var(--adm-accent)] px-3 py-2 hover:bg-[color:var(--adm-accent)] hover:text-[color:var(--adm-on-accent)] transition-colors uppercase tracking-widest"
       >
         + Add Education
       </button>

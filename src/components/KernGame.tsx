@@ -437,7 +437,7 @@ export function KernGame() {
 
   return (
     <div
-      className="relative overflow-hidden rounded-[2rem] border border-primary/20 bg-card/80 p-5 sm:p-8 md:p-10"
+      className="relative overflow-hidden border border-primary/20 bg-card/80 p-5 sm:p-8 md:p-10"
       style={{ boxShadow: "0 30px 80px -40px rgba(31,103,241,0.55)" }}
     >
       <Confetti active={showConfetti} />
