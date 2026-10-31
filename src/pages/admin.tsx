@@ -438,7 +438,7 @@ export default function Admin() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerSearch, setPickerSearch] = useState("");
   const [pickerType, setPickerType] = useState<AssetType>("all");
-  const pickerCallbackRef = useRef<((url: string) => void) | null>(null);
+  const pickerCallbackRef = useRef<Parameters<AssetPickerFn>[0] | null>(null);
   const mediaPrep = useMediaPrep();
 
   const handleLogout = () => {

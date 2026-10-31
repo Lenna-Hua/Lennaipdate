@@ -228,8 +228,9 @@ export function ContentProvider({ children }: { children: ReactNode }) {
 // Typed accessor. Pages call this with the same JSON they used to import
 // directly — that import becomes the per-section fallback so the
 // returned value is never undefined.
-export function useContent<T>(section: keyof ContentMap, fallback: T): T {
+export function useContent(section: keyof ContentMap): unknown;
+export function useContent<T>(section: keyof ContentMap, fallback: T): T;
+export function useContent<T>(section: keyof ContentMap, fallback?: T): unknown {
   const ctx = useContext(ContentCtx);
-  const value = ctx[section];
-  return (value as T) ?? fallback;
+  return ctx[section] ?? fallback;
 }

@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion, useScroll, useTransform, type Variants } from "framer-motion";
 import { Award } from "lucide-react";
 import aboutSeed from "@/data/about.json";
 import experienceSeed from "@/data/experience.json";
@@ -19,11 +19,11 @@ import type { About as AboutData, CommunityItem, EducationItem } from "@/compone
 const BLUE = "#1F67F1";
 const ACCENTS = [BLUE];
 
-const fadeLeft = {
+const fadeLeft: Variants = {
   hidden: { opacity: 0, x: -28 },
   show:   { opacity: 1, x: 0,  transition: { duration: 0.65, ease: [0.16, 1, 0.3, 1] } },
 };
-const fadeRight = {
+const fadeRight: Variants = {
   hidden: { opacity: 0, x: 28 },
   show:   { opacity: 1, x: 0,  transition: { duration: 0.65, ease: [0.16, 1, 0.3, 1] } },
 };
