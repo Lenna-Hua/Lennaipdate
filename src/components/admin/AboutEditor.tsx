@@ -2,6 +2,8 @@
  * About section editor — portrait, bio paragraphs, skills (JSON), and community entries.
  */
 import type { About, CommunityItem, SkillGroup } from "./types";
+import { DEFAULT_PROCESS_STEPS } from "@/components/ProcessStack";
+import { ProcessStepsEditor } from "./ProcessStepsEditor";
 import { TextInput, TextareaInput } from "./shared";
 import {
   UploadToLibraryDashed,
@@ -69,7 +71,7 @@ function CommunityEditor({
               onChange={(v) => update(idx, { organization: v })}
             />
             <TextInput
-              label="Period (optional — e.g. 2024 – Present)"
+              label="Period (optional: e.g. 2024 – Present)"
               value={item.period ?? ""}
               onChange={(v) => update(idx, { period: v })}
             />
@@ -207,7 +209,7 @@ export function AboutEditor({
           </div>
         ) : (
           <p className="text-[color:var(--adm-faint)] text-xs">
-            No portrait set — the About page will show a placeholder until you upload one.
+            No portrait set: the About page will show a placeholder until you upload one.
           </p>
         )}
       </div>
@@ -275,7 +277,7 @@ export function AboutEditor({
 
       <div className="flex flex-col gap-3">
         <label className="text-[color:var(--adm-muted)] text-sm uppercase tracking-widest">
-          Skills (JSON format — array of {"{category, items[]}"}
+          Skills (JSON format: array of {"{category, items[]}"}
           )
         </label>
         <textarea
@@ -290,6 +292,21 @@ export function AboutEditor({
           }}
           rows={12}
           className="w-full bg-[color:var(--adm-input)] border border-[color:var(--adm-line-strong)] text-[color:var(--adm-text)] py-2 px-3 text-sm font-mono focus:outline-none focus:border-[color:var(--adm-accent)] transition-colors resize-y"
+        />
+      </div>
+
+      <div className="flex flex-col gap-3 border border-[color:var(--adm-line)] p-4">
+        <label className="text-[color:var(--adm-muted)] text-sm uppercase tracking-widest">
+          Process / User Flow (Home &amp; About)
+        </label>
+        <p className="text-[color:var(--adm-faint)] text-xs leading-relaxed">
+          Customize the steps, card/box colors, and showcase style (Overlapping Card Stack vs User Flow Box → Arrow) displayed on the Homepage and About page.
+        </p>
+        <ProcessStepsEditor
+          steps={data.processSteps?.length ? data.processSteps : DEFAULT_PROCESS_STEPS}
+          layout={data.processLayout ?? "stack"}
+          onLayoutChange={(processLayout) => onChange({ ...data, processLayout })}
+          onChange={(processSteps) => onChange({ ...data, processSteps })}
         />
       </div>
 

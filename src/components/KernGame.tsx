@@ -71,9 +71,9 @@ function getScoreVibe(score: number): { label: string; color: string } {
 
 function getFunMessage(score: number): string {
   if (score >= 95) return "You have the eye. Typographers are jealous.";
-  if (score >= 85) return "Sharp kerning — nicely done!";
+  if (score >= 85) return "Sharp kerning, nicely done!";
   if (score >= 70) return "Getting there. Your eye is warming up.";
-  if (score >= 50) return "Not bad — keep nudging.";
+  if (score >= 50) return "Not bad. Keep nudging.";
   return "Those letters need a little love.";
 }
 
@@ -91,9 +91,9 @@ const DIFFICULTY_CONFIG: Record<
   Difficulty,
   { min: number; max: number; label: string; sublabel: string; icon: LucideIcon; color: string }
 > = {
-  easy: { min: 3, max: 4, label: "Beginner", sublabel: "3–4 letters", icon: Sprout, color: BRAND.teal },
-  medium: { min: 4, max: 5, label: "Designer", sublabel: "4–5 letters", icon: PenTool, color: BRAND.blue },
-  hard: { min: 5, max: 7, label: "Lead", sublabel: "5–7 letters", icon: Crown, color: BRAND.pink },
+  easy: { min: 3, max: 4, label: "Beginner", sublabel: "3 to 4 letters", icon: Sprout, color: BRAND.teal },
+  medium: { min: 4, max: 5, label: "Designer", sublabel: "4 to 5 letters", icon: PenTool, color: BRAND.blue },
+  hard: { min: 5, max: 7, label: "Lead", sublabel: "5 to 7 letters", icon: Crown, color: BRAND.pink },
 };
 
 const TIMER_DURATION = 30;
@@ -110,9 +110,9 @@ const LETTER_COLORS: [string, string][] = [
   ["#A5B4FC", "#6366F1"],
 ];
 
-/** Shrinks long words so they fit on phones. */
+/** Shrinks long words so they fit on all screens and container sizes. */
 function letterFontSize(len: number): string {
-  return `clamp(2.75rem, ${Math.round(120 / Math.max(3, len))}vw, 9rem)`;
+  return `clamp(1.85rem, min(${Math.round(85 / Math.max(3, len))}cqi, ${Math.round(70 / Math.max(3, len))}vw), 6.5rem)`;
 }
 
 // ── localStorage ──
@@ -216,7 +216,7 @@ const STICKERS: { Icon: LucideIcon; x: string; y: string; size: number; color: s
 function Stickers() {
   const reduce = useReducedMotion();
   return (
-    <div aria-hidden className="pointer-events-none absolute inset-0 hidden sm:block">
+    <div aria-hidden className="pointer-events-none absolute inset-0 hidden @2xl:block">
       {STICKERS.map(({ Icon, x, y, size, color, delay }, i) => (
         <motion.span
           key={i}
@@ -437,7 +437,7 @@ export function KernGame() {
 
   return (
     <div
-      className="relative overflow-hidden border border-primary/20 bg-card/80 p-5 sm:p-8 md:p-10"
+      className="@container relative overflow-hidden border border-primary/20 bg-card/80 p-4 sm:p-6 md:p-8"
       style={{ boxShadow: "0 30px 80px -40px rgba(31,103,241,0.55)" }}
     >
       <Confetti active={showConfetti} />
@@ -551,7 +551,7 @@ function IntroScreen({
         <span className="text-xs uppercase tracking-[0.25em] font-sans font-bold text-muted-foreground">
           Pick your level
         </span>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3" role="radiogroup" aria-label="Difficulty">
+        <div className="grid grid-cols-1 @sm:grid-cols-3 gap-3" role="radiogroup" aria-label="Difficulty">
           {(Object.keys(DIFFICULTY_CONFIG) as Difficulty[]).map((d) => {
             const c = DIFFICULTY_CONFIG[d];
             const Icon = c.icon;
@@ -601,14 +601,14 @@ function IntroScreen({
         </div>
       </div>
 
-      <div className="relative rounded-2xl border border-border/70 bg-background/60 px-5 py-5 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 overflow-hidden">
-        <div className="relative flex items-end select-none shrink-0 pr-8" aria-hidden>
+      <div className="relative rounded-2xl border border-border/70 bg-background/60 px-4 py-4 sm:px-5 sm:py-5 flex flex-col @md:flex-row @md:items-center gap-4 @md:gap-6 overflow-hidden">
+        <div className="relative flex items-end select-none shrink-0 pr-6" aria-hidden>
           {["K", "E", "R", "N"].map((l, i) => (
             <motion.span
               key={l}
-              className="font-display font-black text-5xl md:text-6xl leading-none bg-clip-text text-transparent"
+              className="font-display font-black text-3xl sm:text-4xl @md:text-5xl leading-none bg-clip-text text-transparent"
               style={{ backgroundImage: `linear-gradient(180deg, ${LETTER_COLORS[i][0]}, ${LETTER_COLORS[i][1]})` }}
-              animate={reduce ? undefined : { x: [0, (i - 1.5) * 9, (i - 1.5) * 9, 0] }}
+              animate={reduce ? undefined : { x: [0, (i - 1.5) * 8, (i - 1.5) * 8, 0] }}
               transition={{ duration: 2.8, times: [0, 0.3, 0.6, 1], repeat: Infinity, ease: "easeInOut" }}
             >
               {l}
@@ -616,13 +616,13 @@ function IntroScreen({
           ))}
           <motion.span
             className="absolute right-0 bottom-0 text-foreground/70"
-            animate={reduce ? undefined : { x: [0, 8, 8, 0], y: [0, -2, -2, 0] }}
+            animate={reduce ? undefined : { x: [0, 6, 6, 0], y: [0, -2, -2, 0] }}
             transition={{ duration: 2.8, times: [0, 0.3, 0.6, 1], repeat: Infinity, ease: "easeInOut" }}
           >
-            <Hand size={22} />
+            <Hand size={20} />
           </motion.span>
         </div>
-        <p className="text-foreground/75 text-sm font-sans leading-relaxed">
+        <p className="min-w-0 flex-1 text-foreground/75 text-sm font-sans leading-relaxed">
           <strong className="text-foreground">Drag each letter</strong> left or right until the gaps look even to your eye.
           On a keyboard, focus a letter and use the ← → keys.
         </p>

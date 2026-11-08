@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { Readable } from "node:stream";
 import type { ReadableStream as NodeReadableStream } from "node:stream/web";
 import { query } from "../../lib/db.js";
+import { handleCors } from "../../lib/cors.js";
 
 export const config = { maxDuration: 60 };
 
@@ -23,6 +24,7 @@ function isBlobHost(rawUrl: string): boolean {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (handleCors(req, res)) return;
   const filename = req.query["filename"] as string;
   if (!filename) {
     res.status(400).json({ error: "Missing filename" });

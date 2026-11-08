@@ -46,7 +46,8 @@ export default function StudioPage() {
     >
       <MediaLightbox items={artworks} activeId={openId} onChange={setOpenId} />
 
-      <SplitShowcase
+      <div className="relative">
+        <SplitShowcase
         asideTop={
           <>
             {studio.eyebrow && (
@@ -70,14 +71,15 @@ export default function StudioPage() {
         }
       >
         {tiles.length > 0 ? (
-          <ParallaxMasonry items={tiles} onOpen={setOpenId} />
+          <ParallaxMasonry items={tiles} onOpen={setOpenId} size={studio.artworksCardSize} variant="studio" />
         ) : (
           <p className="text-sm text-muted-foreground">New pieces are on the way.</p>
         )}
       </SplitShowcase>
+    </div>
 
       {studio.showPlay && (
-        <section id="play" className="grid gap-8 md:grid-cols-[minmax(15rem,26%)_1fr] border-t border-border pt-8 scroll-mt-40">
+        <section id="play" className="grid gap-8 lg:grid-cols-[minmax(14rem,22%)_1fr] border-t border-border pt-8 scroll-mt-40">
           <div className="flex flex-col gap-2">
             <span className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">{studio.playEyebrow}</span>
             <h2 className="font-display font-black uppercase tracking-tight leading-[0.9] text-4xl md:text-5xl">

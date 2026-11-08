@@ -201,12 +201,27 @@ body {
 /* ── Site chrome geometry (vertical wordmark rail + top bar) ── */
 :root {
   --rail-w: 4.5rem;
-  --chrome-h: 4rem;
+  --chrome-h: 4.25rem;
 }
 @media (min-width: 768px) {
   :root {
-    --chrome-h: 9.5rem;
+    --rail-w: 4.75rem;
+    --chrome-h: 4.75rem;
   }
+}
+
+/* Case-study sections are scroll targets from the contents list. */
+[id^="cs-"] {
+  scroll-margin-top: calc(var(--chrome-h) + 1rem);
+}
+
+/* ── Avatar white contour outline in dark mode for maximum contrast ── */
+html.dark .avatar-dark-outline {
+  filter:
+    drop-shadow(0.75px 0 0 rgba(255, 255, 255, 0.75))
+    drop-shadow(-0.75px 0 0 rgba(255, 255, 255, 0.75))
+    drop-shadow(0 0.75px 0 rgba(255, 255, 255, 0.75))
+    drop-shadow(0 -0.75px 0 rgba(255, 255, 255, 0.75));
 }
 
 /* ── Scrollbar ─────────────────────────────────────── */
@@ -220,50 +235,72 @@ body {
   height: 0 !important;
 }
 
-/* Thin, minimal scrollbar globally (Firefox + WebKit). Use !important to
-   defeat any third-party UI library scrollbar styling (e.g. Radix, shadcn). */
-html, body, * {
-  scrollbar-width: thin !important;
-  scrollbar-color: hsl(var(--foreground) / 0.25) transparent !important;
+/* Thin, minimal scrollbar on scrollable containers (Firefox + WebKit). */
+html,
+body,
+.overflow-auto,
+.overflow-y-auto,
+.overflow-x-auto,
+[data-lenis-prevent] {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--foreground) / 0.25) transparent;
 }
 html::-webkit-scrollbar,
 body::-webkit-scrollbar,
-*::-webkit-scrollbar {
-  width: 6px !important;
-  height: 6px !important;
-  background: transparent !important;
+.overflow-auto::-webkit-scrollbar,
+.overflow-y-auto::-webkit-scrollbar,
+.overflow-x-auto::-webkit-scrollbar,
+[data-lenis-prevent]::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+  background: transparent;
 }
 html::-webkit-scrollbar-track,
 body::-webkit-scrollbar-track,
-*::-webkit-scrollbar-track {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
+.overflow-auto::-webkit-scrollbar-track,
+.overflow-y-auto::-webkit-scrollbar-track,
+.overflow-x-auto::-webkit-scrollbar-track,
+[data-lenis-prevent]::-webkit-scrollbar-track {
+  background: transparent;
+  border: none;
+  box-shadow: none;
 }
 html::-webkit-scrollbar-thumb,
 body::-webkit-scrollbar-thumb,
-*::-webkit-scrollbar-thumb {
-  background-color: hsl(var(--foreground) / 0.25) !important;
-  border-radius: 9999px !important;
-  border: none !important;
-  box-shadow: none !important;
+.overflow-auto::-webkit-scrollbar-thumb,
+.overflow-y-auto::-webkit-scrollbar-thumb,
+.overflow-x-auto::-webkit-scrollbar-thumb,
+[data-lenis-prevent]::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--foreground) / 0.25);
+  border-radius: 9999px;
+  border: none;
+  box-shadow: none;
 }
 html::-webkit-scrollbar-thumb:hover,
 body::-webkit-scrollbar-thumb:hover,
-*::-webkit-scrollbar-thumb:hover {
-  background-color: hsl(var(--foreground) / 0.45) !important;
+.overflow-auto::-webkit-scrollbar-thumb:hover,
+.overflow-y-auto::-webkit-scrollbar-thumb:hover,
+.overflow-x-auto::-webkit-scrollbar-thumb:hover,
+[data-lenis-prevent]::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--foreground) / 0.45);
 }
 html::-webkit-scrollbar-corner,
 body::-webkit-scrollbar-corner,
-*::-webkit-scrollbar-corner {
-  background: transparent !important;
+.overflow-auto::-webkit-scrollbar-corner,
+.overflow-y-auto::-webkit-scrollbar-corner,
+.overflow-x-auto::-webkit-scrollbar-corner,
+[data-lenis-prevent]::-webkit-scrollbar-corner {
+  background: transparent;
 }
 html::-webkit-scrollbar-button,
 body::-webkit-scrollbar-button,
-*::-webkit-scrollbar-button {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
+.overflow-auto::-webkit-scrollbar-button,
+.overflow-y-auto::-webkit-scrollbar-button,
+.overflow-x-auto::-webkit-scrollbar-button,
+[data-lenis-prevent]::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 /* ── Custom Cursor ─────────────────────────────────── */
@@ -298,14 +335,20 @@ body::-webkit-scrollbar-button,
 }
 
 /* ── Grain Overlay ─────────────────────────────────── */
+/* Tiled 180x180 SVG pattern on its own GPU layer so the browser never
+   stretches/re-rasterizes <feTurbulence> across the full viewport on scroll. */
 .grain-overlay {
   position: fixed;
-  top: 0; left: 0;
-  width: 100vw; height: 100vh;
+  inset: 0;
   pointer-events: none;
   z-index: 9997;
   opacity: 0.02;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+  background-repeat: repeat;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  contain: strict;
 }
 
 html.light .grain-overlay { opacity: 0.012; }
@@ -396,6 +439,24 @@ html.dark .grain-overlay { opacity: 0.035; }
 /* ── Display Font Utility ────────────────────────────── */
 .font-display {
   font-family: var(--app-font-display);
+}
+
+/* Admin "Fonts & look" headline tuning. Unlayered so it beats Tailwind's
+   per-heading leading-/tracking-/font- utilities only when a value is set. */
+html[data-display-scale] .font-display:not(.font-display .font-display) {
+  zoom: var(--app-display-scale);
+}
+html[data-display-leading] .font-display {
+  line-height: var(--app-display-leading);
+}
+html[data-display-tracking] .font-display {
+  letter-spacing: var(--app-display-tracking);
+}
+html[data-display-weight] .font-display {
+  font-weight: var(--app-display-weight);
+}
+html[data-display-case="none"] .font-display {
+  text-transform: none;
 }
 
 /* ── Studio scrapbook ────────────────────────────────── */

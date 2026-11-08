@@ -470,7 +470,7 @@ export default function Admin() {
       }
       setMessages(body.messages ?? []);
     } catch {
-      setMessagesError("Network error — couldn't reach the server.");
+      setMessagesError("Network error: couldn't reach the server.");
     } finally {
       setMessagesLoading(false);
     }
@@ -544,7 +544,7 @@ export default function Admin() {
       setAssets(body.assets ?? []);
       setAssetsTotal(body.total ?? body.assets?.length ?? 0);
     } catch {
-      setAssetsError("Network error — couldn't reach the server.");
+      setAssetsError("Network error: couldn't reach the server.");
     } finally {
       setAssetsLoading(false);
     }
@@ -623,7 +623,7 @@ export default function Admin() {
     const maxBytes = Math.min(maxAssetBytesForFileType(file.type), MAX_FUNCTION_UPLOAD_BYTES);
     if (file.size > maxBytes) {
       throw new Error(
-        `Replace supports files up to ${formatMaxMb(maxBytes)} MB — upload this one as a new asset instead.`,
+        `Replace supports files up to ${formatMaxMb(maxBytes)} MB: upload this one as a new asset instead.`,
       );
     }
     const dims = await readAssetDimensions(file);
@@ -771,7 +771,7 @@ export default function Admin() {
   const handleMigrateInlineGalleryMedia = async () => {
     if (!sessionToken) {
       handleLogout();
-      setSavedMsg("Session expired — please log in again.");
+      setSavedMsg("Session expired: please log in again.");
       setTimeout(() => setSavedMsg(""), 4000);
       return;
     }
@@ -822,7 +822,7 @@ export default function Admin() {
       }
 
       if (converted === 0) {
-        setSavedMsg("No inline gallery media found — nothing to migrate.");
+        setSavedMsg("No inline gallery media found: nothing to migrate.");
         setTimeout(() => setSavedMsg(""), 3500);
         return;
       }
@@ -837,7 +837,7 @@ export default function Admin() {
       setTimeout(() => setSavedMsg(""), 7000);
     } catch (e) {
       const message = e instanceof Error ? e.message : "Migration failed";
-      setSavedMsg(`Error: inline media migration failed — ${message}`);
+      setSavedMsg(`Error: inline media migration failed: ${message}`);
       setTimeout(() => setSavedMsg(""), 7000);
     } finally {
       setIsMigratingInlineMedia(false);
@@ -895,7 +895,7 @@ export default function Admin() {
     }
     if (!sessionToken) {
       handleLogout();
-      setSavedMsg("Session expired — please log in again.");
+      setSavedMsg("Session expired: please log in again.");
       setTimeout(() => setSavedMsg(""), 4000);
       return;
     }
@@ -956,11 +956,11 @@ export default function Admin() {
         if (!res.ok) {
           if (res.status === 401) {
             handleLogout();
-            setSavedMsg("Unauthorized — please log in again.");
+            setSavedMsg("Unauthorized: please log in again.");
           } else {
             const detail = body.error || rawText || res.statusText || `HTTP ${res.status}`;
             const savedNote = savedSections.length > 0
-              ? ` (${savedSections.length} sections already saved — site may be partially updated)`
+              ? ` (${savedSections.length} sections already saved: site may be partially updated)`
               : "";
             setSavedMsg(`Error: ${detail} (section: ${section})${savedNote}`);
           }
@@ -990,7 +990,7 @@ export default function Admin() {
       );
       setTimeout(() => setSavedMsg(""), 4500);
     } catch {
-      setSavedMsg("Network error — check the API server is running.");
+      setSavedMsg("Network error: check the API server is running.");
       setTimeout(() => setSavedMsg(""), 4000);
     } finally {
       setIsSaving(false);
@@ -1029,7 +1029,7 @@ export default function Admin() {
     const base = import.meta.env.BASE_URL.replace(/\/$/, "");
     const url = `${window.location.origin}${base}${path}?preview=1`;
     window.open(url, "_blank", "noopener,noreferrer");
-    setSavedMsg("Draft preview opened — yellow banner means not published yet");
+    setSavedMsg("Draft preview opened: yellow banner means not published yet");
     setTimeout(() => setSavedMsg(""), 4000);
   };
 
@@ -1258,7 +1258,7 @@ export default function Admin() {
             </button>
           </div>
           {dryRunResults.items.length === 0 ? (
-            <p className="text-emerald-400/70 text-sm">No inline media found — nothing to migrate.</p>
+            <p className="text-emerald-400/70 text-sm">No inline media found: nothing to migrate.</p>
           ) : (
             <div className="space-y-1">
               {dryRunResults.items.map((item, i) => (

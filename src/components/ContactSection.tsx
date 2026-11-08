@@ -1,22 +1,28 @@
-import { useState } from "react";
-import { motion, type Variants } from "framer-motion";
+import { useState, type ReactNode } from "react";
+import { motion } from "framer-motion";
 import { Link } from "wouter";
 import contactSeed from "@/data/contact.json";
 import { useContent } from "@/lib/use-content";
-
-const BLUE = "#1F67F1";
-
-const fadeUp: Variants = {
-  hidden: { opacity: 0, y: 28 },
-  show:   { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] } },
-};
-const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.1 } } };
-const VP = { once: true, margin: "-60px" };
+import { useFloatIn } from "@/lib/motion";
+import { EditorialSection, Eyebrow } from "@/components/layout/SplitShowcase";
 
 type Status = "idle" | "sending" | "success" | "error";
 
+const FIELD_CLASS =
+  "w-full bg-transparent border-0 border-b border-border text-foreground py-3 text-base placeholder:text-muted-foreground/60 focus:outline-none focus:border-primary transition-colors disabled:opacity-60";
+
+function InfoRow({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="grid grid-cols-[7rem_1fr] gap-4 border-t border-border py-3">
+      <Eyebrow className="pt-1">{label}</Eyebrow>
+      <div className="min-w-0 flex flex-col gap-1">{children}</div>
+    </div>
+  );
+}
+
 export function ContactSection() {
   const contactData = useContent("contact", contactSeed) as typeof contactSeed;
+  const floatIn = useFloatIn();
   const [form, setForm] = useState({ name: "", email: "", message: "" });
   const [status, setStatus] = useState<Status>("idle");
   const [errorMsg, setErrorMsg] = useState("");
@@ -63,187 +69,79 @@ export function ContactSection() {
     }
   }
 
+  const socials = (contactData.socials ?? []).filter(
+    ({ label, href }) => (label ?? "").trim() && (href ?? "").trim(),
+  );
+  const linkClass = "w-max max-w-full text-base text-foreground hover:text-primary transition-colors break-all";
+
   return (
-    <section
+    <EditorialSection
       id="contact"
-      className="w-full flex flex-col gap-12 pt-12 scroll-mt-28"
-      style={{ borderTop: `2px solid ${BLUE}` }}
+      eyebrow="Get in touch"
+      heading="Let's Talk"
+      aside={
+        <p className="mt-4 inline-flex items-center gap-2 text-sm text-muted-foreground">
+          <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" aria-hidden />
+          Available for freelance projects
+        </p>
+      }
     >
-      <motion.div
-        variants={fadeUp} initial="hidden" whileInView="show" viewport={VP}
-        className="flex flex-col gap-4"
-      >
-        <span
-          className="text-sm uppercase tracking-[0.5em] font-sans font-bold w-max px-3 py-1 rounded-full"
-          style={{ color: BLUE, background: BLUE + "22", border: `1px solid ${BLUE}44` }}
-        >
-          Get in Touch
-        </span>
-        <h2
-          className="font-display font-black uppercase leading-[0.88] tracking-tight"
-          style={{ fontSize: "clamp(2.75rem,8vw,6.5rem)", color: BLUE }}
-        >
-          Let's Talk
-        </h2>
-      </motion.div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24">
-
-        {/* ── Contact Info ── */}
-        <motion.div
-          variants={stagger} initial="hidden" whileInView="show" viewport={VP}
-          className="flex flex-col gap-8"
-        >
-          {/* Email block */}
+      <div className="grid gap-14 lg:grid-cols-2 lg:gap-16">
+        <motion.div {...floatIn} className="flex flex-col">
           {contactData.email?.trim() && (
-            <motion.div
-              variants={fadeUp}
-              className="flex flex-col gap-3 p-6 rounded-xl"
-              style={{ background: BLUE + "14", border: `1.5px solid ${BLUE}40` }}
-            >
-              <h3
-                className="uppercase tracking-widest text-sm font-sans font-bold"
-                style={{ color: BLUE }}
-              >
-                General Inquiries
-              </h3>
-              <a
-                href={`mailto:${contactData.email}`}
-                className="font-display font-black uppercase text-2xl md:text-3xl text-foreground hover:opacity-75 transition-opacity leading-tight tracking-tight"
-              >
+            <InfoRow label="Inquiries">
+              <a href={`mailto:${contactData.email}`} className={linkClass}>
                 {contactData.email}
               </a>
-            </motion.div>
+            </InfoRow>
           )}
-
-          {/* Phone block */}
           {contactData.phone?.trim() && (
-            <motion.div
-              variants={fadeUp}
-              className="flex flex-col gap-3 p-6 rounded-xl"
-              style={{ background: BLUE + "14", border: `1.5px solid ${BLUE}40` }}
-            >
-              <h3
-                className="uppercase tracking-widest text-sm font-sans font-bold"
-                style={{ color: BLUE }}
-              >
-                Phone
-              </h3>
-              <a
-                href={`tel:${contactData.phone.replace(/[^+\d]/g, "")}`}
-                className="font-display font-black uppercase text-2xl md:text-3xl text-foreground hover:opacity-75 transition-opacity leading-tight tracking-tight"
-              >
+            <InfoRow label="Phone">
+              <a href={`tel:${contactData.phone.replace(/[^+\d]/g, "")}`} className={linkClass}>
                 {contactData.phone}
               </a>
-            </motion.div>
+            </InfoRow>
           )}
-
-          {/* Location block */}
           {contactData.location?.trim() && (
-            <motion.div
-              variants={fadeUp}
-              className="flex flex-col gap-3 p-6 rounded-xl"
-              style={{ background: BLUE + "14", border: `1.5px solid ${BLUE}40` }}
-            >
-              <h3
-                className="uppercase tracking-widest text-sm font-sans font-bold"
-                style={{ color: BLUE }}
-              >
-                Location
-              </h3>
-              <p className="text-foreground text-lg font-sans font-medium">
-                {contactData.location}
-                <span className="block text-muted-foreground text-sm font-normal mt-0.5">EST Timezone · Open to Remote</span>
-              </p>
-            </motion.div>
+            <InfoRow label="Location">
+              <span className="text-base text-foreground">{contactData.location}</span>
+              <span className="text-sm text-muted-foreground">EST Timezone · Open to Remote</span>
+            </InfoRow>
           )}
-
-          {/* Social block */}
-          {(() => {
-            const validSocials = (contactData.socials ?? []).filter(
-              ({ label, href }) => (label ?? "").trim() && (href ?? "").trim(),
-            );
-            if (validSocials.length === 0) return null;
-            return (
-              <motion.div variants={fadeUp} className="flex flex-col gap-4">
-                <h3
-                  className="uppercase tracking-widest text-sm font-sans font-bold"
-                  style={{ color: BLUE }}
-                >
-                  Find Me
-                </h3>
-                <div className="flex flex-wrap gap-3">
-                  {validSocials.map(({ label, href }) => (
-                    <a
-                      key={label}
-                      href={href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-sans text-sm font-medium px-5 py-2.5 rounded-full transition-opacity hover:opacity-75"
-                      style={{ background: BLUE + "22", color: BLUE, border: `1.5px solid ${BLUE}55` }}
-                    >
-                      {label}
-                    </a>
-                  ))}
-                </div>
-              </motion.div>
-            );
-          })()}
-
-          {/* Availability badge */}
-          <motion.div variants={fadeUp} className="flex items-center gap-3 mt-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-green-400 animate-pulse" />
-            <span className="text-sm font-sans text-muted-foreground">Available for freelance projects</span>
-          </motion.div>
+          {socials.length > 0 && (
+            <InfoRow label="Elsewhere">
+              {socials.map(({ label, href }) => (
+                <a key={label} href={href} target="_blank" rel="noopener noreferrer" className={linkClass}>
+                  {label} <span aria-hidden className="text-muted-foreground">↗</span>
+                </a>
+              ))}
+            </InfoRow>
+          )}
+          <div className="border-t border-border" />
         </motion.div>
 
-        {/* ── Contact Form ── */}
-        <motion.div
-          initial={{ opacity: 0, y: 28 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={VP}
-          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay: 0.15 }}
-          className="p-8 md:p-10 rounded-2xl"
-          style={{ background: BLUE + "0E", border: `2px solid ${BLUE}35` }}
-        >
+        <motion.div {...floatIn}>
           {status === "success" ? (
-            <motion.div
-              role="status"
-              aria-live="polite"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="flex flex-col items-center justify-center gap-6 py-16 text-center"
-            >
-              <div
-                className="w-16 h-16 rounded-full flex items-center justify-center text-3xl"
-                style={{ background: BLUE + "22", border: `2px solid ${BLUE}` }}
-              >
-                ✦
-              </div>
-              <div>
-                <p className="font-display font-black uppercase text-2xl" style={{ color: BLUE }}>Message sent!</p>
-                <p className="text-muted-foreground font-sans text-sm mt-2">I'll get back to you as soon as possible.</p>
-              </div>
+            <div role="status" aria-live="polite" className="flex flex-col gap-4 border-t border-border pt-6">
+              <p className="font-display font-black uppercase tracking-tight text-3xl text-foreground">Message sent</p>
+              <p className="text-sm text-muted-foreground">I'll get back to you as soon as possible.</p>
               <button
+                type="button"
                 onClick={() => setStatus("idle")}
-                className="text-sm font-sans uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4"
+                className="w-max text-xs uppercase tracking-[0.2em] text-foreground underline underline-offset-4 hover:text-primary transition-colors"
               >
                 Send another
               </button>
-            </motion.div>
+            </div>
           ) : (
-            <form onSubmit={handleSubmit} className="flex flex-col gap-8">
+            <form onSubmit={handleSubmit} className="flex flex-col gap-7">
               {[
-                { id: "name",  label: "Name",  type: "text"  },
+                { id: "name", label: "Name", type: "text" },
                 { id: "email", label: "Email", type: "email" },
               ].map(({ id, label, type }) => (
-                <div key={id} className="flex flex-col gap-2">
-                  <label
-                    htmlFor={id}
-                    className="text-sm uppercase tracking-widest font-sans font-bold"
-                    style={{ color: BLUE }}
-                  >
-                    {label} <span className="text-red-500" aria-hidden="true">*</span>
+                <div key={id} className="flex flex-col">
+                  <label htmlFor={id} className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+                    {label} <span className="text-primary" aria-hidden="true">*</span>
                     <span className="sr-only">(required)</span>
                   </label>
                   <input
@@ -252,23 +150,16 @@ export function ContactSection() {
                     name={id}
                     value={form[id as keyof typeof form]}
                     onChange={handleChange}
-                    className="bg-transparent border-b-2 text-foreground py-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-colors font-sans text-base"
-                    style={{ borderColor: BLUE + "55" }}
-                    onFocus={e => (e.currentTarget.style.borderColor = BLUE)}
-                    onBlur={e  => (e.currentTarget.style.borderColor = BLUE + "55")}
+                    className={FIELD_CLASS}
                     required
                     disabled={status === "sending"}
                   />
                 </div>
               ))}
 
-              <div className="flex flex-col gap-2">
-                <label
-                  htmlFor="message"
-                  className="text-sm uppercase tracking-widest font-sans font-bold"
-                  style={{ color: BLUE }}
-                >
-                  Message <span className="text-red-500" aria-hidden="true">*</span>
+              <div className="flex flex-col">
+                <label htmlFor="message" className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+                  Message <span className="text-primary" aria-hidden="true">*</span>
                   <span className="sr-only">(required)</span>
                 </label>
                 <textarea
@@ -277,40 +168,39 @@ export function ContactSection() {
                   rows={5}
                   value={form.message}
                   onChange={handleChange}
-                  className="bg-transparent border-b-2 text-foreground py-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-colors resize-none font-sans text-base"
-                  style={{ borderColor: BLUE + "55" }}
-                  onFocus={e => (e.currentTarget.style.borderColor = BLUE)}
-                  onBlur={e  => (e.currentTarget.style.borderColor = BLUE + "55")}
+                  className={`${FIELD_CLASS} resize-none`}
                   required
                   disabled={status === "sending"}
                 />
               </div>
 
               {status === "error" && (
-                <p role="alert" aria-live="assertive" className="text-sm font-sans text-red-400 -mt-4">
+                <p role="alert" aria-live="assertive" className="text-sm text-destructive -mt-3">
                   {errorMsg || "Something went wrong. Please try again."}
                 </p>
               )}
 
-              <button
-                type="submit"
-                disabled={status === "sending"}
-                className="mt-2 py-4 px-8 font-sans font-bold uppercase tracking-widest transition-all w-max rounded-full text-sm disabled:opacity-60 disabled:cursor-not-allowed hover:opacity-85"
-                style={{ background: BLUE, color: "#FFFFFF" }}
-              >
-                {status === "sending" ? "Sending…" : "Send Message ✦"}
-              </button>
-              <p className="text-xs text-muted-foreground font-sans leading-relaxed -mt-2">
-                Your name, email, and message are used only to reply to this inquiry. See the{" "}
-                <Link href="/privacy" className="underline underline-offset-4" style={{ color: BLUE }}>
-                  Privacy Policy
-                </Link>
-                .
-              </p>
+              <div className="flex flex-col gap-3">
+                <button
+                  type="submit"
+                  disabled={status === "sending"}
+                  className="group inline-flex w-max items-center gap-3 border border-foreground px-6 py-3 text-xs uppercase tracking-[0.2em] text-foreground hover:bg-foreground hover:text-background transition-colors disabled:opacity-60 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                >
+                  {status === "sending" ? "Sending…" : "Send message"}
+                  <span aria-hidden className="transition-transform group-hover:translate-x-1">→</span>
+                </button>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Your name, email, and message are used only to reply to this inquiry. See the{" "}
+                  <Link href="/privacy" className="underline underline-offset-4 hover:text-foreground">
+                    Privacy Policy
+                  </Link>
+                  .
+                </p>
+              </div>
             </form>
           )}
         </motion.div>
       </div>
-    </section>
+    </EditorialSection>
   );
 }

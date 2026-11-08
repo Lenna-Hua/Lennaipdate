@@ -240,7 +240,7 @@ export function parseBriefToProject(
   const text = brief.trim();
   if (!text) return { ok: false, error: "Paste a project brief first." };
   if (text.length < 20) {
-    return { ok: false, error: "Brief is too short — add role, problem, and what you did." };
+    return { ok: false, error: "Brief is too short: add role, problem, and what you did." };
   }
 
   const labeled = parseLabeledBlocks(text);

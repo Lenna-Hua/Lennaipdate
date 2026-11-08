@@ -1,23 +1,24 @@
 [
   {
     "id": "1",
-    "year": "2025 - 2026",
-    "degree": "Post-Graduation Course in User Experience Design",
-    "summary": "Applied user-centered design, user research, wireframing, prototyping, and usability testing to develop data-driven digital products.",
+    "year": "2025 to 2026",
+    "degree": "Postgraduate Course in User Experience Design",
+    "summary": "Applied user centered design, user research, wireframing, prototyping, and usability testing to develop data driven digital products.",
     "institution": "Humber College"
   },
   {
     "id": "2",
-    "year": "2024 - 2025",
-    "degree": "Post-Graduation Course in Event Management — Creative Design",
-    "summary": "Supported event planning, logistics coordination, and on-site execution while contributing to creative concept development and spatial experience design.",
+    "gpa": "3.9/4.0",
+    "year": "2024 to 2025",
+    "degree": "Postgraduate Course in Event Management, Creative Design",
+    "summary": "Supported event planning, logistics coordination, and on site execution while contributing to creative concept development and spatial experience design.",
     "institution": "Seneca College"
   },
   {
     "id": "3",
-    "year": "2019 - 2023",
+    "year": "2019 to 2023",
     "degree": "Bachelor of Digital Graphic Design",
-    "summary": "Built strong foundations in design principles and media production — including scriptwriting, storyboarding, UX fundamentals, and visual communication.",
+    "summary": "Built strong foundations in design principles and media production, including scriptwriting, storyboarding, UX fundamentals, and visual communication.",
     "institution": "Hoa Sen University, Vietnam"
   }
 ]

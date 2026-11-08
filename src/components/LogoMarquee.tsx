@@ -17,9 +17,9 @@ export function LogoMarquee({
   const duration = Math.max(12, speed);
 
   return (
-    <section className="flex flex-col gap-4 -mx-6 md:-mx-12 lg:-mx-16" aria-label={label || "Project logos"}>
+    <section className="flex flex-col gap-4 -mx-5 md:-mx-8 border-t border-border pt-8" aria-label={label || "Project logos"}>
       {label && (
-        <p className="px-6 md:px-12 lg:px-16 text-xs uppercase tracking-[0.4em] font-sans font-bold text-muted-foreground">
+        <p className="px-5 md:px-8 text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
           {label}
         </p>
       )}

@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import formidable from "formidable";
 import fs from "fs";
 import { isAdminRequest } from "../../../../lib/admin-auth.js";
+import { handleCors } from "../../../../lib/cors.js";
 import { removeAsset, renameAsset, replaceAsset } from "../../../../lib/assets-store.js";
 import {
   MAX_VIDEO_ASSET_BYTES,
@@ -73,6 +74,19 @@ async function readJsonBody(req: VercelRequest): Promise<Record<string, unknown>
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (handleCors(req, res)) return;
+  // Read Authorization header early — before any body parsing — so we can reject
+  // unauthenticated multipart uploads without writing temp files to disk.
+  // The token may also be embedded in multipart fields (legacy path), which is
+  // checked again below after parsing if no header token was supplied.
+  const headerToken = typeof req.headers["authorization"] === "string" &&
+    req.headers["authorization"].startsWith("Bearer ")
+    ? req.headers["authorization"].slice(7)
+    : undefined;
+  if (headerToken !== undefined && !isAdminRequest({ token: headerToken })) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
   if (req.method !== "POST") {
     res.status(405).json({ error: "Method not allowed" });
     return;

@@ -277,7 +277,7 @@ export function GalleryEditor({
             />
             {item.slug && slugConflict(item.slug, selectedIdx) && (
               <span className="text-red-400 text-xs">
-                Slug already used by another item — must be unique.
+                Slug already used by another item: must be unique.
               </span>
             )}
           </div>

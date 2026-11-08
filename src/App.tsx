@@ -24,7 +24,6 @@ const Privacy = lazy(() => import("@/pages/privacy"));
 const Terms = lazy(() => import("@/pages/terms"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 const Admin = lazy(() => import("@/pages/admin"));
-const VisualRedesignPreview = lazy(() => import("@/pages/preview/visual-redesign"));
 
 /**
  * Resets window scroll on every in-app navigation, and emulates
@@ -100,7 +99,11 @@ function ScrollManager() {
   return null;
 }
 
-function WithLayout({ children }: { children: React.ReactNode }) {
+function WithLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <>
       {/* Skip navigation link for keyboard users */}
@@ -179,9 +182,6 @@ function AppRoutes() {
       </Route>
       <Route path="/admin">
         <Suspense fallback={<PageLoading />}><Admin /></Suspense>
-      </Route>
-      <Route path="/preview/visual-redesign">
-        <WithLayout><PageTransition><Suspense fallback={<PageLoading />}><VisualRedesignPreview /></Suspense></PageTransition></WithLayout>
       </Route>
       <Route>
         <WithLayout><PageTransition><Suspense fallback={<PageLoading />}><NotFound /></Suspense></PageTransition></WithLayout>

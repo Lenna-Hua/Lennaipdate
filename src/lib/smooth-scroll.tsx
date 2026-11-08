@@ -1,34 +1,15 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { useLocation } from "wouter";
-import Lenis from "lenis";
-import "lenis/dist/lenis.css";
+import { createContext, useContext, useEffect, type ReactNode } from "react";
+import type Lenis from "lenis";
 
 const LenisContext = createContext<Lenis | null>(null);
 
-const REDUCED_QUERY = "(prefers-reduced-motion: reduce)";
-
-/** Lenis smooth scrolling for the public site. Admin keeps native scrolling. */
+/**
+ * Native browser scrolling wrapper.
+ * Keeps native hardware-accelerated compositor scrolling instead of intercepting
+ * wheel/trackpad events on the main thread with Lenis lerp damping.
+ */
 export function SmoothScroll({ children }: { children: ReactNode }) {
-  const [location] = useLocation();
-  const enabled = !location.startsWith("/admin");
-  const [lenis, setLenis] = useState<Lenis | null>(null);
-
-  useEffect(() => {
-    if (!enabled || window.matchMedia(REDUCED_QUERY).matches) return;
-    const instance = new Lenis({
-      lerp: 0.1,
-      autoRaf: true,
-      allowNestedScroll: true,
-      prevent: (node) => node.closest("[role='dialog'], [data-lenis-prevent]") !== null,
-    });
-    setLenis(instance);
-    return () => {
-      instance.destroy();
-      setLenis(null);
-    };
-  }, [enabled]);
-
-  return <LenisContext.Provider value={lenis}>{children}</LenisContext.Provider>;
+  return <LenisContext.Provider value={null}>{children}</LenisContext.Provider>;
 }
 
 export function useLenis(): Lenis | null {

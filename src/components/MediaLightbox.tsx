@@ -36,11 +36,25 @@ export function MediaLightbox({
   const reduce = useReducedMotion();
   const closeRef = useRef<HTMLButtonElement>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
+  const touchStartX = useRef<number | null>(null);
   useScrollLock(open);
 
   const step = (delta: number) => {
     if (!open || items.length < 2) return;
     onChange(items[(index + delta + items.length) % items.length].id);
+  };
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+    touchStartX.current = null;
+    if (Math.abs(deltaX) > 40) {
+      step(deltaX > 0 ? -1 : 1);
+    }
   };
 
   useEffect(() => {
@@ -73,7 +87,7 @@ export function MediaLightbox({
           role="dialog"
           aria-modal="true"
           aria-label={item.title}
-          className="fixed inset-0 z-[120] bg-background/85 backdrop-blur-md"
+          className="fixed inset-0 z-[120] bg-background/90 backdrop-blur-md"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -84,20 +98,21 @@ export function MediaLightbox({
             ref={closeRef}
             type="button"
             onClick={() => onChange(null)}
-            className="absolute top-5 right-6 z-10 text-xs uppercase tracking-[0.2em] text-foreground hover:text-primary transition-colors"
+            className="absolute top-5 right-6 z-30 text-xs uppercase tracking-[0.2em] text-foreground hover:text-primary transition-colors"
           >
             Close
           </button>
 
           {items.length > 1 && (
             <>
+              {/* Desktop flanking navigation buttons (hidden on mobile to prevent overlapping) */}
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   step(-1);
                 }}
-                className={`${navClass} left-2 md:left-4`}
+                className={`hidden md:block ${navClass} left-2 md:left-4`}
               >
                 Previous
               </button>
@@ -107,18 +122,48 @@ export function MediaLightbox({
                   e.stopPropagation();
                   step(1);
                 }}
-                className={`${navClass} right-2 md:right-4`}
+                className={`hidden md:block ${navClass} right-2 md:right-4`}
               >
                 Next
               </button>
+
+              {/* Mobile bottom navigation bar (never overlaps image) */}
+              <div
+                className="md:hidden absolute bottom-5 inset-x-0 z-30 flex items-center justify-between px-5 pointer-events-auto"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  type="button"
+                  onClick={() => step(-1)}
+                  className="px-3.5 py-2 text-xs uppercase tracking-[0.16em] text-foreground hover:text-primary active:scale-95 transition-all bg-background/90 backdrop-blur-md rounded-full border border-border shadow-sm flex items-center gap-1.5"
+                  aria-label="Previous item"
+                >
+                  <span aria-hidden>←</span> Prev
+                </button>
+                <span className="text-xs font-mono tabular-nums text-muted-foreground bg-background/70 backdrop-blur-sm px-2.5 py-1 rounded-full border border-border/40">
+                  {pad(index + 1)} / {pad(items.length)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => step(1)}
+                  className="px-3.5 py-2 text-xs uppercase tracking-[0.16em] text-foreground hover:text-primary active:scale-95 transition-all bg-background/90 backdrop-blur-md rounded-full border border-border shadow-sm flex items-center gap-1.5"
+                  aria-label="Next item"
+                >
+                  Next <span aria-hidden>→</span>
+                </button>
+              </div>
             </>
           )}
 
-          <div className="absolute inset-0 flex flex-col items-center justify-center px-14 md:px-28 py-16 pointer-events-none">
+          <div
+            className="absolute inset-0 flex flex-col items-center justify-center px-4 sm:px-8 md:px-28 pt-14 pb-24 md:py-16 pointer-events-none"
+            onTouchStart={onTouchStart}
+            onTouchEnd={onTouchEnd}
+          >
             <AnimatePresence mode="wait" initial={false}>
               <motion.div
                 key={item.id}
-                className="pointer-events-auto max-w-[min(1100px,100%)] flex flex-col"
+                className="pointer-events-auto max-w-[min(1100px,100%)] flex flex-col w-full sm:w-auto"
                 initial={reduce ? false : { opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={reduce ? undefined : { opacity: 0, scale: 0.98 }}
@@ -132,7 +177,7 @@ export function MediaLightbox({
                   poster={item.poster}
                   playback="loop"
                   loading="eager"
-                  className={embed ? "w-[min(1100px,80vw)]" : "block max-h-[72vh] w-auto max-w-full object-contain mx-auto"}
+                  className={embed ? "w-[min(1100px,80vw)]" : "block max-h-[58vh] sm:max-h-[68vh] md:max-h-[72vh] w-auto max-w-full object-contain mx-auto"}
                   style={embed ? { aspectRatio: embedAspect(embed) } : undefined}
                 />
                 <div className="mt-4 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 text-sm">
@@ -149,13 +194,13 @@ export function MediaLightbox({
                         {item.hrefLabel ?? "View project"} →
                       </Link>
                     )}
-                    <span className="text-xs tabular-nums text-muted-foreground">
+                    <span className="hidden md:inline text-xs tabular-nums text-muted-foreground">
                       {pad(index + 1)} / {pad(items.length)}
                     </span>
                   </div>
                 </div>
                 {item.description && (
-                  <p className="mt-2 max-w-xl text-sm text-muted-foreground leading-relaxed">{item.description}</p>
+                  <p className="mt-2 max-w-xl text-xs sm:text-sm text-muted-foreground leading-relaxed">{item.description}</p>
                 )}
               </motion.div>
             </AnimatePresence>

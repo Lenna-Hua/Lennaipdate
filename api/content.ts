@@ -16,6 +16,7 @@ import {
   redactProjectsForPublic,
   stripProjectSecrets,
 } from "../lib/project-redaction.js";
+import { handleCors } from "../lib/cors.js";
 
 export const config = { maxDuration: 15 };
 
@@ -88,15 +89,18 @@ async function handleCaseRead(req: VercelRequest, res: VercelResponse, slug: str
     res.status(404).json({ error: "Case study not found" });
     return;
   }
-  const unlocked =
-    !isProtectedProject(project) ||
-    verifyAdminToken(readAdminToken(req)) ||
-    hasUnlockToken(project, readUnlockTokens(req));
-  if (!unlocked) {
+  const access = !isProtectedProject(project)
+    ? "public"
+    : verifyAdminToken(readAdminToken(req))
+      ? "admin"
+      : hasUnlockToken(project, readUnlockTokens(req))
+        ? "unlock"
+        : null;
+  if (!access) {
     res.status(401).json({ error: "Password required", locked: true });
     return;
   }
-  res.json({ project: stripProjectSecrets(project) });
+  res.json({ project: stripProjectSecrets(project), access });
 }
 
 /** POST /api/content { slug, password } — trade the password for an unlock token. */
@@ -115,7 +119,7 @@ async function handleCaseUnlock(req: VercelRequest, res: VercelResponse) {
     return;
   }
   if (!isProtectedProject(project)) {
-    res.json({ project: stripProjectSecrets(project) });
+    res.json({ project: stripProjectSecrets(project), access: "public" });
     return;
   }
   const result = checkCaseStudyPassword(project, password);
@@ -129,10 +133,15 @@ async function handleCaseUnlock(req: VercelRequest, res: VercelResponse) {
     res.status(401).json({ error: "Incorrect password" });
     return;
   }
-  res.json({ project: stripProjectSecrets(project), token: issueUnlockToken(project) });
+  res.json({
+    project: stripProjectSecrets(project),
+    token: issueUnlockToken(project),
+    access: "unlock",
+  });
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (handleCors(req, res)) return;
   const caseSlug = req.query["case"];
   if (req.method === "POST" || typeof caseSlug === "string") {
     res.setHeader("Cache-Control", "private, no-store");

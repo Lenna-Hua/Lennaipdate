@@ -1,110 +1,131 @@
-import type { ReactElement } from "react";
+import type { ReactNode } from "react";
 import { Link } from "wouter";
 import identitySeed from "@/data/identity.json";
 import contactSeed from "@/data/contact.json";
 import { useContent } from "@/lib/use-content";
+import { scrollPageTo, useLenis } from "@/lib/smooth-scroll";
+import { Eyebrow, SPLIT_COLUMNS } from "@/components/layout/SplitShowcase";
 
 type Identity = typeof identitySeed;
 type Contact = typeof contactSeed;
 
+const FOOTER_MENU = [
+  { href: "/", label: "Home" },
+  { href: "/work", label: "Work" },
+  { href: "/studio", label: "Studio" },
+  { href: "/about", label: "About" },
+];
+
+const linkClass =
+  "w-max text-sm text-foreground hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+
+function FooterColumn({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Eyebrow className="mb-1">{label}</Eyebrow>
+      {children}
+    </div>
+  );
+}
+
 export function Footer() {
   const identity = useContent("identity", identitySeed) as Identity;
   const contact = useContent("contact", contactSeed) as Contact;
-
+  const lenis = useLenis();
   const year = new Date().getFullYear();
+  const email = contact.email?.trim() ?? "";
 
   const socials = (contact.socials ?? [])
     .map((s) => ({ label: (s.label ?? "").trim(), href: (s.href ?? "").trim() }))
     .filter((s) => s.label && s.href);
 
-  const phoneHref = contact.phone
-    ? `tel:${contact.phone.replace(/[^+\d]/g, "")}`
-    : "";
-
-  const linkClass =
-    "group inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm";
-  const underline =
-    "relative after:absolute after:left-0 after:bottom-[-2px] after:h-px after:w-full after:scale-x-0 after:origin-left after:bg-current after:transition-transform after:duration-300 group-hover:after:scale-x-100";
+  const phoneHref = contact.phone ? `tel:${contact.phone.replace(/[^+\d]/g, "")}` : "";
 
   return (
-    <footer className="mt-20 md:mt-28 border-t border-border/60">
-      <div className="py-12 md:py-14">
-        <div className="grid gap-10 md:gap-12 md:grid-cols-12">
+    <footer className="mt-28 md:mt-40 border-t border-border pt-8 flex flex-col gap-14 md:gap-20">
+      {email && (
+        <div className={`grid gap-4 ${SPLIT_COLUMNS} md:gap-8`}>
+          <Eyebrow>For inquiries</Eyebrow>
+          <a
+            href={`mailto:${email}`}
+            className="w-max max-w-full font-display font-black tracking-tight leading-[0.95] text-foreground hover:text-primary transition-colors break-all text-[clamp(1.9rem,5.5vw,5rem)]"
+          >
+            {email}
+            <span aria-hidden className="ml-3 inline-block text-primary">↗</span>
+          </a>
+        </div>
+      )}
 
-          {/* Identity */}
-          <div className="md:col-span-5 flex flex-col gap-3">
-            <p className="font-display font-black uppercase tracking-tight text-2xl md:text-3xl text-foreground leading-none">
-              {identity.name}
-            </p>
-            {identity.role && (
-              <p className="text-sm text-muted-foreground tracking-wide">
-                {identity.role}
-              </p>
-            )}
-            <p className="mt-4 text-xs uppercase tracking-[0.22em] text-muted-foreground/70">
-              Crafting digital goods since 2019
-            </p>
-          </div>
+      <div className={`grid gap-10 ${SPLIT_COLUMNS} md:gap-8`}>
+        <div className="flex flex-col gap-2">
+          <p className="font-display font-black uppercase tracking-tight leading-none text-2xl md:text-3xl text-foreground">
+            {identity.name}
+            <sup className="text-[0.45em] ml-0.5">©</sup>
+          </p>
+          {identity.role && <p className="text-sm text-muted-foreground">{identity.role}</p>}
+          <Eyebrow className="mt-3">Crafting digital goods since 2019</Eyebrow>
+        </div>
 
-          {/* Contact */}
-          <div className="md:col-span-4 flex flex-col gap-3">
-            <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground/60 mb-1">
-              Contact
-            </p>
-            {contact.email?.trim() && (
-              <a href={`mailto:${contact.email}`} className={linkClass}>
-                <span className={underline}>{contact.email}</span>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-8">
+          <FooterColumn label="Menu">
+            <nav aria-label="Footer" className="flex flex-col gap-1.5">
+              {FOOTER_MENU.map((l) => (
+                <Link
+                  key={l.href}
+                  href={l.href}
+                  className="w-max text-[16px] text-foreground hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                >
+                  {l.label}
+                </Link>
+              ))}
+            </nav>
+          </FooterColumn>
+
+          <FooterColumn label="Contact">
+            {email && (
+              <a href={`mailto:${email}`} className={`${linkClass} break-all`}>
+                {email}
               </a>
             )}
             {contact.phone?.trim() && (
               <a href={phoneHref} className={linkClass}>
-                <span className={underline}>{contact.phone}</span>
+                {contact.phone}
               </a>
             )}
-            {contact.location?.trim() && (
-              <span className="text-sm text-muted-foreground">
-                {contact.location}
-              </span>
-            )}
-          </div>
+            {contact.location?.trim() && <span className="text-sm text-muted-foreground">{contact.location}</span>}
+          </FooterColumn>
 
-          {/* Elsewhere */}
-          <div className="md:col-span-3 flex flex-col gap-3">
-            <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground/60 mb-1">
-              Elsewhere
-            </p>
-            {socials.map((s): ReactElement => (
-              <a
-                key={s.label}
-                href={s.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={linkClass}
-              >
-                <span className={underline}>{s.label}</span>
-                <span aria-hidden className="opacity-0 -translate-x-1 group-hover:opacity-60 group-hover:translate-x-0 transition-all duration-300">↗</span>
-              </a>
-            ))}
-            {socials.length === 0 && contact.email?.trim() && (
-              <a href={`mailto:${contact.email}`} className={linkClass}>
-                <span className={underline}>{contact.email}</span>
-              </a>
-            )}
-          </div>
+          {socials.length > 0 && (
+            <FooterColumn label="Elsewhere">
+              {socials.map((s) => (
+                <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer" className={linkClass}>
+                  {s.label} <span aria-hidden className="text-muted-foreground">↗</span>
+                </a>
+              ))}
+            </FooterColumn>
+          )}
         </div>
+      </div>
 
-        {/* Baseline strip */}
-        <div className="mt-12 pt-6 border-t border-border/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-muted-foreground/70">
-          <span>© {year} {identity.name}. All rights reserved.</span>
-          <nav aria-label="Legal" className="flex flex-wrap items-center gap-x-4 gap-y-1">
-            <Link href="/privacy" className="hover:text-foreground transition-colors">
-              Privacy Policy
-            </Link>
-            <Link href="/terms" className="hover:text-foreground transition-colors">
-              Terms of Use
-            </Link>
-          </nav>
-        </div>
+      <div className="border-t border-border pt-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+        <span>
+          © {year} {identity.name}. All rights reserved.
+        </span>
+        <nav aria-label="Legal" className="flex flex-wrap items-center gap-x-5 gap-y-1">
+          <Link href="/privacy" className="hover:text-foreground transition-colors">
+            Privacy Policy
+          </Link>
+          <Link href="/terms" className="hover:text-foreground transition-colors">
+            Terms of Use
+          </Link>
+          <button
+            type="button"
+            onClick={() => scrollPageTo(lenis, 0, { smooth: true })}
+            className="uppercase tracking-[0.2em] hover:text-foreground transition-colors"
+          >
+            Back to top ↑
+          </button>
+        </nav>
       </div>
     </footer>
   );

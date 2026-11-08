@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import projectsSeed from "@/data/projects.json";
-import gallerySeed from "@/data/gallery.json";
 import aboutSeed from "@/data/about.json";
 import identitySeed from "@/data/identity.json";
 import contactSeed from "@/data/contact.json";
@@ -12,8 +11,8 @@ import { useFloatIn } from "@/lib/motion";
 import type { CoverPlayback } from "@/components/CoverMedia";
 import { ParallaxMasonry, type MasonryItem } from "@/components/ParallaxMasonry";
 import { MediaLightbox, type LightboxItem } from "@/components/MediaLightbox";
-import { BigCount, SplitShowcase, TextLink } from "@/components/layout/SplitShowcase";
-import type { GalleryItem } from "@/components/admin/types";
+import { BigCount, SplitShowcase } from "@/components/layout/SplitShowcase";
+import { DEFAULT_PROCESS_STEPS, ProcessStack, type ProcessLayout, type ProcessStep } from "@/components/ProcessStack";
 
 type Project = (typeof projectsSeed)[number] & {
   archived?: boolean;
@@ -26,6 +25,14 @@ type HomeCopy = (typeof homepageSeed)["home"] & {
   heroMedia?: string;
   heroMediaAlt?: string;
   heroMediaMime?: string;
+  selectedWorkCardSize?: "md" | "lg" | "xl";
+  selectedWorkCardAspect?: "4/3" | "16/10" | "1/1" | "auto";
+  selectedWorkCardRoleTag?: "hover" | "hidden" | "always";
+  selectedWorkTitleDisplay?: "always" | "hover";
+  selectedWorkTitleFont?: string;
+  selectedWorkTitleSize?: "sm" | "md" | "lg" | "xl";
+  selectedWorkTitleWeight?: "normal" | "medium" | "bold" | "black";
+  selectedWorkTitleCase?: "uppercase" | "normal";
 };
 
 const HERO_MEDIA_ID = "hero-media";
@@ -47,7 +54,6 @@ function buildStats(location: string, yearsExperience = "3+") {
 export default function Home() {
   const floatSection = useFloatIn();
   const projectsData = useContent("projects", projectsSeed) as Project[];
-  const galleryData = useContent("gallery", gallerySeed) as GalleryItem[];
   const aboutData = useContent("about", aboutSeed) as typeof aboutSeed;
   const identityData = useContent("identity", identitySeed) as typeof identitySeed;
   const contactData = useContent("contact", contactSeed) as typeof contactSeed;
@@ -57,7 +63,7 @@ export default function Home() {
   const [openId, setOpenId] = useState<string | null>(null);
 
   const featuredWork = useMemo((): MasonryItem[] => {
-    const fromWork = projectsData
+    return projectsData
       .filter((p) => !p.archived && p.featured)
       .map((p) => ({
         id: p.id,
@@ -65,37 +71,17 @@ export default function Home() {
         mime: p.coverMime,
         poster: p.coverPoster,
         playback: p.coverPlayback,
+        hoverVideo: (p as { hoverVideo?: string }).hoverVideo,
         title: p.title,
+        shortTitle: (p as { shortTitle?: string }).shortTitle,
+        subtitle: p.subtitle,
+        role: p.type,
+        year: p.year,
+        protected: (p as { protected?: boolean }).protected,
         meta: joinMeta(p.type, p.year),
         href: `/work/${p.slug}`,
       }));
-    const workSlugs = new Set(projectsData.map((p) => p.slug));
-    const fromStudio = galleryData
-      .filter((g) => !g.archived && g.featured && !workSlugs.has(g.slug))
-      .map((g) => ({
-        id: g.id,
-        src: g.coverImage,
-        title: g.title,
-        meta: joinMeta(g.role || "Studio", g.year),
-        href: `/studio/${g.slug}`,
-      }));
-    return [...fromWork, ...fromStudio];
-  }, [projectsData, galleryData]);
-
-  const artworks = useMemo((): LightboxItem[] => {
-    if (hp.showStudioBand === false) return [];
-    return galleryData
-      .filter((g) => !g.archived && g.kind === "small")
-      .map((g) => ({
-        id: g.id,
-        src: g.coverImage,
-        title: g.title,
-        meta: joinMeta(g.role, g.year),
-        description: g.description,
-        href: g.images?.length ? `/studio/${g.slug}` : undefined,
-        hrefLabel: "All images",
-      }));
-  }, [galleryData, hp.showStudioBand]);
+  }, [projectsData]);
 
   const heroItem = useMemo(
     (): LightboxItem | null =>
@@ -106,15 +92,15 @@ export default function Home() {
   );
 
   const lightboxItems = useMemo(
-    () => (heroItem ? [heroItem, ...artworks] : artworks),
-    [heroItem, artworks],
+    () => (heroItem ? [heroItem] : []),
+    [heroItem],
   );
 
   const gridItems = useMemo((): MasonryItem[] => {
     const toTile = ({ id, src, title, meta, mime }: LightboxItem): MasonryItem => ({ id, src, title, meta, mime });
     const hero = heroItem ? [{ ...toTile(heroItem), playback: "loop" as const }] : [];
-    return [...hero, ...featuredWork, ...artworks.map(toTile)];
-  }, [heroItem, featuredWork, artworks]);
+    return [...hero, ...featuredWork];
+  }, [heroItem, featuredWork]);
 
   const stats = useMemo(
     () => buildStats(contactData.location, aboutData.yearsExperience ?? "3+"),
@@ -125,42 +111,48 @@ export default function Home() {
     <div className="w-full flex flex-col gap-28 md:gap-40">
       <MediaLightbox items={lightboxItems} activeId={openId} onChange={setOpenId} />
 
-      <SplitShowcase
-        asideTop={
-          <>
-            {hp.heroEyebrow && (
-              <span className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">{hp.heroEyebrow}</span>
-            )}
-            <h1 className="font-display font-black uppercase leading-[0.88] tracking-tight text-foreground text-[clamp(2.75rem,5vw,4.75rem)]">
-              {identityData.name}
-            </h1>
-            <BigCount value={featuredWork.length} label={hp.selectedWorkHeading} />
-          </>
-        }
-        asideBottom={
-          <>
-            <p className="max-w-sm text-sm md:text-[0.95rem] leading-relaxed text-foreground/80">{hp.heroIntro}</p>
-            <dl className="grid grid-cols-2 gap-x-6 gap-y-2 max-w-xs">
-              {stats.map((s) => (
-                <div key={s.label} className="flex items-baseline justify-between gap-2 border-t border-border pt-1.5">
-                  <dt className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">{s.label}</dt>
-                  <dd className="text-sm text-foreground">{s.value}</dd>
-                </div>
-              ))}
-            </dl>
-            <div className="flex flex-wrap gap-x-6 gap-y-2">
-              {hp.primaryCtaHref && <TextLink href={hp.primaryCtaHref}>{hp.primaryCtaLabel}</TextLink>}
-              {hp.secondaryCtaHref && <TextLink href={hp.secondaryCtaHref}>{hp.secondaryCtaLabel}</TextLink>}
-              <TextLink href="/work">{hp.selectedWorkLinkLabel}</TextLink>
-              {artworks.length > 0 && (
-                <TextLink href="/studio">{hp.studioLinkLabel?.trim() || "Visit Studio →"}</TextLink>
+      <div className="relative">
+        <SplitShowcase
+          asideTop={
+            <>
+              {hp.heroEyebrow && (
+                <span className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">{hp.heroEyebrow}</span>
               )}
-            </div>
-          </>
-        }
-      >
-        <ParallaxMasonry items={gridItems} onOpen={setOpenId} />
-      </SplitShowcase>
+              <h1 className="font-display font-black uppercase leading-[0.88] tracking-tight text-foreground text-[clamp(2.75rem,5vw,4.75rem)]">
+                {identityData.name}
+              </h1>
+              <BigCount value={featuredWork.length} label={hp.selectedWorkHeading} />
+            </>
+          }
+          asideBottom={
+            <>
+              <p className="max-w-sm text-sm md:text-[0.95rem] leading-relaxed text-foreground/80">{hp.heroIntro}</p>
+              <dl className="grid grid-cols-2 gap-x-6 gap-y-2 max-w-xs">
+                {stats.map((s) => (
+                  <div key={s.label} className="flex items-baseline justify-between gap-2 border-t border-border pt-1.5">
+                    <dt className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">{s.label}</dt>
+                    <dd className="text-sm text-foreground">{s.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </>
+          }
+        >
+          <ParallaxMasonry
+            items={gridItems}
+            onOpen={setOpenId}
+            variant="case-study"
+            size={hp.selectedWorkCardSize ?? "md"}
+            cardAspect={hp.selectedWorkCardAspect}
+            cardRoleTagMode={hp.selectedWorkCardRoleTag ?? "hidden"}
+            titleDisplayMode={hp.selectedWorkTitleDisplay ?? "always"}
+            titleFont={hp.selectedWorkTitleFont}
+            titleSize={hp.selectedWorkTitleSize}
+            titleWeight={hp.selectedWorkTitleWeight}
+            titleCase={hp.selectedWorkTitleCase}
+          />
+        </SplitShowcase>
+      </div>
 
       <motion.section
         {...floatSection}
@@ -172,14 +164,25 @@ export default function Home() {
             {hp.aboutHeading}
           </h2>
         </div>
-        <div className="max-w-2xl flex flex-col gap-6">
-          <p className="text-lg md:text-xl leading-relaxed text-foreground/85">{aboutData.bio[0]}</p>
-          <Link
-            href="/about"
-            className="w-max text-xs uppercase tracking-[0.2em] text-primary underline underline-offset-4"
-          >
-            {hp.aboutCtaLabel}
-          </Link>
+        <div className="min-w-0 flex flex-col gap-10">
+          <div className="max-w-2xl flex flex-col gap-6">
+            <p className="text-lg md:text-xl leading-relaxed text-foreground/85">{aboutData.bio[0]}</p>
+            <Link
+              href="/about"
+              className="w-max text-xs uppercase tracking-[0.2em] text-primary underline underline-offset-4"
+            >
+              {hp.aboutCtaLabel}
+            </Link>
+          </div>
+          <ProcessStack
+            steps={
+              ((aboutData as { processSteps?: ProcessStep[] }).processSteps?.length
+                ? (aboutData as { processSteps?: ProcessStep[] }).processSteps!
+                : DEFAULT_PROCESS_STEPS)
+            }
+            layout={(aboutData as { processLayout?: ProcessLayout }).processLayout ?? "stack"}
+            label="Design process"
+          />
         </div>
       </motion.section>
     </div>

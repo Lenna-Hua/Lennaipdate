@@ -66,7 +66,7 @@ export function EducationEditor({
               rows={3}
             />
             <TextInput
-              label="GPA / score (optional — e.g. 3.8 / 4.0)"
+              label="GPA / score (optional: e.g. 3.8 / 4.0)"
               value={item.gpa ?? ""}
               onChange={(v) => update(idx, { gpa: v })}
             />

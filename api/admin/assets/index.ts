@@ -4,6 +4,7 @@ import fs from "fs";
 import { head, del } from "@vercel/blob";
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { isAdminRequest } from "../../../lib/admin-auth.js";
+import { handleCors } from "../../../lib/cors.js";
 import { listAssets, uploadAsset, registerAsset } from "../../../lib/assets-store.js";
 import {
   MAX_VIDEO_ASSET_BYTES,
@@ -99,6 +100,7 @@ function readToken(req: VercelRequest): string | undefined {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (handleCors(req, res)) return;
   if (req.method === "GET") {
     if (!isAdminRequest({ token: readToken(req) })) {
       res.status(401).json({ error: "Unauthorized" });
@@ -206,6 +208,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const contentType = req.headers["content-type"] ?? "";
   if (contentType.includes("multipart/form-data")) {
+    // Auth check MUST come before parseMultipart() — formidable writes to /tmp
+    // immediately on parse, so an unauthenticated caller could write up to
+    // MAX_VIDEO_ASSET_BYTES to disk before being rejected.
+    const token = readToken(req);
+    if (!isAdminRequest({ token })) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
     let parsed: { fields: MultipartFields; files: MultipartFiles };
     try {
       parsed = await parseMultipart(req);
@@ -213,12 +224,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const msg = err instanceof Error ? err.message : "Upload parse failed";
       const isTooBig = msg.toLowerCase().includes("maxfilesize") || msg.toLowerCase().includes("too large");
       res.status(isTooBig ? 413 : 400).json({ error: isTooBig ? `File is too large (max ${formatMaxMb(MAX_VIDEO_ASSET_BYTES)} MB).` : msg });
-      return;
-    }
-
-    const token = readToken(req);
-    if (!isAdminRequest({ token })) {
-      res.status(401).json({ error: "Unauthorized" });
       return;
     }
     const fileEntry = parsed.files["file"];

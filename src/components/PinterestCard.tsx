@@ -16,14 +16,6 @@ const GLOW_PAIRS: [string, string][] = [
   ["236,72,153", "139,92,246"], // pink + purple
 ];
 
-const GRAIN_SVG = `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`;
-
-const BLOB_ANIMS = [
-  "entry-blob-drift-1 11s ease-in-out infinite",
-  "entry-blob-drift-2 13s ease-in-out infinite",
-  "entry-blob-drift-3 10s ease-in-out infinite",
-] as const;
-
 export type PinterestCardProject = {
   id: string;
   slug: string;
@@ -93,8 +85,6 @@ export const PinterestCard = memo(function PinterestCard({
     color: isDark ? "rgba(255,255,255,0.8)" : "rgba(0,0,0,0.7)",
   } as const;
   const href = project.href ?? `/work/${project.slug}`;
-  const description = project.cardDescription || project.subtitle || "";
-  const tags = project.tags ?? [];
   const hasHoverVideo = Boolean(project.hoverVideo?.trim());
   const videoRef = useRef<HTMLVideoElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -153,35 +143,16 @@ export const PinterestCard = memo(function PinterestCard({
       {horizontal ? (
         <div aria-hidden="true" className={`col-start-1 row-start-1 ${aspectClass}`} />
       ) : null}
-      {/* Dual-tone floating grain glow — high-feather gradient blur under card */}
+      {/* Dual-tone feathered ambient glow under card (compositor-friendly radial gradient without per-frame blur/SVG filter rasterization) */}
       <div
         aria-hidden="true"
-        className="card-glow absolute -inset-10 rounded-[1.5rem] pointer-events-none transition-opacity duration-700 opacity-60 group-hover:opacity-100 group-focus-within:opacity-100"
+        className="card-glow absolute -inset-12 rounded-[1.5rem] pointer-events-none transition-opacity duration-500 opacity-55 group-hover:opacity-100 group-focus-within:opacity-100"
         style={{
           background: isDark
-            ? `radial-gradient(ellipse 70% 65% at 30% 55%, rgba(${glowA},0.38) 0%, rgba(${glowA},0.12) 35%, transparent 70%),
-               radial-gradient(ellipse 70% 65% at 70% 60%, rgba(${glowB},0.34) 0%, rgba(${glowB},0.10) 35%, transparent 70%)`
-            : `radial-gradient(ellipse 70% 65% at 30% 55%, rgba(${glowA},0.24) 0%, rgba(${glowA},0.08) 35%, transparent 70%),
-               radial-gradient(ellipse 70% 65% at 70% 60%, rgba(${glowB},0.20) 0%, rgba(${glowB},0.06) 35%, transparent 70%)`,
-          filter: "blur(56px)",
-          zIndex: 0,
-          animation: BLOB_ANIMS[seed % BLOB_ANIMS.length],
-        }}
-      />
-      <div
-        aria-hidden="true"
-        className="card-grain absolute -inset-6 rounded-[1rem] pointer-events-none mix-blend-overlay transition-opacity duration-700 opacity-25 group-hover:opacity-45 group-focus-within:opacity-45"
-        style={{
-          backgroundImage: `
-            radial-gradient(ellipse 75% 65% at 50% 55%, rgba(255,255,255,0.55) 0%, transparent 70%),
-            ${GRAIN_SVG}
-          `,
-          backgroundSize: "100% 100%, 128px 128px",
-          WebkitMaskImage:
-            "radial-gradient(ellipse 70% 60% at 50% 55%, black 0%, transparent 75%)",
-          maskImage:
-            "radial-gradient(ellipse 70% 60% at 50% 55%, black 0%, transparent 75%)",
-          filter: "blur(2px)",
+            ? `radial-gradient(ellipse 65% 60% at 32% 55%, rgba(${glowA},0.28) 0%, rgba(${glowA},0.08) 45%, transparent 72%),
+               radial-gradient(ellipse 65% 60% at 68% 58%, rgba(${glowB},0.24) 0%, rgba(${glowB},0.07) 45%, transparent 72%)`
+            : `radial-gradient(ellipse 65% 60% at 32% 55%, rgba(${glowA},0.18) 0%, rgba(${glowA},0.05) 45%, transparent 72%),
+               radial-gradient(ellipse 65% 60% at 68% 58%, rgba(${glowB},0.15) 0%, rgba(${glowB},0.04) 45%, transparent 72%)`,
           zIndex: 0,
         }}
       />
@@ -277,83 +248,41 @@ export const PinterestCard = memo(function PinterestCard({
           }}
         />
 
-        {/* ── Top badges — inset past rounded corners so pills aren’t clipped ── */}
-        <div className="absolute top-4 left-4 right-4 flex items-start gap-2 z-10 pointer-events-none">
-          <span
-            className="text-[8px] sm:text-[9px] uppercase tracking-wide font-sans font-bold px-2.5 py-1.5 rounded-full backdrop-blur-sm leading-tight min-w-0 max-w-[70%] line-clamp-2"
-            style={badgeStyle}
-          >
-            {project.type}
-          </span>
-          {project.protected ? (
-            <span
-              className="flex items-center gap-1 text-[8px] sm:text-[9px] uppercase tracking-wide font-sans font-bold px-2.5 py-1.5 rounded-full backdrop-blur-sm whitespace-nowrap leading-none shrink-0 ml-auto"
-              style={badgeStyle}
-            >
-              <Lock className="w-2.5 h-2.5" aria-hidden="true" />
-              Protected
-            </span>
-          ) : null}
-          {playOnHover ? (
-            <span
-              className={`hidden [@media(hover:hover)]:flex items-center justify-center w-6 h-6 rounded-full backdrop-blur-sm shrink-0 transition-opacity duration-300 ${
-                project.protected ? "" : "ml-auto"
-              } ${hovered ? "opacity-0" : "opacity-100"}`}
-              style={badgeStyle}
-              aria-hidden="true"
-            >
-              <Play className="w-2.5 h-2.5 fill-current" />
-            </span>
-          ) : null}
-          <span
-            className={`text-[8px] sm:text-[9px] font-mono font-bold px-2.5 py-1.5 rounded-full backdrop-blur-sm whitespace-nowrap leading-none shrink-0 ${
-              project.protected ? "" : playOnHover ? "[@media(hover:none)]:ml-auto" : "ml-auto"
-            }`}
-            style={badgeStyle}
-          >
-            {project.year}
-          </span>
-        </div>
+        {/* ── Top badges: Protected lock & Play indicator only (no role, no year, no number) ── */}
+        {(project.protected || playOnHover) ? (
+          <div className="absolute top-4 left-4 right-4 flex items-start justify-end gap-2 z-10 pointer-events-none">
+            {project.protected ? (
+              <span
+                className="flex items-center gap-1 text-[8px] sm:text-[9px] uppercase tracking-wide font-sans font-bold px-2.5 py-1.5 rounded-full backdrop-blur-sm whitespace-nowrap leading-none shrink-0"
+                style={badgeStyle}
+              >
+                <Lock className="w-2.5 h-2.5" aria-hidden="true" />
+                Protected
+              </span>
+            ) : null}
+            {playOnHover ? (
+              <span
+                className={`hidden [@media(hover:hover)]:flex items-center justify-center w-6 h-6 rounded-full backdrop-blur-sm shrink-0 transition-opacity duration-300 ${
+                  hovered ? "opacity-0" : "opacity-100"
+                }`}
+                style={badgeStyle}
+                aria-hidden="true"
+              >
+                <Play className="w-2.5 h-2.5 fill-current" />
+              </span>
+            ) : null}
+          </div>
+        ) : null}
 
-        {/* ── Unified type block: title → description → tags ── */}
+        {/* ── Bottom title block: spread out to 1-2 lines with no role or description ── */}
         <div
-          className={`absolute inset-x-0 bottom-0 z-20 flex flex-col justify-end gap-2 px-4 sm:px-5 pb-5 sm:pb-6 pt-24 pointer-events-none ${
-            horizontal ? "sm:max-w-[60%]" : ""
+          className={`absolute inset-x-0 bottom-0 z-20 flex flex-col justify-end px-4 sm:px-5 pb-5 sm:pb-6 pt-24 pointer-events-none w-full ${
+            horizontal ? "sm:max-w-[85%]" : ""
           }`}
         >
-          <h3 className="font-display font-black uppercase text-sm sm:text-base md:text-lg leading-[1.15] tracking-[0.03em] text-white line-clamp-3 break-words [overflow-wrap:anywhere]">
+          <h3 className="w-full font-display font-black uppercase text-sm sm:text-base md:text-lg lg:text-xl leading-[1.15] tracking-[0.02em] text-white line-clamp-2 break-words [overflow-wrap:anywhere]">
             {project.title}
           </h3>
-
-          <div
-            className="flex flex-col gap-2 max-h-0 opacity-0 overflow-hidden
-            group-hover:max-h-28 group-hover:opacity-100
-            group-focus-within:max-h-28 group-focus-within:opacity-100
-            transition-[max-height,opacity] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]
-            motion-reduce:max-h-28 motion-reduce:opacity-100 motion-reduce:transition-none"
-          >
-            {description ? (
-              <p className="text-xs font-sans text-white/75 leading-relaxed line-clamp-2">
-                {description}
-              </p>
-            ) : null}
-
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {tags.slice(0, 3).map((tag) => (
-                <span
-                  key={tag}
-                  className="text-[9px] uppercase tracking-wider font-sans font-bold px-2 py-0.5 rounded-full"
-                  style={{
-                    background: `rgba(${rgb}, 0.25)`,
-                    color: "rgba(255,255,255,0.85)",
-                    border: `1px solid rgba(${rgb}, 0.35)`,
-                  }}
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          </div>
         </div>
       </a>
     </div>

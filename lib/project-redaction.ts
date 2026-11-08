@@ -11,6 +11,7 @@ const PUBLIC_PROJECT_FIELDS = [
   "id",
   "slug",
   "title",
+  "shortTitle",
   "subtitle",
   "cardDescription",
   "type",

@@ -1,14 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Sparkles,
-  Star,
-  Heart,
-  Flower2,
-  Sun,
-  Cloud,
-  Zap,
-  Diamond,
   Columns3,
   Columns2,
   Square,
@@ -16,6 +8,7 @@ import {
 import projectsSeed from "@/data/projects.json";
 import gallerySeed from "@/data/gallery.json";
 import studioSeed from "@/data/studio.json";
+import appearanceSeed from "@/data/appearance.json";
 import { useContent } from "@/lib/use-content";
 import { floatInProps, useMotionProfile, SOFT_EASE } from "@/lib/motion";
 import { useTheme } from "@/context/ThemeContext";
@@ -31,6 +24,7 @@ import type {
   GalleryItem,
   Project as ProjectType,
   Studio,
+  Appearance,
 } from "@/components/admin/types";
 import {
   BRAND,
@@ -116,93 +110,14 @@ function workToCard(p: Project): PinterestCardProject {
   };
 }
 
-/* ───────────────────── Cursor-following floating icons ───────────────── */
-const FLOAT_ICONS = [
-  { Icon: Sparkles, x: "8%", y: "12%", size: 28, depth: 22, color: BRAND.coral },
-  { Icon: Star, x: "88%", y: "18%", size: 22, depth: 14, color: BRAND.pink },
-  { Icon: Flower2, x: "92%", y: "62%", size: 26, depth: 30, color: BRAND.teal },
-  { Icon: Heart, x: "5%", y: "70%", size: 20, depth: 18, color: BRAND.coral },
-  { Icon: Sun, x: "78%", y: "88%", size: 24, depth: 26, color: BRAND.pink },
-  { Icon: Cloud, x: "12%", y: "92%", size: 30, depth: 12, color: BRAND.blue },
-  { Icon: Zap, x: "60%", y: "8%", size: 22, depth: 20, color: BRAND.blue },
-  { Icon: Diamond, x: "45%", y: "96%", size: 18, depth: 16, color: BRAND.teal },
-];
-
-function CursorFollowIcons() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const targetRef = useRef({ x: 0.5, y: 0.5 });
-  const currentRef = useRef({ x: 0.5, y: 0.5 });
-
-  useEffect(() => {
-    const onMove = (e: MouseEvent) => {
-      targetRef.current = {
-        x: e.clientX / window.innerWidth,
-        y: e.clientY / window.innerHeight,
-      };
-    };
-    window.addEventListener("mousemove", onMove);
-    return () => window.removeEventListener("mousemove", onMove);
-  }, []);
-
-  useEffect(() => {
-    let raf = 0;
-    const tick = (t: number) => {
-      currentRef.current.x += (targetRef.current.x - currentRef.current.x) * 0.06;
-      currentRef.current.y += (targetRef.current.y - currentRef.current.y) * 0.06;
-      const cx = currentRef.current.x - 0.5;
-      const cy = currentRef.current.y - 0.5;
-      const root = containerRef.current;
-      if (root) {
-        const nodes = root.querySelectorAll<HTMLElement>("[data-float]");
-        nodes.forEach((node, idx) => {
-          const depth = Number(node.dataset.depth ?? 16);
-          const idle = Math.sin(t / 1200 + idx) * 3;
-          const tx = cx * depth + idle;
-          const ty = cy * depth + Math.cos(t / 1400 + idx) * 3;
-          const rot = cx * (depth * 0.4);
-          node.style.transform = `translate3d(${tx}px,${ty}px,0) rotate(${rot}deg)`;
-        });
-      }
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, []);
-
-  return (
-    <div
-      ref={containerRef}
-      aria-hidden
-      className="pointer-events-none absolute inset-0 overflow-hidden"
-      style={{ zIndex: 0 }}
-    >
-      {FLOAT_ICONS.map(({ Icon, x, y, size, depth, color }, i) => (
-        <div
-          key={i}
-          data-float
-          data-depth={depth}
-          className="absolute"
-          style={{
-            left: x,
-            top: y,
-            color,
-            opacity: 0.55,
-            willChange: "transform",
-            transition: "opacity 0.4s",
-          }}
-        >
-          <Icon size={size} strokeWidth={1.6} />
-        </div>
-      ))}
-    </div>
-  );
-}
-
 /* ════════════════════════════════════════════════════════════════════════ */
 export default function WorkIndex() {
   const projectsData = useContent("projects", projectsSeed) as Project[];
   const galleryData = useContent("gallery", gallerySeed) as GalleryItem[];
   const studioRaw = useContent("studio", studioSeed as Studio);
+  const appearanceData = useContent("appearance", appearanceSeed as Appearance);
+  const titleLine1Color = appearanceData?.workTitleLine1Color?.trim() || BRAND_TEXT.coral;
+  const titleLine2Color = appearanceData?.workTitleLine2Color?.trim() || BRAND_TEXT.blue;
   const studio = useMemo(() => mergeStudio(studioRaw), [studioRaw]);
   const marqueeItems = useMemo(
     () =>
@@ -259,7 +174,6 @@ export default function WorkIndex() {
       className="relative w-full"
       style={{ minHeight: "calc(100vh - 80px)" }}
     >
-      {!motionProfile.lite && <CursorFollowIcons />}
       <motion.div
         className="relative w-full flex flex-col gap-10 pb-28"
         style={{ zIndex: 1 }}
@@ -283,7 +197,7 @@ export default function WorkIndex() {
 
         <section
           className="flex flex-col gap-5 pb-8"
-          style={{ borderBottom: `2px solid ${BRAND.coral}44` }}
+          style={{ borderBottom: `2px solid ${titleLine1Color}44` }}
         >
           <motion.h1
             className="font-display font-black uppercase leading-[0.88] tracking-tight"
@@ -292,9 +206,9 @@ export default function WorkIndex() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: SOFT_EASE }}
           >
-            <span style={{ color: BRAND_TEXT.coral }}>Selected</span>
+            <span style={{ color: titleLine1Color }}>Selected</span>
             <br />
-            <span style={{ color: BRAND_TEXT.blue }}>Works</span>
+            <span style={{ color: titleLine2Color }}>Works</span>
           </motion.h1>
 
           <motion.div

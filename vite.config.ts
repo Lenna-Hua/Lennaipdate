@@ -1,9 +1,10 @@
-import { defineConfig, type Plugin } from "vite";
+import { defineConfig, loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import { readFileSync } from "fs";
 import { redactProjectsForBundle } from "./lib/project-redaction.js";
+import { getAdminPassword, issueAdminToken } from "./lib/admin-auth.js";
 
 const projectsSeedPath = path.resolve(import.meta.dirname, "src", "data", "projects.json");
 
@@ -24,6 +25,39 @@ function caseStudySeedRedaction(): Plugin {
     enforce: "pre",
     configResolved(config) {
       deferAll = config.command === "build";
+      if (config.command === "serve") {
+        const env = loadEnv(config.mode, config.root, "");
+        for (const [k, v] of Object.entries(env)) {
+          if (process.env[k] === undefined) process.env[k] = v;
+        }
+      }
+    },
+    configureServer(server) {
+      server.middlewares.use("/api/admin/login", (req, res, next) => {
+        if (req.method !== "POST") return next();
+        let body = "";
+        req.on("data", (chunk) => {
+          body += String(chunk);
+        });
+        req.on("end", () => {
+          try {
+            const parsed = JSON.parse(body || "{}") as { password?: string };
+            if (parsed.password && parsed.password === getAdminPassword()) {
+              res.statusCode = 200;
+              res.setHeader("Content-Type", "application/json");
+              res.end(JSON.stringify({ token: issueAdminToken() }));
+              return;
+            }
+            res.statusCode = 401;
+            res.setHeader("Content-Type", "application/json");
+            res.end(JSON.stringify({ error: "Incorrect password" }));
+          } catch {
+            res.statusCode = 400;
+            res.setHeader("Content-Type", "application/json");
+            res.end(JSON.stringify({ error: "Bad request" }));
+          }
+        });
+      });
     },
     load(id) {
       if (!samePath(id.split("?")[0]!, projectsSeedPath)) return null;
@@ -63,6 +97,17 @@ export default defineConfig({
   server: {
     port: 5173,
     host: "localhost",
+    watch: {
+      // Prevent data-file writes from triggering a full server restart
+      ignored: [
+        "**/.tmp-live-content.json",
+        "**/exports/**",
+        "**/case-study-drafts/**",
+        "**/tmp-mockup-preview/**",
+        "**/docs/**",
+        "**/dist/**",
+      ],
+    },
   },
   preview: {
     port: 4173,

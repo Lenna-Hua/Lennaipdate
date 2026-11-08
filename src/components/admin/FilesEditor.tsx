@@ -29,7 +29,7 @@ export function FilesEditor({
     if (!file) return;
     if (!sessionToken) {
       setStatus("error");
-      setErrorMsg("Session expired — please log out and back in.");
+      setErrorMsg("Session expired: please log out and back in.");
       return;
     }
     const isPdf =

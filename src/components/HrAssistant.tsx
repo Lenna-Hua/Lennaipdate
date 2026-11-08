@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { AnimatePresence, motion } from "framer-motion";
-import { Bot, Send, X } from "lucide-react";
+import { ArrowRight, Bot, Send, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useContent } from "@/lib/use-content";
@@ -24,7 +24,7 @@ type ChatMessage = {
   streaming?: boolean;
 };
 
-const HIDDEN_ROUTES = ["/", "/admin", "/preview/visual-redesign"];
+const HIDDEN_ROUTES = ["/admin"];
 
 function renderBold(text: string): ReactNode[] {
   const parts: ReactNode[] = [];
@@ -70,15 +70,29 @@ function MessageBody({
       </div>
       {links && links.length > 0 && (
         <div className="flex flex-wrap gap-2 pt-1">
-          {links.map((link) => (
-            <Link
-              key={link.href + link.label}
-              href={link.href}
-              className="inline-flex items-center rounded-full border border-primary/25 bg-primary/8 px-3 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/15"
-            >
-              {link.label}
-            </Link>
-          ))}
+          {links.map((link) => {
+            const isExternalOrFile =
+              /^https?:\/\//i.test(link.href) ||
+              link.href.startsWith("/api/") ||
+              link.href.endsWith(".pdf");
+            const pillClass =
+              "inline-flex items-center rounded-full border border-primary/25 bg-primary/8 px-3 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/15";
+            return isExternalOrFile ? (
+              <a
+                key={link.href + link.label}
+                href={link.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={pillClass}
+              >
+                {link.label}
+              </a>
+            ) : (
+              <Link key={link.href + link.label} href={link.href} className={pillClass}>
+                {link.label}
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>
@@ -103,6 +117,9 @@ function TypingIndicator() {
 export function HrAssistant() {
   const [location] = useLocation();
   const [open, setOpen] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [bubbleDismissed, setBubbleDismissed] = useState(false);
+  const hoverTimeoutRef = useRef<number | null>(null);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isThinking, setIsThinking] = useState(false);
@@ -110,6 +127,31 @@ export function HrAssistant() {
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const streamTimersRef = useRef<number[]>([]);
+
+  const handleMouseEnter = useCallback(() => {
+    if (hoverTimeoutRef.current) {
+      window.clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+    setIsHovered(true);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    if (hoverTimeoutRef.current) {
+      window.clearTimeout(hoverTimeoutRef.current);
+    }
+    hoverTimeoutRef.current = window.setTimeout(() => {
+      setIsHovered(false);
+    }, 250);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) {
+        window.clearTimeout(hoverTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const clearStream = useCallback(() => {
     streamTimersRef.current.forEach((t) => window.clearTimeout(t));
@@ -305,12 +347,12 @@ export function HrAssistant() {
             className="fixed z-[60] flex flex-col overflow-hidden rounded-2xl border border-border/80 bg-background/95 shadow-2xl backdrop-blur-md"
             style={{
               right: "max(1rem, env(safe-area-inset-right, 0px) + 1rem)",
-              bottom: "calc(max(5.5rem, env(safe-area-inset-bottom, 0px) + 5.5rem))",
+              bottom: "max(1rem, env(safe-area-inset-bottom, 0px) + 1rem)",
               width: "min(22rem, calc(100vw - 2rem))",
-              maxHeight: "min(34rem, calc(100vh - 7rem))",
+              maxHeight: "min(34rem, calc(100vh - 2.5rem))",
             }}
             role="dialog"
-            aria-label="Portfolio assistant"
+            aria-label="Fast Assistant"
           >
             <header className="flex items-center justify-between gap-3 border-b border-border/70 px-4 py-3">
               <div className="flex items-center gap-2.5 min-w-0">
@@ -321,9 +363,9 @@ export function HrAssistant() {
                   <Bot className="h-4.5 w-4.5" aria-hidden />
                 </div>
                 <div className="min-w-0">
-                  <p className="truncate font-sans text-sm font-semibold">Portfolio Assistant</p>
+                  <p className="truncate font-sans text-sm font-semibold">Fast Assistant</p>
                   <p className="truncate text-xs text-muted-foreground">
-                    {isThinking ? "Reviewing portfolio…" : "Ready to assist"}
+                    {isThinking ? "Reviewing portfolio…" : "Fast candidacy summary & highlights"}
                   </p>
                 </div>
               </div>
@@ -413,13 +455,104 @@ export function HrAssistant() {
         )}
       </AnimatePresence>
 
+      {/* Speech bubble popup on hover */}
+      <AnimatePresence>
+        {!open && isHovered && !bubbleDismissed && (
+          <motion.div
+            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 6, scale: 0.95 }}
+            transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+            className="fixed z-[60] flex flex-col pointer-events-auto"
+            style={{
+              right: "max(1rem, env(safe-area-inset-right, 0px) + 1rem)",
+              bottom: "calc(max(1rem, env(safe-area-inset-bottom, 0px) + 1rem) + 4.1rem)",
+              width: "min(19.5rem, calc(100vw - 2rem))",
+            }}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+            role="tooltip"
+          >
+            <div
+              onClick={() => {
+                setOpen(true);
+                setIsHovered(false);
+              }}
+              className="group relative cursor-pointer rounded-2xl border border-primary/25 bg-background/95 p-3.5 shadow-2xl backdrop-blur-md transition-all hover:border-primary/45 hover:shadow-primary/10"
+            >
+              {/* Pointer arrow pointing down toward trigger button */}
+              <div
+                className="absolute -bottom-1.5 right-6 sm:right-14 h-3 w-3 rotate-45 border-b border-r border-primary/25 bg-background"
+                aria-hidden
+              />
+
+              <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-border/60">
+                <div className="flex items-center gap-1.5">
+                  <div
+                    className="flex h-4 w-4 items-center justify-center rounded-full text-white"
+                    style={{ background: `linear-gradient(135deg, ${BRAND.blue}, ${BRAND.teal})` }}
+                  >
+                    <Sparkles className="h-2.5 w-2.5" />
+                  </div>
+                  <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Fast Assistant
+                  </span>
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setBubbleDismissed(true);
+                  }}
+                  className="rounded-full p-1 text-muted-foreground/70 hover:bg-muted hover:text-foreground transition-colors"
+                  aria-label="Dismiss preview"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+
+              <div className="pt-2">
+                <p className="text-[13px] font-semibold text-foreground leading-snug">
+                  In a hurry? Buried with tons of applications?
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                  I'm here to sum it all up and help you review Lenna's work in seconds! ⚡
+                </p>
+              </div>
+
+              <div
+                className="mt-2.5 flex items-center justify-between rounded-xl px-2.5 py-1.5 text-xs font-medium text-white shadow-sm transition-all group-hover:brightness-105"
+                style={{ background: `linear-gradient(135deg, ${BRAND.blue}, ${BRAND.teal})` }}
+              >
+                <span className="flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Get fast overview
+                </span>
+                <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <motion.button
         type="button"
-        onClick={() => setOpen(true)}
-        className="fixed z-[60] flex items-center gap-2 rounded-full border border-primary/20 bg-background/95 px-3 py-2.5 text-sm font-medium shadow-lg backdrop-blur-md transition-colors hover:bg-primary/5"
+        onClick={() => {
+          setOpen(true);
+          setIsHovered(false);
+        }}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        onFocus={handleMouseEnter}
+        onBlur={handleMouseLeave}
+        className="fixed z-[60] flex items-center gap-2 rounded-full border border-primary/20 bg-background/95 px-3 py-2.5 text-sm font-medium shadow-lg backdrop-blur-md transition-all hover:border-primary/40 hover:shadow-[0_4px_20px_-4px_rgba(31,103,241,0.25)]"
         style={{
           right: "max(1rem, env(safe-area-inset-right, 0px) + 1rem)",
-          bottom: "calc(max(5.5rem, env(safe-area-inset-bottom, 0px) + 5.5rem))",
+          bottom: "max(1rem, env(safe-area-inset-bottom, 0px) + 1rem)",
         }}
         initial={false}
         animate={{
@@ -431,7 +564,7 @@ export function HrAssistant() {
         whileTap={open ? undefined : { scale: 0.97 }}
         aria-expanded={open}
         aria-hidden={open}
-        aria-label="Open portfolio assistant"
+        aria-label="Open Fast Assistant"
       >
         <span
           className="flex h-8 w-8 items-center justify-center rounded-full text-white"
@@ -439,7 +572,7 @@ export function HrAssistant() {
         >
           <Bot className="h-4 w-4" aria-hidden />
         </span>
-        <span className="hidden sm:inline pr-1">HR Assistant</span>
+        <span className="hidden sm:inline pr-1">Fast Assistant</span>
       </motion.button>
     </>
   );

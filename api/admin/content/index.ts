@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { ALLOWED_SECTIONS, getSection, isAllowedSection, setSection, validateSection } from "../../../lib/content-store.js";
 import { isAdminRequest } from "../../../lib/admin-auth.js";
+import { handleCors } from "../../../lib/cors.js";
 
 export const config = { maxDuration: 30 };
 
@@ -32,6 +33,7 @@ function readBodyObject(req: VercelRequest): Record<string, unknown> {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (handleCors(req, res)) return;
   if (req.method !== "POST" && req.method !== "GET") {
     res.status(405).json({ error: "Method not allowed" });
     return;

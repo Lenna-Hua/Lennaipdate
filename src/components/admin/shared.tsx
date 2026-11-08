@@ -1,8 +1,18 @@
 /**
  * Shared UI primitives used across admin panel editor components.
  */
-import { useState, type ReactNode } from "react";
-import type { AssetType } from "./types";
+import { useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import {
+  Bold,
+  Italic,
+  Underline,
+  Link2,
+  List,
+  ListOrdered,
+  RemoveFormatting,
+  Type,
+} from "lucide-react";
+import { hasRichTextFormatting, renderRichText, stripRichText } from "@/lib/rich-text";
 
 // ── Utility helpers ────────────────────────────────────────────────────
 
@@ -109,6 +119,382 @@ export function EditorBox({
   );
 }
 
+// ── Rich Text Formatting Helpers & Toolbar ─────────────────────────────
+
+function shouldEnableToolbarForInput(label: string, placeholder?: string): boolean {
+  const combined = `${label} ${placeholder ?? ""}`.toLowerCase();
+  if (
+    /\b(url|slug|password|height|speed|seconds|email|href|iframe|hex)\b/.test(combined) ||
+    /^https?:\/\//.test(placeholder ?? "")
+  ) {
+    return false;
+  }
+  return true;
+}
+
+function toggleWrapSelection(
+  el: HTMLInputElement | HTMLTextAreaElement | null,
+  value: string,
+  onChange: (v: string) => void,
+  openTag: string,
+  closeTag: string,
+) {
+  if (!el) return;
+  const start = el.selectionStart ?? 0;
+  const end = el.selectionEnd ?? 0;
+  const hasSelection = end > start;
+  const selected = hasSelection ? value.slice(start, end) : value;
+
+  if (!hasSelection && !value) {
+    const next = `${openTag}text${closeTag}`;
+    onChange(next);
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(openTag.length, openTag.length + 4);
+    });
+    return;
+  }
+
+  if (!hasSelection) {
+    // Wrap or unwrap the entire field when nothing is highlighted
+    if (value.startsWith(openTag) && value.endsWith(closeTag)) {
+      const unwrapped = value.slice(openTag.length, value.length - closeTag.length);
+      onChange(unwrapped);
+      requestAnimationFrame(() => el.focus());
+    } else {
+      const wrapped = `${openTag}${value}${closeTag}`;
+      onChange(wrapped);
+      requestAnimationFrame(() => el.focus());
+    }
+    return;
+  }
+
+  // Check if already wrapped inside or around selection
+  if (selected.startsWith(openTag) && selected.endsWith(closeTag)) {
+    const inner = selected.slice(openTag.length, selected.length - closeTag.length);
+    const next = value.slice(0, start) + inner + value.slice(end);
+    onChange(next);
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(start, start + inner.length);
+    });
+    return;
+  }
+
+  const before = value.slice(Math.max(0, start - openTag.length), start);
+  const after = value.slice(end, end + closeTag.length);
+  if (before === openTag && after === closeTag) {
+    const next =
+      value.slice(0, start - openTag.length) +
+      selected +
+      value.slice(end + closeTag.length);
+    onChange(next);
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(start - openTag.length, end - openTag.length);
+    });
+    return;
+  }
+
+  // If applying a size or color tag, strip existing outer size/color tag on selection first
+  const cleanedSelected = /^<(sm|lg|xl)>/.test(openTag)
+    ? selected.replace(/^<(sm|lg|xl)>([\s\S]*?)<\/\1>$/, "$2")
+    : /^<color=#[0-9a-fA-F]{3,8}>$/.test(openTag)
+      ? selected.replace(/^<color=#[0-9a-fA-F]{3,8}>([\s\S]*?)<\/color>$/, "$1")
+      : selected;
+
+  const replacement = `${openTag}${cleanedSelected}${closeTag}`;
+  const next = value.slice(0, start) + replacement + value.slice(end);
+  onChange(next);
+  requestAnimationFrame(() => {
+    el.focus();
+    el.setSelectionRange(start + openTag.length, start + openTag.length + cleanedSelected.length);
+  });
+}
+
+function insertLinkFormatting(
+  el: HTMLInputElement | HTMLTextAreaElement | null,
+  value: string,
+  onChange: (v: string) => void,
+) {
+  if (!el) return;
+  const start = el.selectionStart ?? value.length;
+  const end = el.selectionEnd ?? value.length;
+  const selected = end > start ? value.slice(start, end) : "link text";
+  const url = window.prompt("Enter link URL (https://... or /path):", "https://");
+  if (!url || !url.trim()) return;
+  const snippet = `[${selected}](${url.trim()})`;
+  const next = value.slice(0, start) + snippet + value.slice(end);
+  onChange(next);
+  requestAnimationFrame(() => {
+    el.focus();
+    el.setSelectionRange(start + 1, start + 1 + selected.length);
+  });
+}
+
+function toggleListFormatting(
+  el: HTMLTextAreaElement | null,
+  value: string,
+  onChange: (v: string) => void,
+  kind: "bullet" | "number",
+) {
+  if (!el) return;
+  const start = el.selectionStart ?? 0;
+  const end = el.selectionEnd ?? value.length;
+  const lineStart = value.lastIndexOf("\n", Math.max(0, start - 1)) + 1;
+  const nextNewline = value.indexOf("\n", end);
+  const lineEnd = nextNewline === -1 ? value.length : nextNewline;
+
+  const block = value.slice(lineStart, lineEnd);
+  const lines = block.split("\n");
+  const allMatch =
+    kind === "bullet"
+      ? lines.every((l) => /^\s*•\s+/.test(l))
+      : lines.every((l) => /^\s*\d+\.\s+/.test(l));
+
+  const transformed = lines.map((line, idx) => {
+    const stripped = line.replace(/^\s*(?:•|\d+\.)\s+/, "");
+    if (allMatch) return stripped;
+    return kind === "bullet" ? `• ${stripped}` : `${idx + 1}. ${stripped}`;
+  });
+
+  const replacement = transformed.join("\n");
+  const next = value.slice(0, lineStart) + replacement + value.slice(lineEnd);
+  onChange(next);
+  requestAnimationFrame(() => {
+    el.focus();
+    el.setSelectionRange(lineStart, lineStart + replacement.length);
+  });
+}
+
+function clearFormattingSelection(
+  el: HTMLInputElement | HTMLTextAreaElement | null,
+  value: string,
+  onChange: (v: string) => void,
+) {
+  if (!el) return;
+  const start = el.selectionStart ?? 0;
+  const end = el.selectionEnd ?? 0;
+  const cleanChunk = (s: string) =>
+    stripRichText(s)
+      .split("\n")
+      .map((line) => line.replace(/^\s*(?:•|\d+\.)\s+/, ""))
+      .join("\n");
+
+  if (end > start) {
+    const cleaned = cleanChunk(value.slice(start, end));
+    onChange(value.slice(0, start) + cleaned + value.slice(end));
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(start, start + cleaned.length);
+    });
+  } else {
+    onChange(cleanChunk(value));
+    requestAnimationFrame(() => el.focus());
+  }
+}
+
+const fmtBtnClass =
+  "inline-flex items-center justify-center h-6 min-w-[1.5rem] px-1.5 rounded text-[11px] font-medium text-[color:var(--adm-muted)] hover:bg-[color:var(--adm-subtle)] hover:text-[color:var(--adm-text)] transition-colors cursor-pointer select-none";
+
+function TextFormattingBar({
+  inputRef,
+  value,
+  onChange,
+  multiline = false,
+}: {
+  inputRef: React.RefObject<HTMLInputElement | HTMLTextAreaElement | null>;
+  value: string;
+  onChange: (v: string) => void;
+  multiline?: boolean;
+}) {
+  const preventFocusLoss = (e: React.MouseEvent) => e.preventDefault();
+
+  return (
+    <div
+      onMouseDown={preventFocusLoss}
+      className="flex flex-wrap items-center gap-0.5 px-1.5 py-1 border border-t-0 border-[color:var(--adm-line-strong)] bg-[color:var(--adm-surface)] rounded-b-md"
+      role="toolbar"
+      aria-label="Text formatting"
+    >
+      <button
+        type="button"
+        onClick={() => toggleWrapSelection(inputRef.current, value, onChange, "**", "**")}
+        className={fmtBtnClass}
+        title="Bold (Ctrl+B)"
+        aria-label="Bold"
+      >
+        <Bold className="h-3.5 w-3.5 stroke-[2.2]" />
+      </button>
+      <button
+        type="button"
+        onClick={() => toggleWrapSelection(inputRef.current, value, onChange, "*", "*")}
+        className={fmtBtnClass}
+        title="Italic (Ctrl+I)"
+        aria-label="Italic"
+      >
+        <Italic className="h-3.5 w-3.5 stroke-[2]" />
+      </button>
+      <button
+        type="button"
+        onClick={() => toggleWrapSelection(inputRef.current, value, onChange, "<u>", "</u>")}
+        className={fmtBtnClass}
+        title="Underline (Ctrl+U)"
+        aria-label="Underline"
+      >
+        <Underline className="h-3.5 w-3.5 stroke-[2]" />
+      </button>
+
+      <span className="mx-1 h-3.5 w-px bg-[color:var(--adm-line)]" aria-hidden />
+
+      <span
+        className="inline-flex items-center gap-0.5 text-[10px] text-[color:var(--adm-faint)] px-1"
+        title="Text size adjustment"
+      >
+        <Type className="h-3 w-3" aria-hidden />
+      </span>
+      <button
+        type="button"
+        onClick={() => toggleWrapSelection(inputRef.current, value, onChange, "<sm>", "</sm>")}
+        className={fmtBtnClass}
+        title="Small text (<sm>)"
+        aria-label="Small text"
+      >
+        S
+      </button>
+      <button
+        type="button"
+        onClick={() => toggleWrapSelection(inputRef.current, value, onChange, "<lg>", "</lg>")}
+        className={fmtBtnClass}
+        title="Large text (<lg>)"
+        aria-label="Large text"
+      >
+        L
+      </button>
+      <button
+        type="button"
+        onClick={() => toggleWrapSelection(inputRef.current, value, onChange, "<xl>", "</xl>")}
+        className={fmtBtnClass}
+        title="Extra large text (<xl>)"
+        aria-label="Extra large text"
+      >
+        XL
+      </button>
+
+      <span className="mx-1 h-3.5 w-px bg-[color:var(--adm-line)]" aria-hidden />
+
+      <label
+        className={`${fmtBtnClass} gap-1 relative`}
+        title="Adjust text color"
+        aria-label="Adjust text color"
+      >
+        <span className="font-serif font-bold text-[11px] leading-none border-b-2 border-[#E85D4A]">
+          A
+        </span>
+        <input
+          type="color"
+          defaultValue="#E85D4A"
+          onChange={(e) =>
+            toggleWrapSelection(
+              inputRef.current,
+              value,
+              onChange,
+              `<color=${e.target.value}>`,
+              "</color>",
+            )
+          }
+          className="sr-only"
+        />
+      </label>
+      {[
+        { hex: "#E85D4A", label: "Coral" },
+        { hex: "#5E9BFF", label: "Blue" },
+      ].map((sw) => (
+        <button
+          key={sw.hex}
+          type="button"
+          onClick={() =>
+            toggleWrapSelection(inputRef.current, value, onChange, `<color=${sw.hex}>`, "</color>")
+          }
+          title={`Text color: ${sw.label} (${sw.hex})`}
+          aria-label={`Set text color ${sw.label}`}
+          className="inline-flex items-center justify-center h-4 w-4 rounded-sm border border-black/20 hover:scale-110 transition-transform mx-0.5 cursor-pointer"
+          style={{ backgroundColor: sw.hex }}
+        />
+      ))}
+
+      <span className="mx-1 h-3.5 w-px bg-[color:var(--adm-line)]" aria-hidden />
+
+      <button
+        type="button"
+        onClick={() => insertLinkFormatting(inputRef.current, value, onChange)}
+        className={fmtBtnClass}
+        title="Insert link"
+        aria-label="Insert link"
+      >
+        <Link2 className="h-3.5 w-3.5" />
+      </button>
+
+      {multiline && (
+        <>
+          <button
+            type="button"
+            onClick={() =>
+              toggleListFormatting(inputRef.current as HTMLTextAreaElement | null, value, onChange, "number")
+            }
+            className={fmtBtnClass}
+            title="Numbered list"
+            aria-label="Numbered list"
+          >
+            <ListOrdered className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              toggleListFormatting(inputRef.current as HTMLTextAreaElement | null, value, onChange, "bullet")
+            }
+            className={fmtBtnClass}
+            title="Bulleted list"
+            aria-label="Bulleted list"
+          >
+            <List className="h-3.5 w-3.5" />
+          </button>
+        </>
+      )}
+
+      <button
+        type="button"
+        onClick={() => clearFormattingSelection(inputRef.current, value, onChange)}
+        className={`${fmtBtnClass} ml-auto`}
+        title="Clear formatting"
+        aria-label="Clear formatting"
+      >
+        <RemoveFormatting className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+}
+
+function handleRichTextKeyDown(
+  e: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>,
+  el: HTMLInputElement | HTMLTextAreaElement | null,
+  value: string,
+  onChange: (v: string) => void,
+) {
+  if (!(e.ctrlKey || e.metaKey)) return;
+  const key = e.key.toLowerCase();
+  if (key === "b") {
+    e.preventDefault();
+    toggleWrapSelection(el, value, onChange, "**", "**");
+  } else if (key === "i") {
+    e.preventDefault();
+    toggleWrapSelection(el, value, onChange, "*", "*");
+  } else if (key === "u") {
+    e.preventDefault();
+    toggleWrapSelection(el, value, onChange, "<u>", "</u>");
+  }
+}
+
 // ── Input components ───────────────────────────────────────────────────
 
 export function TextInput({
@@ -117,27 +503,60 @@ export function TextInput({
   onChange,
   hint,
   placeholder,
+  toolbar,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
-  /** Small helper under the label — where this field appears on the site. */
+  /** Small helper under the label showing where this field appears on the site. */
   hint?: string;
   placeholder?: string;
+  /** Show rich-text formatting toolbar (auto-detected if omitted). */
+  toolbar?: boolean;
 }) {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [focused, setFocused] = useState(false);
+  const showToolbar =
+    (toolbar ?? shouldEnableToolbarForInput(label, placeholder)) &&
+    (focused || hasRichTextFormatting(value));
+
   return (
     <div className="flex flex-col gap-1">
       <label className="text-[color:var(--adm-text)] text-[13px] font-medium">{label}</label>
       {hint && (
         <p className="text-[color:var(--adm-faint)] text-xs leading-relaxed -mt-0.5 mb-0.5">{hint}</p>
       )}
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="bg-[color:var(--adm-input)] border border-[color:var(--adm-line-strong)] rounded-md text-[color:var(--adm-text)] px-3 py-2 text-sm focus:outline-none focus:border-[color:var(--adm-accent)] focus:ring-2 focus:ring-[color:var(--adm-accent)]/15 transition-colors placeholder:text-[color:var(--adm-placeholder)]"
-      />
+      <div className="flex flex-col">
+        <input
+          ref={inputRef}
+          type="text"
+          value={value}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={(e) => handleRichTextKeyDown(e, inputRef.current, value, onChange)}
+          placeholder={placeholder}
+          className={`bg-[color:var(--adm-input)] border border-[color:var(--adm-line-strong)] ${
+            showToolbar ? "rounded-t-md" : "rounded-md"
+          } text-[color:var(--adm-text)] px-3 py-2 text-sm focus:outline-none focus:border-[color:var(--adm-accent)] focus:ring-2 focus:ring-[color:var(--adm-accent)]/15 transition-colors placeholder:text-[color:var(--adm-placeholder)]`}
+        />
+        {showToolbar && (
+          <TextFormattingBar
+            inputRef={inputRef}
+            value={value}
+            onChange={onChange}
+            multiline={false}
+          />
+        )}
+      </div>
+      {hasRichTextFormatting(value) && (
+        <div className="text-xs text-[color:var(--adm-text)] bg-[color:var(--adm-subtle)] border border-[color:var(--adm-line)] rounded px-2.5 py-1.5 leading-relaxed">
+          <span className="text-[10px] uppercase tracking-widest text-[color:var(--adm-faint)] mr-2">
+            Preview:
+          </span>
+          {renderRichText(value)}
+        </div>
+      )}
     </div>
   );
 }
@@ -149,6 +568,7 @@ export function TextareaInput({
   rows = 3,
   hint,
   placeholder,
+  toolbar = true,
 }: {
   label: string;
   value: string;
@@ -156,20 +576,45 @@ export function TextareaInput({
   rows?: number;
   hint?: string;
   placeholder?: string;
+  toolbar?: boolean;
 }) {
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
   return (
     <div className="flex flex-col gap-1">
       <label className="text-[color:var(--adm-text)] text-[13px] font-medium">{label}</label>
       {hint && (
         <p className="text-[color:var(--adm-faint)] text-xs leading-relaxed -mt-0.5 mb-0.5">{hint}</p>
       )}
-      <textarea
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        rows={rows}
-        placeholder={placeholder}
-        className="bg-[color:var(--adm-input)] border border-[color:var(--adm-line-strong)] text-[color:var(--adm-text)] py-2 px-3 text-sm focus:outline-none focus:border-[color:var(--adm-accent)] focus:ring-2 focus:ring-[color:var(--adm-accent)]/15 transition-colors resize-y placeholder:text-[color:var(--adm-placeholder)]"
-      />
+      <div className="flex flex-col">
+        <textarea
+          ref={textareaRef}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={(e) => handleRichTextKeyDown(e, textareaRef.current, value, onChange)}
+          rows={rows}
+          placeholder={placeholder}
+          className={`bg-[color:var(--adm-input)] border border-[color:var(--adm-line-strong)] ${
+            toolbar ? "rounded-t-md" : "rounded-md"
+          } text-[color:var(--adm-text)] py-2 px-3 text-sm focus:outline-none focus:border-[color:var(--adm-accent)] focus:ring-2 focus:ring-[color:var(--adm-accent)]/15 transition-colors resize-y placeholder:text-[color:var(--adm-placeholder)]`}
+        />
+        {toolbar && (
+          <TextFormattingBar
+            inputRef={textareaRef}
+            value={value}
+            onChange={onChange}
+            multiline={true}
+          />
+        )}
+      </div>
+      {hasRichTextFormatting(value) && (
+        <div className="text-xs text-[color:var(--adm-text)] bg-[color:var(--adm-subtle)] border border-[color:var(--adm-line)] rounded px-2.5 py-1.5 leading-relaxed whitespace-pre-line">
+          <span className="text-[10px] uppercase tracking-widest text-[color:var(--adm-faint)] block mb-0.5">
+            Formatted Preview
+          </span>
+          {renderRichText(value)}
+        </div>
+      )}
     </div>
   );
 }

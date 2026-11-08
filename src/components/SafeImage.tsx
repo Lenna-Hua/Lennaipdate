@@ -70,7 +70,7 @@ export function DinoFallback({
   const reduce = useReducedMotion();
   const label = caption?.trim() ?? "";
   const ariaLabel = alt
-    ? `${alt} — image unavailable`
+    ? `${alt} (image unavailable)`
     : "Image unavailable";
 
   return (

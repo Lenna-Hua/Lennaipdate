@@ -103,10 +103,13 @@ export function StudioEditor({
                     : "text-[color:var(--adm-muted)] border-[color:var(--adm-line-strong)] hover:border-[color:var(--adm-accent)]"
                 }`}
               >
-                {size === "md" ? "Medium" : size === "lg" ? "Large" : "Extra large"}
+                {size === "md" ? "Medium · 4 cols" : size === "lg" ? "Large · 3 cols" : "Extra large · 2 cols"}
               </button>
             ))}
           </div>
+          <p className="text-[color:var(--adm-muted)] text-xs">
+            Column count on wide screens. Tablets and phones use fewer columns automatically.
+          </p>
         </div>
       </section>
 
@@ -139,7 +142,7 @@ export function StudioEditor({
       </section>
 
       <section className="flex flex-col gap-4 border border-[color:var(--adm-line)] p-4">
-        <h3 className="text-[color:var(--adm-accent)] text-sm uppercase tracking-widest">Logo marquee — Work page</h3>
+        <h3 className="text-[color:var(--adm-accent)] text-sm uppercase tracking-widest">Logo marquee: Work page</h3>
         <p className="text-[color:var(--adm-muted)] text-sm">
           Infinite horizontal strip at the bottom of the Work page. Add marks here, and/or upload a Logo on each artwork or project.
         </p>
@@ -159,7 +162,7 @@ export function StudioEditor({
           onChange={(v) => patch({ logoMarqueeLabel: v })}
         />
         <TextInput
-          label="Loop speed (seconds — higher is slower)"
+          label="Loop speed (seconds: higher is slower)"
           value={String(data.logoMarqueeSpeed)}
           onChange={(v) => {
             const n = parseFloat(v);
@@ -188,7 +191,7 @@ export function StudioEditor({
                 onChange={(v) => updateLogo(i, { name: v })}
               />
               <TextInput
-                label="Link (optional — /work/slug or https://…)"
+                label="Link (optional: /work/slug or https://…)"
                 value={logo.href ?? ""}
                 onChange={(v) => updateLogo(i, { href: v })}
               />

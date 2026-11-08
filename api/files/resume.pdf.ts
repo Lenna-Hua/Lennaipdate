@@ -1,7 +1,9 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { readResumeBlob } from "../../lib/resume-storage.js";
+import { handleCors } from "../../lib/cors.js";
 
-export default async function handler(_req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (handleCors(req, res)) return;
   try {
     const blob = await readResumeBlob();
     if (!blob) {

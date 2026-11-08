@@ -185,7 +185,7 @@ export function PreflightPanel({
         </div>
         {info.oversizeSections.length > 0 && (
           <p className="text-amber-400 text-xs mt-2">
-            ⚠ {info.oversizeSections.join(", ")} exceed {formatBytes(SECTION_WARN_BYTES)} — may fail on Vercel (limit ~4.5 MB).
+            ⚠ {info.oversizeSections.join(", ")} exceed {formatBytes(SECTION_WARN_BYTES)}: may fail on Vercel (limit ~4.5 MB).
           </p>
         )}
       </div>
@@ -195,11 +195,11 @@ export function PreflightPanel({
         <h4 className="text-[color:var(--adm-muted)] text-xs uppercase tracking-widest mb-2">
           Inline Base64 Media{" "}
           <span className="normal-case">
-            ({info.inlineMedia.length} found{info.inlineMedia.length > 0 ? " — must migrate before saving" : ""})
+            ({info.inlineMedia.length} found{info.inlineMedia.length > 0 ? ": must migrate before saving" : ""})
           </span>
         </h4>
         {info.inlineMedia.length === 0 ? (
-          <p className="text-emerald-400/70 text-sm">No inline media detected — safe to save.</p>
+          <p className="text-emerald-400/70 text-sm">No inline media detected: safe to save.</p>
         ) : (
           <div className="space-y-1">
             {info.inlineMedia.map((m, i) => (

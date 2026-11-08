@@ -25,6 +25,7 @@ export type HrResponse = {
 
 export type ProjectSummary = {
   slug: string;
+  archived?: boolean;
   title: string;
   subtitle?: string;
   tags?: string[];
@@ -71,33 +72,28 @@ export type HrContext = {
 export const HR_QUICK_ACTIONS: { id: HrAction; label: string; prompt: string }[] = [
   {
     id: "summarize",
-    label: "Profile summary",
+    label: "⚡ Fast Overview",
     prompt: "Could you provide a concise overview of Lenna's background for hiring review?",
   },
   {
     id: "projects",
-    label: "Key case studies",
-    prompt: "Which portfolio projects would you recommend reviewing first?",
+    label: "🏆 Top Case Studies",
+    prompt: "Which top portfolio case studies would you recommend reviewing first?",
   },
   {
     id: "skills",
-    label: "Skills & strengths",
-    prompt: "What are her primary skills and areas of expertise?",
-  },
-  {
-    id: "experience",
-    label: "Work experience",
-    prompt: "Please summarize her recent professional experience.",
+    label: "🛠 Skills & Tools",
+    prompt: "What are her primary skills, tools, and design strengths?",
   },
   {
     id: "resume",
-    label: "Resume",
-    prompt: "Where can I access her resume?",
+    label: "📄 Resume (PDF)",
+    prompt: "Where can I download her resume in PDF format?",
   },
   {
     id: "contact",
-    label: "Contact details",
-    prompt: "What is the best way to reach her regarding a role?",
+    label: "📬 Contact",
+    prompt: "What is the best way to get in touch with Lenna?",
   },
 ];
 
@@ -118,9 +114,9 @@ function thinkFor(text: string): number {
 export function buildWelcomeMessage(ctx: HrContext): HrResponse {
   return {
     text: [
-      `Hello — I'm the portfolio assistant for **${ctx.name}**. I can help you review her candidacy more efficiently during initial screening.`,
+      `Hello, I'm the Fast Assistant for **${ctx.name}**. In a hurry or buried under applications? I'm here to sum it all up and help you review her work in seconds!`,
       "",
-      "I can provide a background summary, highlight relevant case studies, outline skills and experience, and share resume and contact details — all sourced from this portfolio.",
+      "I can provide a 60-second summary, highlight key case studies, outline skills and experience, and share resume or contact details.",
       "",
       "How may I assist you today?",
     ].join("\n"),
@@ -151,7 +147,7 @@ export function buildHrResponse(action: HrAction, ctx: HrContext): HrResponse {
             featured.length > 1
               ? ` and **${featured.slice(1, 3).map((p) => p.title).join("** and **")}**`
               : ""
-          } — these case studies demonstrate her range from research through delivery.`
+          }. These case studies demonstrate her range from research through delivery.`
         : "";
 
       const text = [
@@ -165,7 +161,7 @@ export function buildHrResponse(action: HrAction, ctx: HrContext): HrResponse {
         "",
         projectText,
         "",
-        "I can expand on any of these areas — projects, skills, experience, or contact information — if that would be helpful.",
+        "I can expand on any of these areas (projects, skills, experience, or contact information) if that would be helpful.",
       ]
         .filter((line, i, arr) => !(line === "" && arr[i - 1] === ""))
         .join("\n");
@@ -184,7 +180,7 @@ export function buildHrResponse(action: HrAction, ctx: HrContext): HrResponse {
       const items = featuredProjects(ctx.projects);
       const lines = items.map((p, i) => {
         const tags = p.tags?.slice(0, 3).join(", ");
-        return `${i + 1}. **${p.title}**${tags ? ` — ${tags}` : ""}\n   ${p.subtitle ? firstSentence(p.subtitle) : "Full case study with process and outcomes on the site."}`;
+        return `${i + 1}. **${p.title}**${tags ? `: ${tags}` : ""}\n   ${p.subtitle ? firstSentence(p.subtitle) : "Full case study with process and outcomes on the site."}`;
       });
 
       const text = [
@@ -209,7 +205,7 @@ export function buildHrResponse(action: HrAction, ctx: HrContext): HrResponse {
 
     case "skills": {
       const groups = ctx.skills
-        .map((g) => `**${g.category}** — ${g.items.slice(0, 6).join(", ")}`)
+        .map((g) => `**${g.category}**: ${g.items.slice(0, 6).join(", ")}`)
         .join("\n");
 
       const text = [
@@ -217,7 +213,7 @@ export function buildHrResponse(action: HrAction, ctx: HrContext): HrResponse {
         "",
         groups,
         "",
-        "Her practice centers on research-led product design — from discovery and information architecture through prototyping and production-ready visual execution.",
+        "Her practice centers on research-led product design, from discovery and information architecture through prototyping and production-ready visual execution.",
         "",
         "She is well suited to roles that require both UX rigor and strong visual communication.",
       ].join("\n");
@@ -240,7 +236,7 @@ export function buildHrResponse(action: HrAction, ctx: HrContext): HrResponse {
         "",
         ...blocks,
         "",
-        "Across these roles, she has consistently worked at the intersection of user needs and business outcomes — including service design, conversion-focused information architecture, and internal product optimization.",
+        "Across these roles, she has consistently worked at the intersection of user needs and business outcomes, including service design, conversion-focused information architecture, and internal product optimization.",
         "",
         "I can also provide education details or project-specific context if needed.",
       ].join("\n\n");
@@ -254,7 +250,7 @@ export function buildHrResponse(action: HrAction, ctx: HrContext): HrResponse {
 
     case "education": {
       const lines = ctx.education.map(
-        (e) => `• **${e.degree}** — ${e.institution} (${e.year})`,
+        (e) => `• **${e.degree}**, ${e.institution} (${e.year})`,
       );
 
       const text = [
@@ -280,7 +276,7 @@ export function buildHrResponse(action: HrAction, ctx: HrContext): HrResponse {
         ctx.contact.phone ? `**Phone:** ${ctx.contact.phone}` : "",
         ctx.contact.location ? `**Location:** ${ctx.contact.location}` : "",
         "",
-        "She typically responds within **1–2 business days**. You may also use the contact form on this site to share role details directly.",
+        "She typically responds within **1 to 2 business days**. You may also use the contact form on this site to share role details directly.",
       ]
         .filter(Boolean)
         .join("\n");
@@ -300,7 +296,7 @@ export function buildHrResponse(action: HrAction, ctx: HrContext): HrResponse {
     case "resume": {
       const text = ctx.resumeUrl
         ? [
-            "Yes — her resume is available as a PDF for download or distribution to your hiring team.",
+            "Yes, her resume is available as a PDF for download or distribution to your hiring team.",
             "",
             "This is the same document linked from the about page, so you will have the most current version.",
             "",
@@ -416,7 +412,7 @@ export function parseHrContext(raw: {
     skills: about.skills ?? [],
     experience: (raw.experience as ExperienceItem[]) ?? [],
     education: (raw.education as EducationItem[]) ?? [],
-    projects: ((raw.projects as ProjectSummary[]) ?? []).map((p) => ({
+    projects: ((raw.projects as ProjectSummary[]) ?? []).filter((p) => !p.archived).map((p) => ({
       slug: p.slug,
       title: p.title,
       subtitle: p.subtitle,

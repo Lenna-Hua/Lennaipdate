@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { isAdminRequest } from "../../lib/admin-auth.js";
+import { handleCors } from "../../lib/cors.js";
 import { saveResume, readResumeBlob, RESUME_MAX_BYTES } from "../../lib/resume-storage.js";
 
 function readToken(req: VercelRequest): string | undefined {
@@ -15,6 +16,7 @@ function requireAdmin(req: VercelRequest): boolean {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (handleCors(req, res)) return;
   if (!requireAdmin(req)) {
     res.status(401).json({ error: "Unauthorized" });
     return;

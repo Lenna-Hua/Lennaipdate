@@ -16,18 +16,52 @@ const root = path.join(__dirname, "..");
 const LIVE_URL =
   process.env.LIVE_URL ?? "https://www.lennahua.ca/api/content?meta=1";
 
-/** Sections stored in production Postgres today (do not include studio/appearance). */
+/** Sections stored in production Postgres. */
 const LIVE_SECTIONS = [
   "projects",
   "about",
   "experience",
   "education",
   "gallery",
+  "studio",
   "identity",
   "contact",
   "files",
   "homepage",
+  "appearance",
 ];
+
+function mergeProjectsPreservingLockedSeeds(liveProjects, existingSeedFile) {
+  if (!Array.isArray(liveProjects)) return liveProjects;
+  let existingBySlug = new Map();
+  try {
+    const raw = JSON.parse(fs.readFileSync(existingSeedFile, "utf8"));
+    if (Array.isArray(raw)) {
+      for (const p of raw) {
+        if (p && typeof p.slug === "string") existingBySlug.set(p.slug, p);
+      }
+    }
+  } catch {
+    // ignore if seed file doesn't exist yet
+  }
+
+  return liveProjects.map((item) => {
+    if (!item || typeof item !== "object") return item;
+    const { password, locked, ...clean } = item;
+    if (locked && typeof clean.slug === "string" && existingBySlug.has(clean.slug)) {
+      const prev = existingBySlug.get(clean.slug);
+      return {
+        ...prev,
+        ...clean,
+        sections:
+          Array.isArray(clean.sections) && clean.sections.length > 0
+            ? clean.sections
+            : prev.sections ?? [],
+      };
+    }
+    return clean;
+  });
+}
 
 async function main() {
   console.log(`Fetching ${LIVE_URL} …`);
@@ -42,10 +76,16 @@ async function main() {
   }
 
   for (const section of LIVE_SECTIONS) {
-    const value = data[section];
+    let value = data[section];
     if (value === undefined || value === null) {
       console.warn(`  skip ${section} — not in live payload`);
       continue;
+    }
+    if (section === "projects") {
+      value = mergeProjectsPreservingLockedSeeds(
+        value,
+        path.join(root, "lib/data/projects.json"),
+      );
     }
     const json = JSON.stringify(value, null, 2) + "\n";
     for (const dir of ["lib/data", "src/data"]) {
@@ -56,8 +96,7 @@ async function main() {
     console.log(`  ✓ ${section} (${kb} KB) → lib/data + src/data`);
   }
 
-  console.log("\nDone. studio.json + appearance.json left unchanged (feature seeds only).");
-  console.log("Review git diff, then commit seeds with your code deploy.");
+  console.log("\nDone. Review git diff, then commit seeds with your code deploy.");
 }
 
 main().catch((err) => {

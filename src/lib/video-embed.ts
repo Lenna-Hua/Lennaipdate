@@ -10,6 +10,13 @@ export type VideoEmbed =
 
 export type EmbedCommand = "play" | "pause" | "mute" | "unmute";
 
+/** Extracts the src attribute if the input is an HTML <iframe> tag. */
+export function extractIframeSrc(input: string): string {
+  if (!input) return "";
+  const m = input.match(/<iframe[^>]+src=["']([^"']+)["']/i);
+  return m ? m[1] : input.trim();
+}
+
 function toUrl(src: string): URL | null {
   try {
     return new URL(src.trim());
@@ -53,8 +60,10 @@ function parseInstagram(url: URL): VideoEmbed | null {
 }
 
 export function parseVideoEmbed(src: string | undefined): VideoEmbed | null {
-  if (!src || !/^https?:\/\//i.test(src.trim())) return null;
-  const url = toUrl(src);
+  if (!src) return null;
+  const cleaned = extractIframeSrc(src.trim());
+  if (!/^https?:\/\//i.test(cleaned)) return null;
+  const url = toUrl(cleaned);
   if (!url) return null;
   return parseYouTube(url) ?? parseVimeo(url) ?? parseInstagram(url);
 }
@@ -95,11 +104,24 @@ export function backgroundEmbedUrl(embed: VideoEmbed): string | null {
       loop: "1",
       muted: "1",
       dnt: "1",
+      api: "1",
       ...(embed.hash ? { h: embed.hash } : {}),
     });
     return `https://player.vimeo.com/video/${embed.id}?${p}`;
   }
   return null;
+}
+
+/** Standard player with controls (no autoplay) for inline embeds/sections. */
+export function inlineEmbedUrl(embed: VideoEmbed): string {
+  if (embed.provider === "youtube") {
+    return `https://www.youtube-nocookie.com/embed/${embed.id}?rel=0`;
+  }
+  if (embed.provider === "vimeo") {
+    const h = embed.hash ? `&h=${embed.hash}` : "";
+    return `https://player.vimeo.com/video/${embed.id}?dnt=1${h}`;
+  }
+  return playerEmbedUrl(embed);
 }
 
 /** Full player with controls and sound, for the lightbox. */

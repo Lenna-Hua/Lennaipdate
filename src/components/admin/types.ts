@@ -11,7 +11,12 @@ export type {
   GalleryImageEntry,
 } from "@/lib/gallery-image";
 
-export type SectionType = "text" | "image" | "video" | "problem-solution" | "embed" | "mockup";
+export type SectionType = "text" | "image" | "video" | "problem-solution" | "embed" | "mockup" | "cta" | "process";
+
+/** One card/box in a Process or User Flow section. */
+export type ProcessStep = { title: string; body?: string; color?: string };
+
+export type ProcessLayout = "stack" | "flow";
 
 /** Skim vs expanded: "always" shows by default; "detail" only after See more. */
 export type SectionVisibility = "always" | "detail";
@@ -65,6 +70,10 @@ export type Section = {
   interactive?: boolean;
   /** Mockup: width as % of the content column (40–100, default 100). */
   mockupWidth?: number;
+  /** Process: ordered steps shown as a sliding, stacking card deck or user flow. */
+  steps?: ProcessStep[];
+  /** Process display style: "stack" (overlapping cards) or "flow" (Box → Arrow → Box user flow). */
+  processLayout?: ProcessLayout;
 };
 
 /**
@@ -77,6 +86,8 @@ export type Project = {
   id: string;
   slug: string;
   title: string;
+  /** Short punchy title for cards (e.g. Habiganize). Falls back to title if empty. */
+  shortTitle?: string;
   /** Shown under the title on the case study hero. */
   subtitle: string;
   /** Short hover text on Work page cards (falls back to subtitle). */
@@ -156,11 +167,17 @@ export type About = {
   /** Intro paragraph for the Community & Volunteer section. */
   community?: string;
   communityItems?: CommunityItem[];
+  /** Optional custom 4-step process cards shown on Home & About. */
+  processSteps?: ProcessStep[];
+  /** Display style for the Home & About process section ("stack" or "flow"). */
+  processLayout?: ProcessLayout;
 };
 
 export type CommunityItem = {
   id: string;
   title: string;
+  /** Short punchy title for cards (e.g. Habiganize). Falls back to title if empty. */
+  shortTitle?: string;
   organization?: string;
   period?: string;
   description?: string;
@@ -195,6 +212,8 @@ export type GalleryItem = {
   kind?: "big" | "small";
   slug: string;
   title: string;
+  /** Short punchy title for cards (e.g. Habiganize). Falls back to title if empty. */
+  shortTitle?: string;
   role: string;
   year?: string;
   description?: string;
@@ -285,6 +304,22 @@ export type Homepage = {
     secondaryCtaHref: string;
     selectedWorkHeading: string;
     selectedWorkLinkLabel: string;
+    /** Card size for homepage Selected Work. "md" = 3 cols, "lg" = 2 cols, "xl" = 1-2 cols. */
+    selectedWorkCardSize?: "md" | "lg" | "xl";
+    /** Aspect ratio for cards on homepage. Defaults to "4/3". */
+    selectedWorkCardAspect?: "4/3" | "16/10" | "1/1" | "auto";
+    /** Role tag visibility on card. "hover" = visible on hover, "hidden" = completely off, "always" = static. */
+    selectedWorkCardRoleTag?: "hover" | "hidden" | "always";
+    /** Title visibility: "always" = always visible below, "hover" = reveals smoothly on hover (pure visual gallery at rest). */
+    selectedWorkTitleDisplay?: "always" | "hover";
+    /** Typeface for card title: "display" | "sans" | "serif" or custom Google Font name. */
+    selectedWorkTitleFont?: string;
+    /** Font size for card title: "sm" | "md" | "lg" | "xl". */
+    selectedWorkTitleSize?: "sm" | "md" | "lg" | "xl";
+    /** Font weight for card title: "normal" | "medium" | "bold" | "black". */
+    selectedWorkTitleWeight?: "normal" | "medium" | "bold" | "black";
+    /** Text transform for card title: "uppercase" | "normal". */
+    selectedWorkTitleCase?: "uppercase" | "normal";
     /** Rotating flower sticker in the hero; links to primaryCtaHref. */
     badgeLabel?: string;
     showStudioBand?: boolean;
@@ -339,6 +374,17 @@ export type AppearancePreset =
   | "poster"
   | "custom";
 
+/** Site-wide overrides for every `.font-display` headline. `null` keeps each heading's own value. */
+export type DisplayTuning = {
+  /** Multiplies headline size; 1 = as designed. */
+  scale: number;
+  lineHeight: number | null;
+  /** In em. */
+  letterSpacing: number | null;
+  weight: number | null;
+  uppercase: boolean;
+};
+
 export type Appearance = {
   preset: AppearancePreset;
   displayFont: string;
@@ -346,6 +392,13 @@ export type Appearance = {
   serifFont: string;
   /** Google Fonts CSS2 family fragments, e.g. "Syne:wght@700;800". */
   googleFamilies: string[];
+  display?: DisplayTuning;
+  sidebarBg?: string;
+  sidebarBgDark?: string;
+  /** Custom hex color for "Selected" on the /work page (defaults to #E85D4A). */
+  workTitleLine1Color?: string;
+  /** Custom hex color for "Works" on the /work page (defaults to #5E9BFF). */
+  workTitleLine2Color?: string;
 };
 
 export type ContentData = {

@@ -172,7 +172,7 @@ export function MockupSectionEditor({
           >
             <span>{busy || "↑ Drop or pick screenshots (multiple)"}</span>
             <span className="normal-case tracking-normal text-[color:var(--adm-faint)]">
-              {guidelineSummary("mockup-screen")}. Full-bleed UI only — no device in the image. Each screen's shape picks its frame; mix phone, tablet and
+              {guidelineSummary("mockup-screen")}. Full-bleed UI only: no device in the image. Each screen's shape picks its frame; mix phone, tablet and
               desktop shots to get a device set. Full-page (long) screenshots scroll inside the device.
             </span>
             <input
@@ -253,7 +253,7 @@ export function MockupSectionEditor({
             <Slider label="Size" value={meta[open].size ?? 100} min={50} max={150} onChange={(v) => patchMeta(open, { size: v })} />
             <p className="text-[color:var(--adm-faint)] text-[11px] leading-relaxed">
               Zoom and Focus crop the image inside the screen (Focus 0 = top). Interactive mockups ignore Focus on long
-              screens and scroll them from the top. "Set as" and Size apply to the Device set layout — the first screen
+              screens and scroll them from the top. "Set as" and Size apply to the Device set layout: the first screen
               of each kind is the one shown.
             </p>
           </div>
@@ -330,7 +330,7 @@ export function MockupSectionEditor({
       />
       <p className="text-[color:var(--adm-faint)] text-xs -mt-1 leading-relaxed">
         Long screens scroll up and down inside the device like a website, clicking fades to the next screen, and the
-        device tilts toward the cursor — like a Figma prototype. Off = click opens the full-size image.
+        device tilts toward the cursor: like a Figma prototype. Off = click opens the full-size image.
       </p>
 
       <TextInput label="Caption (optional)" value={section.caption ?? ""} onChange={(v) => onChange({ caption: v })} />

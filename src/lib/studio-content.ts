@@ -4,15 +4,15 @@ export const DEFAULT_STUDIO: Studio = {
   eyebrow: "Studio · Archive",
   heading: "Studio",
   intro:
-    "A living scrapbook of illustration, photography, motion, and editorial studies — plus a little type game to play.",
+    "A living scrapbook of illustration, photography, motion, and editorial studies, plus a little type game to play.",
   bigEyebrow: "01 · Productions",
   bigHeading: "Big Projects",
   bigBlurb:
-    "Full directorial and production projects — click any tile to read the full project page.",
+    "Full directorial and production projects. Click any tile to read the full project page.",
   artworksEyebrow: "02 · Studies",
   artworksHeading: "Artworks",
   artworksBlurb:
-    "Smaller pieces, studies, and standalone artworks. Scroll horizontally or click a card to view details.",
+    "Smaller pieces, studies, and standalone artworks. Click any piece to view it larger.",
   artworksCardSize: "lg",
   artworksDefaultStyle: "slideshow",
   showPlay: true,

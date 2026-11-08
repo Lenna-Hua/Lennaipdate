@@ -233,7 +233,7 @@ export function LivePreviewPane({
       </div>
 
       <p className="px-3 py-1.5 border-t border-[color:var(--adm-line)] text-[color:var(--adm-faint)] text-[11px]">
-        Unsaved draft — updates as you type. Click Save to Site to publish.
+        Unsaved draft: updates as you type. Click Save to Site to publish.
       </p>
     </div>
   );

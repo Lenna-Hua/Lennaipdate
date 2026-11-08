@@ -25,7 +25,7 @@ export function ExperienceEditor({
       role: "New Role",
       company: "Company",
       location: "",
-      period: "2024 — Present",
+      period: "2024: Present",
       bullets: [],
     };
     const updated = [...data, newItem];
@@ -103,7 +103,7 @@ export function ExperienceEditor({
             onChange={(v) => update(selectedIdx, { location: v })}
           />
           <TextInput
-            label="Period (e.g. 2022 — Present)"
+            label="Period (e.g. 2022: Present)"
             value={item.period}
             onChange={(v) => update(selectedIdx, { period: v })}
           />

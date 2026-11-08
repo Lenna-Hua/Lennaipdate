@@ -63,14 +63,21 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 
-/** Keep new seed fields (e.g. yearsExperience) when live DB rows are older. */
+/**
+ * Keep new seed fields (e.g. yearsExperience, homepage.home.selectedWork*)
+ * when live DB rows are older. Plain objects merge recursively so nested
+ * defaults survive; live values (including arrays and empty strings) win.
+ */
+function deepMerge(seed: unknown, live: unknown): unknown {
+  if (live === undefined || live === null) return seed;
+  if (!isPlainObject(seed) || !isPlainObject(live)) return live;
+  const out: Record<string, unknown> = { ...seed };
+  for (const [k, v] of Object.entries(live)) out[k] = deepMerge(seed[k], v);
+  return out;
+}
+
 function mergeWithSeed(key: keyof ContentMap, live: unknown): unknown {
-  const seed = SEEDS[key];
-  if (live == null) return seed;
-  if (isPlainObject(seed) && isPlainObject(live)) {
-    return { ...seed, ...live };
-  }
-  return live;
+  return deepMerge(SEEDS[key], live);
 }
 
 /**
@@ -106,7 +113,7 @@ function overlayDraft(
     const live = content[key];
     const d = draft[key];
     if (isPlainObject(seed) && isPlainObject(live) && isPlainObject(d)) {
-      next[key] = { ...seed, ...live, ...d };
+      next[key] = deepMerge(deepMerge(seed, live), d);
     } else {
       next[key] = d;
     }
@@ -217,7 +224,7 @@ export function ContentProvider({ children }: { children: ReactNode }) {
           className="fixed top-0 inset-x-0 z-[100] px-4 py-2 text-center text-sm font-sans"
           style={{ background: "#C8A96E", color: "#0A0908" }}
         >
-          Draft preview — not published yet. Click Save to Site in Admin to go live.
+          Draft preview, not published yet. Click Save to Site in Admin to go live.
         </div>
       )}
       {children}

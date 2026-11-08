@@ -1,17 +1,11 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { query } from "../lib/db.js";
+import { handleCors } from "../lib/cors.js";
 
 export const config = { maxDuration: 10 };
 
-function hasCloudinary(): boolean {
-  return Boolean(
-    process.env.CLOUDINARY_CLOUD_NAME &&
-      process.env.CLOUDINARY_API_KEY &&
-      process.env.CLOUDINARY_API_SECRET,
-  );
-}
-
-export default async function handler(_req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (handleCors(req, res)) return;
   try {
     await query("SELECT 1");
     res.json({ status: "ok" });
@@ -19,3 +13,4 @@ export default async function handler(_req: VercelRequest, res: VercelResponse) 
     res.status(500).json({ status: "error" });
   }
 }
+

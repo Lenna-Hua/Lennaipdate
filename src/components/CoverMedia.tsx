@@ -243,15 +243,23 @@ export function EmbedCover({
   useEffect(() => {
     if (!progressed || !running) {
       setSettled(false);
-      return;
+      return undefined;
     }
     if (!isYouTube) {
       setSettled(true);
-      return;
+      return undefined;
     }
     const t = window.setTimeout(() => setSettled(true), YOUTUBE_SETTLE_MS);
     return () => window.clearTimeout(t);
   }, [progressed, running, isYouTube]);
+
+  useEffect(() => {
+    if (!isYouTube && loaded && running && !settled) {
+      const t = window.setTimeout(() => setSettled(true), 800);
+      return () => window.clearTimeout(t);
+    }
+    return undefined;
+  }, [isYouTube, loaded, running, settled]);
 
   const playMessage = embedCommandMessage(embed, running ? "play" : "pause");
   const soundMessage = embedCommandMessage(embed, muted ? "mute" : "unmute");

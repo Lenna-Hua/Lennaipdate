@@ -1,12 +1,12 @@
 [
   {
     "id": "1784329271447",
-    "role": "Product Designer (UX/UI & Front-end Operations) Intern",
-    "period": "April - June 2026",
+    "role": "Product Designer (UX/UI & Frontend Operations) Intern",
+    "period": "April to June 2026",
     "bullets": [
-      "Led end-to-end UX/UI design and usability testing for a B2B travel management platform. By refining information architecture and streamlining self-service workflows, increased independent booking success rates by 20-30%, significantly reducing user reliance on customer support.",
-      "Overhauled core application logic and resolved complex UX backlogs across critical booking touchpoints. Successfully translated intricate business parameters (e.g., cross-regional data synchronization, dynamic pricing, and corporate policy compliance) into an intuitive, error-free user journey.",
-      "Spearheaded the design and integration of AI-driven planning features, enabling HR professionals to automate corporate itinerary creation. Designed prompt-based interactions that instantly generate and customize complex trip schedules, drastically reducing manual effort and elevating overall product value."
+      "Led end to end UX/UI design and usability testing for a B2B travel management platform. By refining information architecture and streamlining self service workflows, increased independent booking success rates by 20 to 30%, significantly reducing user reliance on customer support.",
+      "Overhauled core application logic and resolved complex UX backlogs across critical booking touchpoints. Successfully translated intricate business parameters (e.g., cross regional data synchronization, dynamic pricing, and corporate policy compliance) into an intuitive, error free user journey.",
+      "Spearheaded the design and integration of AI driven planning features, enabling HR professionals to automate corporate itinerary creation. Designed prompt based interactions that instantly generate and customize complex trip schedules, drastically reducing manual effort and elevating overall product value."
     ],
     "company": "Cotriply",
     "location": "Ontario"
@@ -16,20 +16,20 @@
     "role": "Product Designer",
     "period": "2026",
     "bullets": [
-      "Product Strategy & Research: Spearheaded end-to-end service design research to uncover critical friction points within the user journey. Translated complex behavioral data and root-cause analysis into a prioritized product roadmap, aligning high-impact usability improvements with core business objectives.",
-      "Conversion-Driven Information Architecture: Overhauled website architecture and navigation to optimize discoverability and streamline the client acquisition funnel, directly bridging user task-completion needs with the firm's growth targets.",
-      "Visual Identity & Media Integration: Directed the visual narrative by producing high-fidelity architectural photography and seamlessly integrating these assets into the overarching UX framework, establishing a cohesive digital brand presence that elevated market credibility."
+      "Product Strategy & Research: Spearheaded end to end service design research to uncover critical friction points within the user journey. Translated complex behavioral data and root cause analysis into a prioritized product roadmap, aligning high impact usability improvements with core business objectives.",
+      "Conversion Driven Information Architecture: Overhauled website architecture and navigation to optimize discoverability and streamline the client acquisition funnel, directly bridging user task completion needs with the firm's growth targets.",
+      "Visual Identity & Media Integration: Directed the visual narrative by producing high fidelity architectural photography and seamlessly integrating these assets into the overarching UX framework, establishing a cohesive digital brand presence that elevated market credibility."
     ],
     "company": "Lloyd Hunt Architect",
     "location": "Ontario"
   },
   {
     "id": "2",
-    "role": "Internal Product Designer — POS Ecosystem Optimization",
+    "role": "Internal Product Designer, POS Ecosystem Optimization",
     "period": "2026",
     "bullets": [
-      "Spearheaded the digital transformation of a legacy POS system, resolving critical technical debt and operational failures to ensure 100% system uptime during high-traffic business hours.",
-      "Re-engineered the end-to-end service blueprint, streamlining the order-to-fulfillment journey for staff which significantly reduced manual input errors and order processing latency.",
+      "Spearheaded the digital transformation of a legacy POS system, resolving critical technical debt and operational failures to ensure 100% system uptime during high traffic business hours.",
+      "Reengineered the end to end service blueprint, streamlining the order to fulfillment journey for staff which significantly reduced manual input errors and order processing latency.",
       "Optimized business efficiency by consolidating fragmented legacy tools into a unified internal product, enhancing staff productivity and driving a seamless customer dining experience."
     ],
     "company": "I LOVE PHO",
@@ -38,11 +38,11 @@
   {
     "id": "3",
     "role": "Event Assistant",
-    "period": "2024 - 2025",
+    "period": "2024 to 2025",
     "bullets": [
-      "Supported major Toronto events including Annual Dinner 2025, DesignTO, CANFAR's Bloor Street Entertain 28, Limitless Gala 2024, CAFA Awards 2024, and on-call work for Floral Werx | Europe Elegant.",
+      "Supported major Toronto events including Annual Dinner 2025, DesignTO, CANFAR's Bloor Street Entertain 28, Limitless Gala 2024, CAFA Awards 2024, and on call work for Floral Werx | Europe Elegant.",
       "Executed event setups from concept boards, including table styling, venue décor, auction displays, and backstage support.",
-      "Optimized wayfinding and spatial systems for high-volume environments, iterating on service delivery in real time based on logistical constraints and live user feedback."
+      "Optimized wayfinding and spatial systems for high volume environments, iterating on service delivery in real time based on logistical constraints and live user feedback."
     ],
     "company": "European Elegance | Floral Werx",
     "location": "Ontario"
@@ -50,11 +50,11 @@
   {
     "id": "4",
     "role": "Experience Designer (Visual & Event)",
-    "period": "2022 - 2025",
+    "period": "2022 to 2025",
     "bullets": [
       "Designed integrated brand and audience experiences across visual systems, motion assets, and spatial environments for live events and campaigns.",
       "Translated client objectives into structured experience concepts that connected digital visuals with physical interactions, improving coherence across touchpoints.",
-      "Collaborated with planners, marketers, and production teams to deliver end-to-end audience journeys and produced asset libraries and design specifications for seamless implementation."
+      "Collaborated with planners, marketers, and production teams to deliver end to end audience journeys and produced asset libraries and design specifications for seamless implementation."
     ],
     "company": "THG Trade & Service Co., Ltd.",
     "location": ""

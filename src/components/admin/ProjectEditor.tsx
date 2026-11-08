@@ -5,19 +5,29 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { SafeImage } from "@/components/SafeImage";
 import { CoverMedia, isVideo } from "@/components/CoverMedia";
-import { parseVideoEmbed } from "@/lib/video-embed";
+import { embedProviderLabel, parseVideoEmbed } from "@/lib/video-embed";
 import { AdminSortableList } from "@/pages/admin-sortable";
-import type { Project, Section, SectionType } from "./types";
+import type { ProcessStep, Project, Section, SectionType } from "./types";
 import {
+  AlignLeft,
   ArrowDown,
   ArrowUp,
   ChevronDown,
   ChevronRight,
+  Code2,
+  Columns2,
   Copy,
+  ExternalLink,
+  Film,
+  GitCommitHorizontal,
+  Image as ImageIcon,
+  Layers,
   Lock,
   Plus,
+  Smartphone,
   Trash2,
 } from "lucide-react";
+import { stripRichText } from "@/lib/rich-text";
 import {
   TextInput,
   TextareaInput,
@@ -33,6 +43,7 @@ import {
 } from "./AssetLibrary";
 import { parseBriefToProject } from "@/lib/case-study-brief";
 import { MockupSectionEditor } from "./MockupSectionEditor";
+import { ProcessStepsEditor } from "./ProcessStepsEditor";
 
 // ── Helpers ────────────────────────────────────────────────────────────
 
@@ -43,6 +54,8 @@ const SECTION_TYPES = new Set<SectionType>([
   "problem-solution",
   "embed",
   "mockup",
+  "cta",
+  "process",
 ]);
 
 /** Saved passwords come back from the server as hashes, never plain text. */
@@ -65,7 +78,7 @@ function CaseStudyPasswordFields({
   }, [password]);
   const typed = password && !isSavedPasswordHash(password) ? password : "";
   const status = typed
-    ? "New custom password — goes live when you Save to Site."
+    ? "New custom password: goes live when you Save to Site."
     : savedHash
       ? "Custom password saved."
       : "Using the shared portfolio password (CASE_STUDY_PASSWORD in Vercel).";
@@ -80,7 +93,7 @@ function CaseStudyPasswordFields({
         label="Custom password (optional)"
         value={typed}
         onChange={(v) => onChange(v || savedHash)}
-        placeholder={savedHash ? "Saved — type to replace" : "Leave blank to use the shared password"}
+        placeholder={savedHash ? "Saved: type to replace" : "Leave blank to use the shared password"}
         hint={status}
       />
       {(savedHash || typed) && (
@@ -408,7 +421,7 @@ function MediaLinkFields({
         onChange={(v) => onChange({ linkLabel: v })}
       />
       <p className="text-[color:var(--adm-faint)] text-xs leading-relaxed -mt-1">
-        Shows a “Click here to try the product →” style link under the media. Use https://… — no iframe.
+        Shows a “Click here to try the product →” style link under the media. Use https://…: no iframe.
       </p>
     </>
   );
@@ -421,9 +434,37 @@ const SECTION_TYPE_LABEL: Record<SectionType, string> = {
   mockup: "Mockup",
   "problem-solution": "Problem / Solution",
   embed: "Embed",
+  cta: "CTA Button (only)",
+  process: "Process (step cards)",
 };
 
-const ADDABLE_SECTION_TYPES: SectionType[] = ["text", "image", "video", "mockup", "problem-solution", "embed"];
+function SectionTypeIcon({
+  type,
+  processLayout,
+  className = "h-3.5 w-3.5 stroke-[1.75]",
+}: {
+  type: SectionType;
+  processLayout?: "stack" | "flow";
+  className?: string;
+}) {
+  if (type === "text") return <AlignLeft className={className} aria-hidden />;
+  if (type === "image") return <ImageIcon className={className} aria-hidden />;
+  if (type === "video") return <Film className={className} aria-hidden />;
+  if (type === "mockup") return <Smartphone className={className} aria-hidden />;
+  if (type === "problem-solution") return <Columns2 className={className} aria-hidden />;
+  if (type === "process") {
+    return processLayout === "flow" ? (
+      <GitCommitHorizontal className={className} aria-hidden />
+    ) : (
+      <Layers className={className} aria-hidden />
+    );
+  }
+  if (type === "embed") return <Code2 className={className} aria-hidden />;
+  if (type === "cta") return <ExternalLink className={className} aria-hidden />;
+  return <AlignLeft className={className} aria-hidden />;
+}
+
+const ADDABLE_SECTION_TYPES: SectionType[] = ["text", "image", "video", "mockup", "problem-solution", "process", "embed", "cta"];
 
 function newSectionId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -435,17 +476,40 @@ function createSection(type: SectionType): Section {
   if (type === "image") return { id, type, visibility: "always", src: "", caption: "", href: "", linkLabel: "" };
   if (type === "video") return { id, type, visibility: "always", src: "", caption: "", title: "", href: "", linkLabel: "" };
   if (type === "embed") return { id, type, visibility: "always", src: "", title: "", caption: "", height: 500 };
+  if (type === "cta") return { id, type, visibility: "always", title: "", href: "", linkLabel: "Click here to try the product →" };
+  if (type === "process")
+    return {
+      id,
+      type,
+      visibility: "always",
+      title: "Process",
+      summary: "",
+      steps: [
+        { title: "Discover", body: "" },
+        { title: "Define", body: "" },
+        { title: "Develop", body: "" },
+        { title: "Deliver", body: "" },
+      ],
+    };
   if (type === "mockup") return { id, type, visibility: "always", title: "", caption: "", screens: [], device: "phone", layout: "single", background: "" };
   return { id, type, visibility: "always", problem: "", solution: "" };
 }
 
 function sectionDisplayName(sec: Section): string {
-  const raw = sec.title || (sec.type === "problem-solution" ? sec.problem : "") || sec.caption || "";
-  const s = raw.trim().replace(/\s+/g, " ");
+  const raw = sec.title || (sec.type === "problem-solution" ? sec.problem : "") || (sec.type === "cta" ? (sec.linkLabel || sec.href) : "") || sec.caption || "";
+  const s = stripRichText(raw).trim().replace(/\s+/g, " ");
   return s.length > 48 ? `${s.slice(0, 47)}…` : s;
 }
 
-function AddSectionChips({ onPick, onCancel }: { onPick: (t: SectionType) => void; onCancel?: () => void }) {
+function AddSectionChips({
+  onPick,
+  onPickFlow,
+  onCancel,
+}: {
+  onPick: (t: SectionType) => void;
+  onPickFlow?: () => void;
+  onCancel?: () => void;
+}) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       {ADDABLE_SECTION_TYPES.map((t) => (
@@ -453,12 +517,24 @@ function AddSectionChips({ onPick, onCancel }: { onPick: (t: SectionType) => voi
           key={t}
           type="button"
           onClick={() => onPick(t)}
-          className="inline-flex items-center gap-1 h-8 px-3 rounded-full border border-[color:var(--adm-line-strong)] text-[13px] text-[color:var(--adm-text)] hover:border-[color:var(--adm-accent)] hover:text-[color:var(--adm-accent)] transition-colors"
+          className="inline-flex items-center gap-1 h-8 px-3 rounded-none border border-[color:var(--adm-line-strong)] text-[13px] text-[color:var(--adm-text)] hover:border-[color:var(--adm-accent)] hover:text-[color:var(--adm-accent)] transition-colors"
         >
-          <Plus className="h-3.5 w-3.5" aria-hidden />
+          <Plus className="h-3 w-3 opacity-60" aria-hidden />
+          <SectionTypeIcon type={t} className="h-3.5 w-3.5 stroke-[1.75] text-[color:var(--adm-muted)]" />
           {SECTION_TYPE_LABEL[t]}
         </button>
       ))}
+      {onPickFlow && (
+        <button
+          type="button"
+          onClick={onPickFlow}
+          className="inline-flex items-center gap-1 h-8 px-3 rounded-none border border-[color:var(--adm-line-strong)] text-[13px] text-[color:var(--adm-text)] hover:border-[color:var(--adm-accent)] hover:text-[color:var(--adm-accent)] transition-colors"
+        >
+          <Plus className="h-3 w-3 opacity-60" aria-hidden />
+          <SectionTypeIcon type="process" processLayout="flow" className="h-3.5 w-3.5 stroke-[1.75] text-[color:var(--adm-muted)]" />
+          User Flow (box → arrow)
+        </button>
+      )}
       {onCancel && (
         <button type="button" onClick={onCancel} className="h-8 px-2 text-[13px] text-[color:var(--adm-faint)] hover:text-[color:var(--adm-text)]">
           Cancel
@@ -468,7 +544,13 @@ function AddSectionChips({ onPick, onCancel }: { onPick: (t: SectionType) => voi
   );
 }
 
-function SectionInsertRow({ onPick }: { onPick: (t: SectionType) => void }) {
+function SectionInsertRow({
+  onPick,
+  onPickFlow,
+}: {
+  onPick: (t: SectionType) => void;
+  onPickFlow?: () => void;
+}) {
   const [open, setOpen] = useState(false);
   if (open) {
     return (
@@ -478,6 +560,14 @@ function SectionInsertRow({ onPick }: { onPick: (t: SectionType) => void }) {
             setOpen(false);
             onPick(t);
           }}
+          onPickFlow={
+            onPickFlow
+              ? () => {
+                  setOpen(false);
+                  onPickFlow();
+                }
+              : undefined
+          }
           onCancel={() => setOpen(false)}
         />
       </div>
@@ -500,6 +590,15 @@ function SectionInsertRow({ onPick }: { onPick: (t: SectionType) => void }) {
 const iconBtn =
   "inline-flex items-center justify-center h-7 w-7 rounded-md text-[color:var(--adm-faint)] hover:bg-[color:var(--adm-subtle)] hover:text-[color:var(--adm-text)] transition-colors disabled:opacity-30 disabled:pointer-events-none";
 
+/** Converts "01 · Title — body" style bullets into process steps. */
+function bulletsToSteps(bullets: string[]): ProcessStep[] {
+  return bullets.map((b) => {
+    const clean = b.replace(/^\s*\d+\s*[·.)\-:]\s*/, "");
+    const m = clean.match(/^(.+?)\s+[—–-]\s+(.+)$/s);
+    return m ? { title: m[1].trim(), body: m[2].trim() } : { title: clean.trim(), body: "" };
+  });
+}
+
 function SectionsEditor({
   sections,
   onChange,
@@ -515,6 +614,16 @@ function SectionsEditor({
     onChange(next);
   };
 
+  const insertFlowSection = (at: number) => {
+    const next = [...sections];
+    next.splice(at, 0, {
+      ...createSection("process"),
+      title: "User Flow",
+      processLayout: "flow",
+    });
+    onChange(next);
+  };
+
   const update = (idx: number, patch: Partial<Section>) => {
     onChange(sections.map((s, i) => (i === idx ? { ...s, ...patch } : s)));
   };
@@ -523,7 +632,7 @@ function SectionsEditor({
     const sec = sections[idx];
     if (!sec) return;
     const name = sectionDisplayName(sec);
-    if (!window.confirm(`Delete S${idx + 1} · ${SECTION_TYPE_LABEL[sec.type]}${name ? ` — ${name}` : ""}?`)) return;
+    if (!window.confirm(`Delete S${idx + 1} · ${SECTION_TYPE_LABEL[sec.type]}${name ? `: ${name}` : ""}?`)) return;
     onChange(sections.filter((_, i) => i !== idx));
   };
 
@@ -576,7 +685,7 @@ function SectionsEditor({
           ) : undefined
         }
       >
-        <AddSectionChips onPick={(t) => insertSection(t, 0)} />
+        <AddSectionChips onPick={(t) => insertSection(t, 0)} onPickFlow={() => insertFlowSection(0)} />
       </EditorBox>
 
       {sections.length === 0 && (
@@ -593,20 +702,34 @@ function SectionsEditor({
           const isCollapsed = collapsed.has(sec.id);
           return (
             <div className="pb-1">
-              {idx > 0 && <SectionInsertRow onPick={(t) => insertSection(t, idx)} />}
+              {idx > 0 && <SectionInsertRow onPick={(t) => insertSection(t, idx)} onPickFlow={() => insertFlowSection(idx)} />}
               <EditorBox
                 code={`S${idx + 1}`}
                 leading={dragHandle}
                 title={
-                  <>
-                    {SECTION_TYPE_LABEL[sec.type]}
-                    {name && <span className="font-normal text-[color:var(--adm-muted)]"> — {name}</span>}
+                  <span className="inline-flex items-center gap-2 min-w-0">
+                    <span
+                      className="inline-flex items-center justify-center h-5 w-5 rounded border border-[color:var(--adm-line-strong)] bg-[color:var(--adm-subtle)] text-[color:var(--adm-muted)] shrink-0"
+                      title={SECTION_TYPE_LABEL[sec.type]}
+                    >
+                      <SectionTypeIcon type={sec.type} processLayout={sec.processLayout} />
+                    </span>
+                    <span className="shrink-0">
+                      {sec.type === "process" && sec.processLayout === "flow"
+                        ? "User Flow"
+                        : SECTION_TYPE_LABEL[sec.type]}
+                    </span>
+                    {name && (
+                      <span className="font-normal text-[color:var(--adm-muted)] truncate">
+                        · {name}
+                      </span>
+                    )}
                     {sec.visibility === "detail" && (
-                      <span className="ml-2 align-middle text-[10px] font-medium px-1.5 py-0.5 rounded bg-[color:var(--adm-subtle)] text-[color:var(--adm-muted)]">
+                      <span className="ml-1 shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded bg-[color:var(--adm-subtle)] text-[color:var(--adm-muted)]">
                         See more
                       </span>
                     )}
-                  </>
+                  </span>
                 }
                 actions={
                   <>
@@ -659,7 +782,7 @@ function SectionsEditor({
               />
               <div className="border-t border-[color:var(--adm-line)] pt-3 flex flex-col gap-3">
                 <p className="text-[color:var(--adm-muted)] text-[10px] uppercase tracking-widest">
-                  Expanded copy (optional — swaps in when See more is on)
+                  Expanded copy (optional: swaps in when See more is on)
                 </p>
                 <TextInput label="Title when expanded" value={sec.titleDetail ?? ""} onChange={(v) => update(idx, { titleDetail: v })} />
                 <TextInput label="Summary when expanded" value={sec.summaryDetail ?? ""} onChange={(v) => update(idx, { summaryDetail: v })} />
@@ -707,7 +830,7 @@ function SectionsEditor({
                 onChange={(v) => update(idx, { transparent: v })}
               />
               <p className="text-[color:var(--adm-faint)] text-xs -mt-1">
-                For PNG, WebP or GIF files with see-through areas — removes the card behind the image.
+                For PNG, WebP or GIF files with see-through areas: removes the card behind the image.
               </p>
               {sec.src && (
                 <div className="mt-1 self-start" style={sec.transparent ? CHECKERBOARD : undefined}>
@@ -724,7 +847,7 @@ function SectionsEditor({
           {sec.type === "video" && (
             <>
               <TextInput label="Title (optional)" value={sec.title ?? ""} onChange={(v) => update(idx, { title: v })} />
-              <TextInput label="Video URL (.mp4 / .webm)" value={sec.src ?? ""} onChange={(v) => update(idx, { src: v })} />
+              <TextInput label="Video URL (.mp4 / .webm, or YouTube / Vimeo link)" value={sec.src ?? ""} onChange={(v) => update(idx, { src: v })} />
               <div className="flex items-center gap-2 flex-wrap">
                 <SectionImageUploader
                   accept="video/mp4,video/webm,.mp4,.webm"
@@ -755,19 +878,26 @@ function SectionsEditor({
                 onChange={(v) => update(idx, { transparent: v })}
               />
               <p className="text-[color:var(--adm-faint)] text-xs leading-relaxed -mt-1">
-                MP4 can’t store transparency — export a <span className="text-[color:var(--adm-muted)]">WebM (VP9 with alpha)</span> for
+                MP4 can’t store transparency: export a <span className="text-[color:var(--adm-muted)]">WebM (VP9 with alpha)</span> for
                 see-through video. Safari may show WebM transparency as a solid background.
               </p>
               {sec.src && (
-                <video
-                  src={sec.src}
-                  muted
-                  playsInline
-                  loop={!!sec.loop}
-                  autoPlay={!!sec.loop}
-                  className={`h-24 mt-1 w-full ${sec.transparent ? "object-contain" : "object-cover opacity-60 bg-[color:var(--adm-input)]"}`}
-                  style={sec.transparent ? CHECKERBOARD : undefined}
-                />
+                parseVideoEmbed(sec.src) ? (
+                  <div className="mt-1 p-3 bg-[color:var(--adm-subtle)] border border-[color:var(--adm-line-strong)] text-xs text-[color:var(--adm-text)] flex items-center gap-2">
+                    <span className="font-medium text-[color:var(--adm-accent)]">▶ {embedProviderLabel(parseVideoEmbed(sec.src)!)} Video</span>
+                    <span className="text-[color:var(--adm-muted)]">:  plays via responsive player on the case study</span>
+                  </div>
+                ) : (
+                  <video
+                    src={sec.src}
+                    muted
+                    playsInline
+                    loop={!!sec.loop}
+                    autoPlay={!!sec.loop}
+                    className={`h-24 mt-1 w-full ${sec.transparent ? "object-contain" : "object-cover opacity-60 bg-[color:var(--adm-input)]"}`}
+                    style={sec.transparent ? CHECKERBOARD : undefined}
+                  />
+                )
               )}
               <p className="text-[color:var(--adm-faint)] text-xs">
                 {sec.loop
@@ -784,7 +914,7 @@ function SectionsEditor({
               <TextareaInput label="Solution" value={sec.solution ?? ""} onChange={(v) => update(idx, { solution: v })} rows={3} />
               <div className="border-t border-[color:var(--adm-line)] pt-3 flex flex-col gap-3">
                 <p className="text-[color:var(--adm-muted)] text-[10px] uppercase tracking-widest">
-                  Expanded copy (optional — swaps in when See more is on)
+                  Expanded copy (optional: swaps in when See more is on)
                 </p>
                 <TextareaInput label="Problem when expanded" value={sec.problemDetail ?? ""} onChange={(v) => update(idx, { problemDetail: v })} rows={3} />
                 <TextareaInput label="Solution when expanded" value={sec.solutionDetail ?? ""} onChange={(v) => update(idx, { solutionDetail: v })} rows={3} />
@@ -796,12 +926,13 @@ function SectionsEditor({
             <>
               <TextInput label="Title (optional)" value={sec.title ?? ""} onChange={(v) => update(idx, { title: v })} />
               <TextInput
-                label="Embed URL (online.pubhtml5.com only)"
+                label="Embed URL or iframe code (Vimeo, YouTube, PubHTML5)"
                 value={sec.src ?? ""}
+                placeholder="e.g. https://player.vimeo.com/video/875454327 or <iframe...>"
                 onChange={(v) => update(idx, { src: v })}
               />
               <TextInput
-                label="Height (px)"
+                label="Height (px, optional for video)"
                 value={String(sec.height ?? 500)}
                 onChange={(v) => {
                   const n = parseInt(v, 10);
@@ -810,9 +941,36 @@ function SectionsEditor({
               />
               <TextInput label="Caption (optional)" value={sec.caption ?? ""} onChange={(v) => update(idx, { caption: v })} />
               <p className="text-[color:var(--adm-faint)] text-xs leading-relaxed">
-                PubHTML5 viewer URLs only. For live products, use Image/Video + Product CTA link instead of an iframe.
+                Vimeo (URL or embed code), YouTube, or PubHTML5 viewer embeds.
               </p>
             </>
+          )}
+
+          {sec.type === "process" && (
+            <>
+              <TextInput label="Section Title" value={sec.title ?? ""} onChange={(v) => update(idx, { title: v })} />
+              <TextInput label="Summary line (optional)" value={sec.summary ?? ""} onChange={(v) => update(idx, { summary: v })} />
+              <TextareaInput label="Intro text (optional)" value={sec.body ?? ""} onChange={(v) => update(idx, { body: v })} rows={3} />
+              <ProcessStepsEditor
+                steps={sec.steps ?? []}
+                layout={sec.processLayout ?? "stack"}
+                onLayoutChange={(processLayout) => update(idx, { processLayout })}
+                onChange={(steps) => update(idx, { steps })}
+              />
+            </>
+          )}
+
+          {sec.type === "text" && (sec.bullets?.length ?? 0) > 1 && (
+            <button
+              type="button"
+              onClick={() =>
+                update(idx, { type: "process", steps: bulletsToSteps(sec.bullets ?? []), bullets: undefined })
+              }
+              className="w-max text-xs text-[color:var(--adm-accent)] hover:underline"
+              title="Turns each bullet into a step card. Use “01 · Title: description” bullets for best results."
+            >
+              Convert bullets to Process step cards →
+            </button>
           )}
 
           {sec.type === "mockup" && (
@@ -825,6 +983,44 @@ function SectionsEditor({
               />
             </>
           )}
+
+          {sec.type === "cta" && (
+            <>
+              <TextInput
+                label="Section Title (optional)"
+                value={sec.title ?? ""}
+                onChange={(v) => update(idx, { title: v })}
+              />
+              <TextInput
+                label="Button Link URL"
+                value={sec.href ?? ""}
+                placeholder="https://..."
+                onChange={(v) => update(idx, { href: v })}
+              />
+              <TextInput
+                label="Button Text / Label"
+                value={sec.linkLabel ?? ""}
+                placeholder="Click here to try the product →"
+                onChange={(v) => update(idx, { linkLabel: v })}
+              />
+              <p className="text-[color:var(--adm-faint)] text-xs leading-relaxed -mt-1">
+                Renders a standalone square call-to-action button placed on the right.
+              </p>
+              {sec.href && (
+                <div className="flex justify-end pt-2">
+                  <a
+                    href={sec.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 border border-[color:var(--adm-line-strong)] bg-[color:var(--adm-subtle)] text-[color:var(--adm-text)] px-5 py-2.5 text-xs uppercase tracking-widest font-medium rounded-none hover:border-[color:var(--adm-accent)]"
+                  >
+                    {(sec.linkLabel?.trim() || "Click here to try the product").replace(/\s*[→↗›»]+\s*$/, "")} ↗
+                  </a>
+                </div>
+              )}
+            </>
+          )}
+
               </>
               )}
               </EditorBox>
@@ -833,7 +1029,7 @@ function SectionsEditor({
         }}
       />
 
-      {sections.length > 0 && <SectionInsertRow onPick={(t) => insertSection(t, sections.length)} />}
+      {sections.length > 0 && <SectionInsertRow onPick={(t) => insertSection(t, sections.length)} onPickFlow={() => insertFlowSection(sections.length)} />}
     </div>
   );
 }
@@ -885,7 +1081,7 @@ function BriefAutofillPanel({
     onApply(result.patch as Partial<Project>);
     setHint(
       includeSections
-        ? `Filled from brief (local) — ${result.patch.sections?.length ?? 0} sections. Review, add images, then Save.`
+        ? `Filled from brief (local): ${result.patch.sections?.length ?? 0} sections. Review, add images, then Save.`
         : "Filled hero and Overview / Problem / Solution / Impact from brief. Review, then Save.",
     );
   };
@@ -908,7 +1104,7 @@ function BriefAutofillPanel({
       {open && (
         <>
           <p className="text-[color:var(--adm-faint)] text-xs leading-relaxed">
-            Paste a labeled brief. Runs in your browser only — no API key, no network call.
+            Paste a labeled brief. Runs in your browser only: no API key, no network call.
             Use lines like <span className="text-[color:var(--adm-muted)]">Title:</span>,{" "}
             <span className="text-[color:var(--adm-muted)]">Role:</span>,{" "}
             <span className="text-[color:var(--adm-muted)]">Problem:</span>,{" "}
@@ -1222,6 +1418,13 @@ export function ProjectsEditor({
               <EditorBox code="D2" title="Title & URL">
                 <TextInput label="Title" value={project.title} onChange={(v) => updateProject(selectedIdx, { title: v })} />
                 <TextInput
+                  label="Short title (card display)"
+                  value={project.shortTitle ?? ""}
+                  onChange={(v) => updateProject(selectedIdx, { shortTitle: v })}
+                  placeholder={project.title.split(/[:-]/)[0].trim()}
+                  hint="Displayed on homepage & project cards (e.g. Habiganize). Defaults to first word of Title if empty."
+                />
+                <TextInput
                   label="Slug (URL path)"
                   value={project.slug}
                   onChange={(v) => updateProject(selectedIdx, { slug: v })}
@@ -1242,7 +1445,7 @@ export function ProjectsEditor({
                   value={project.cardDescription || ""}
                   onChange={(v) => updateProject(selectedIdx, { cardDescription: v })}
                   hint="Short text on Work page cards on hover. Leave blank to reuse the subtitle."
-                  placeholder="Optional — shown on Work cards only"
+                  placeholder="Optional: shown on Work cards only"
                 />
               </EditorBox>
 
@@ -1291,7 +1494,7 @@ export function ProjectsEditor({
                 />
                 <div className="flex items-center gap-2 flex-wrap">
                   <UploadToLibraryDashed
-                    label="↑ Upload file — image / gif / mp4 / webm"
+                    label="↑ Upload file: image / gif / mp4 / webm"
                     usage="project-cover"
                     accept="image/*,video/mp4,video/webm,.gif,.mp4,.webm"
                     onUploaded={(url, meta) =>
@@ -1319,10 +1522,10 @@ export function ProjectsEditor({
                 {coverEmbed && (
                   <p className="text-[color:var(--adm-faint)] text-xs leading-relaxed">
                     {coverEmbed.provider === "instagram"
-                      ? "Instagram link — Instagram can't autoplay inside a cover, so cards and the case study show the poster below with a play button that opens the Instagram player. Add a poster image."
+                      ? "Instagram link: Instagram can't autoplay inside a cover, so cards and the case study show the poster below with a play button that opens the Instagram player. Add a poster image."
                       : coverEmbed.provider === "youtube"
-                        ? "YouTube link — plays muted and looping as the cover. The YouTube thumbnail is used as the poster unless you set one."
-                        : "Vimeo link — plays muted and looping as the cover. Add a poster so the card isn't blank while Vimeo loads. Vimeo may still show its player controls unless the video's account is on a paid Vimeo plan."}
+                        ? "YouTube link: plays muted and looping as the cover. The YouTube thumbnail is used as the poster unless you set one."
+                        : "Vimeo link: plays muted and looping as the cover. Add a poster so the card isn't blank while Vimeo loads. Vimeo may still show its player controls unless the video's account is on a paid Vimeo plan."}
                   </p>
                 )}
                 {(isVideo(project.coverImage, project.coverMime) || coverEmbed) && (
@@ -1505,21 +1708,21 @@ export function ProjectsEditor({
                   label="Overview"
                   value={project.description}
                   onChange={(v) => updateProject(selectedIdx, { description: v })}
-                  hint="Main project summary — the Overview section under the cover."
+                  hint="Main project summary: the Overview section under the cover."
                   rows={4}
                 />
                 <TextareaInput
                   label="Problem"
                   value={project.challenge}
                   onChange={(v) => updateProject(selectedIdx, { challenge: v })}
-                  hint="Left card under Overview — the challenge you tackled."
+                  hint="Left card under Overview: the challenge you tackled."
                   rows={3}
                 />
                 <TextareaInput
                   label="Solution"
                   value={project.solution}
                   onChange={(v) => updateProject(selectedIdx, { solution: v })}
-                  hint="Right card under Overview — your approach."
+                  hint="Right card under Overview: your approach."
                   rows={3}
                 />
                 <TextareaInput

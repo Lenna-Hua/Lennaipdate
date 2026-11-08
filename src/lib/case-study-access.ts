@@ -2,8 +2,11 @@ const UNLOCKS_KEY = "lenna_case_unlocks";
 const ADMIN_TOKEN_KEY = "lenna_admin_token";
 const MAX_STORED_UNLOCKS = 20;
 
+/** How the caller got the body: protected bodies reach admins and stored unlocks too. */
+export type CaseStudyAccess = "public" | "admin" | "unlock";
+
 export type CaseStudyResult<P> =
-  | { status: "ok"; project: P }
+  | { status: "ok"; project: P; access: CaseStudyAccess }
   | { status: "locked" }
   | { status: "error"; message: string };
 
@@ -43,17 +46,29 @@ function accessHeaders(): Record<string, string> {
   return headers;
 }
 
-export async function fetchCaseStudy<P>(slug: string): Promise<CaseStudyResult<P>> {
+function readAccess(v: unknown, fallback: CaseStudyAccess): CaseStudyAccess {
+  return v === "public" || v === "admin" || v === "unlock" ? v : fallback;
+}
+
+/** `asVisitor` skips the admin session and stored unlocks, so the owner can see the lock screen. */
+export async function fetchCaseStudy<P>(
+  slug: string,
+  { asVisitor = false }: { asVisitor?: boolean } = {},
+): Promise<CaseStudyResult<P>> {
   try {
     const res = await fetch(`/api/content?case=${encodeURIComponent(slug)}`, {
-      headers: accessHeaders(),
+      headers: asVisitor ? {} : accessHeaders(),
     });
     if (res.status === 401) return { status: "locked" };
-    const body = (await res.json().catch(() => ({}))) as { project?: P; error?: string };
+    const body = (await res.json().catch(() => ({}))) as {
+      project?: P;
+      access?: unknown;
+      error?: string;
+    };
     if (!res.ok || !body.project) {
       return { status: "error", message: body.error ?? "Couldn't load this case study." };
     }
-    return { status: "ok", project: body.project };
+    return { status: "ok", project: body.project, access: readAccess(body.access, "public") };
   } catch {
     return { status: "error", message: "Couldn't reach the server. Check your connection." };
   }
@@ -62,7 +77,7 @@ export async function fetchCaseStudy<P>(slug: string): Promise<CaseStudyResult<P
 export async function unlockCaseStudy<P>(
   slug: string,
   password: string,
-): Promise<{ ok: true; project: P } | { ok: false; message: string }> {
+): Promise<{ ok: true; project: P; access: CaseStudyAccess } | { ok: false; message: string }> {
   try {
     const res = await fetch("/api/content", {
       method: "POST",
@@ -72,13 +87,14 @@ export async function unlockCaseStudy<P>(
     const body = (await res.json().catch(() => ({}))) as {
       project?: P;
       token?: string;
+      access?: unknown;
       error?: string;
     };
     if (!res.ok || !body.project) {
       return { ok: false, message: body.error ?? "Incorrect password" };
     }
     if (body.token) storeUnlock(body.token);
-    return { ok: true, project: body.project };
+    return { ok: true, project: body.project, access: readAccess(body.access, "unlock") };
   } catch {
     return { ok: false, message: "Couldn't reach the server. Try again." };
   }

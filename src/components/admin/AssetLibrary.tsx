@@ -70,7 +70,7 @@ export async function uploadAssetFile(
   file: File,
   sessionToken: string,
 ): Promise<Asset> {
-  if (!sessionToken) throw new Error("Session expired — log out and back in.");
+  if (!sessionToken) throw new Error("Session expired: log out and back in.");
   if (!/^image\//.test(file.type) && !/^video\//.test(file.type)) {
     throw new Error(`Unsupported file type: ${file.type || "unknown"}.`);
   }

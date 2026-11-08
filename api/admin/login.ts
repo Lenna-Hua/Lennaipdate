@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import crypto from "crypto";
 import { AdminConfigError, getAdminPassword, issueAdminToken } from "../../lib/admin-auth.js";
+import { handleCors } from "../../lib/cors.js";
 
 // Simple in-memory rate limiter: max 5 failed attempts per IP per 15 minutes
 const loginAttempts = new Map<string, { count: number; resetAt: number }>();
@@ -39,6 +40,7 @@ function passwordsMatch(provided: string, expected: string): boolean {
 }
 
 export default function handler(req: VercelRequest, res: VercelResponse) {
+  if (handleCors(req, res)) return;
   if (req.method !== "POST") {
     res.status(405).json({ error: "Method not allowed" });
     return;

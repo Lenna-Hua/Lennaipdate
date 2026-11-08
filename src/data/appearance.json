@@ -1,11 +1,13 @@
 {
   "preset": "current",
-  "displayFont": "Big Shoulders Display",
   "sansFont": "Inter",
   "serifFont": "Cormorant Garamond",
+  "displayFont": "Big Shoulders Display",
   "googleFamilies": [
     "Big+Shoulders+Display:wght@700;800;900",
     "Inter:wght@300;400;500;600;700",
     "Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700"
-  ]
+  ],
+  "sidebarBg": "#f3f0e2",
+  "sidebarBgDark": "#151513"
 }

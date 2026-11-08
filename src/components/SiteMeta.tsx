@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import projectsSeed from "@/data/projects.json";
 import { SITE } from "@/lib/site";
 
-const DEFAULT_TITLE = `${SITE.name} — ${SITE.role}`;
+const DEFAULT_TITLE = `${SITE.name} | ${SITE.role}`;
 
 function titleForPath(path: string): { title: string; description: string } {
   const clean = path.replace(/\/+$/, "") || "/";
@@ -13,7 +13,7 @@ function titleForPath(path: string): { title: string; description: string } {
   }
   if (clean === "/work") {
     return {
-      title: `Work — ${SITE.name}`,
+      title: `Work | ${SITE.name}`,
       description: `UX research and product design case studies by ${SITE.name}, ${SITE.role} in ${SITE.location}.`,
     };
   }
@@ -23,31 +23,31 @@ function titleForPath(path: string): { title: string; description: string } {
     const projectTitle = project?.title?.trim();
     const suffix = view === "full" ? " (Full case study)" : "";
     return {
-      title: projectTitle ? `${projectTitle}${suffix} — ${SITE.name}` : `Case study — ${SITE.name}`,
+      title: projectTitle ? `${projectTitle}${suffix} | ${SITE.name}` : `Case study | ${SITE.name}`,
       description: project?.subtitle?.trim() || SITE.description,
     };
   }
   if (clean === "/studio" || clean.startsWith("/studio/")) {
     return {
-      title: `Studio — ${SITE.name}`,
+      title: `Studio | ${SITE.name}`,
       description: `Art, illustration, and creative direction by ${SITE.name}.`,
     };
   }
   if (clean === "/about") {
     return {
-      title: `About — ${SITE.name}`,
+      title: `About | ${SITE.name}`,
       description: `${SITE.name} is a ${SITE.role} based in ${SITE.location}, specializing in UX research, service design, and visual storytelling.`,
     };
   }
   if (clean === "/privacy") {
     return {
-      title: `Privacy Policy — ${SITE.name}`,
+      title: `Privacy Policy | ${SITE.name}`,
       description: `How ${SITE.name} collects, uses, and protects information on ${SITE.url.replace("https://", "")}.`,
     };
   }
   if (clean === "/terms") {
     return {
-      title: `Terms of Use — ${SITE.name}`,
+      title: `Terms of Use | ${SITE.name}`,
       description: `Terms of use for ${SITE.name}'s product design portfolio.`,
     };
   }

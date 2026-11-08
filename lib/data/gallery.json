@@ -1,57 +1,7 @@
 [
   {
-    "id": "g1",
-    "kind": "big",
-    "role": "Art Director",
-    "slug": "the-third",
-    "tags": [
-      "Art Direction",
-      "Editorial",
-      "Photography",
-      "Graphic Design"
-    ],
-    "year": "2024",
-    "order": 1,
-    "title": "The Third",
-    "images": [
-      "/api/assets/ms9yia0t-v4k0np.png",
-      "/api/assets/ms9yjnih-ne07vd.png",
-      "/api/assets/ms9yjp3j-ydcu7t.png",
-      "/api/assets/ms9yjqn4-cmzfqw.png",
-      "/api/assets/ms9yjs6o-92oyrc.png",
-      "/api/assets/ms9yjvhh-3jtz5s.png",
-      "/api/assets/ms9yjx0g-nokuoj.png",
-      "/api/assets/ms9yjyje-hmjhao.png",
-      "/api/assets/ms9ys6oy-l6kx5t.png",
-      "/api/assets/ms9ys4s4-jhgahb.png",
-      "/api/assets/ms9ys328-1zpynz.png",
-      "/api/assets/ms9ys1ds-faecp5.png",
-      "/api/assets/ms9yrzdj-c1cazg.png"
-    ],
-    "linkUrl": "https://www.behance.net/gallery/189360419/The-Third-Spirit-Culture-Events",
-    "coverImage": "/api/assets/ms9yk1xz-ge5gvm.png",
-    "description": "Direction for The Third — a stillness-meets-motion editorial piece exploring color, composition, and quiet tension across stills and short film."
-  },
-  {
-    "id": "g2",
-    "kind": "big",
-    "role": "D.O.P / Producer",
-    "slug": "media-production",
-    "tags": [
-      "Film",
-      "Production",
-      "Direction"
-    ],
-    "year": "2024",
-    "order": 2,
-    "title": "Media Production",
-    "images": [],
-    "coverImage": "https://framerusercontent.com/images/ASUsf3TZ9JPrUnkysgECY0c8h4.png?width=1275&height=1173",
-    "description": "A short-form media production project where I led camera, lighting, and on-set production — translating a loose creative brief into a polished final cut."
-  },
-  {
     "id": "g3",
-    "kind": "big",
+    "kind": "small",
     "role": "Photography & Editorial",
     "slug": "photobook-editorial-design",
     "tags": [
@@ -74,42 +24,14 @@
       "/api/assets/ms9zd9wr-bjq5ey.png"
     ],
     "linkUrl": "https://www.behance.net/nhuxu",
+    "featured": false,
     "coverImage": "https://framerusercontent.com/images/cZRigJNSrDLTA3WrjPyWPqlVbA.png?width=1000&height=800",
-    "description": "An ongoing photobook study pairing photographic series with editorial typesetting exploring how sequencing changes the way a single image is read."
-  },
-  {
-    "id": "g6",
-    "kind": "big",
-    "role": "Art Direction",
-    "slug": "event-design",
-    "tags": [
-      "Art Direction",
-      "Event",
-      "Identity"
-    ],
-    "year": "2023",
-    "order": 4,
-    "title": "Event Design",
-    "images": [
-      "/api/assets/msa00oql-csdqzq.png",
-      "/api/assets/msa00q6u-z2xfy0.png",
-      "/api/assets/msa00ri7-0ksjft.png",
-      "/api/assets/msa0168t-sflrxh.png",
-      "/api/assets/msa017na-2vyhbq.png",
-      "/api/assets/msa00ngf-iony2c.png",
-      "/api/assets/msa00st2-rdqp1i.png",
-      "/api/assets/msa00wr3-705rrd.png",
-      "/api/assets/msa00y1x-pz0u17.png",
-      "/api/assets/msa00zd3-u8nj6o.png",
-      "/api/assets/msa010u1-sraqqy.png",
-      "/api/assets/msa012bb-krss1i.png"
-    ],
-    "coverImage": "/api/assets/msa06bfs-hvpyoz.png",
-    "description": "Art direction for a one-night event — wayfinding, key art, and on-site visual identity built around a single material concept."
+    "description": "An ongoing photobook study pairing photographic series with editorial typesetting exploring how sequencing changes the way a single image is read.",
+    "imageColumns": 1
   },
   {
     "id": "g8",
-    "kind": "big",
+    "kind": "small",
     "role": "Video Production",
     "slug": "graffiti-production",
     "tags": [
@@ -128,12 +50,16 @@
       "/api/assets/mtf30c2q-bwt5xk.png",
       "/api/assets/mtf30dr7-xq0edh.png"
     ],
+    "linkUrl": "https://www.behance.net/gallery/190330741/Tieu-Music-Video",
+    "featured": true,
+    "linkLabel": "Let's see ",
     "coverImage": "/api/assets/mtf303f7-xw4awe.png",
-    "description": "Production and direction for a short documentary capturing a graffiti piece from blank wall to finished work."
+    "description": "Production and direction for a short documentary capturing a graffiti piece from blank wall to finished work.",
+    "imageColumns": 1
   },
   {
     "id": "g9",
-    "kind": "big",
+    "kind": "small",
     "role": "Animation",
     "slug": "rat-wedding-short-movie",
     "tags": [
@@ -142,7 +68,7 @@
     ],
     "year": "2023",
     "order": 6,
-    "title": "Rat Wedding - Short Movie ",
+    "title": "Rat Wedding: Short Movie",
     "images": [
       "/api/assets/ms9yxe73-27xql8.png",
       "/api/assets/ms9yxd9s-ddeeky.png",
@@ -157,7 +83,8 @@
     "linkUrl": "https://www.behance.net/gallery/221772067/Wedding-Rats-Animation",
     "linkLabel": "https://vimeo.com/875454327?fl=ip&fe=ec",
     "coverImage": "/api/assets/ms9yxo5w-ior8q7.png",
-    "description": "A short animated piece, character design, frame timing, and a deliberately scrappy hand-drawn finish."
+    "description": "A short animated piece, character design, frame timing, and a deliberately scrappy hand drawn finish.",
+    "imageColumns": 1
   },
   {
     "id": "g4",
@@ -176,7 +103,8 @@
     "title": "Musik Magazine",
     "images": [],
     "coverImage": "https://framerusercontent.com/images/URXbTJOZBmVceM6kZ7NMQiZee0.png?width=1000&height=750",
-    "description": "Poster and layout study pushing typographic hierarchy, grid, and color in graphic design."
+    "description": "Poster and layout study pushing typographic hierarchy, grid, and color in graphic design.",
+    "orientation": "landscape"
   },
   {
     "id": "g10",
@@ -193,13 +121,14 @@
     "title": "Editorial Layout Study",
     "images": [],
     "coverImage": "/api/assets/ms9zd54o-k0ke27.png",
-    "description": "Editorial layout study — typography meets photography, exploring how negative space changes the pacing of a spread."
+    "description": "Editorial layout study: typography meets photography, exploring how negative space changes the pacing of a spread.",
+    "orientation": "landscape"
   },
   {
     "id": "g11",
     "kind": "small",
     "role": "Brand Identity",
-    "slug": "brand-exploration",
+    "slug": "tiem-ka",
     "tags": [
       "Brand Identity",
       "Motion",
@@ -207,12 +136,16 @@
     ],
     "year": "2024",
     "order": 3,
-    "title": "Brand Exploration",
+    "title": "Tiem Ka",
     "images": [
-      "/api/assets/ms9zqpu9-ktb3wu.png"
+      {
+        "src": "/api/assets/mupxai8g-8ut7jy.png",
+        "columns": 2
+      }
     ],
-    "coverImage": "https://framerusercontent.com/images/yhNjk9nH84KC7ujqF4qVnqYbOmE.png?width=1200",
-    "description": "Brand exploration — mark, color, and motion language developed in parallel as one continuous identity system."
+    "coverImage": "/api/assets/mupxai8g-8ut7jy.png",
+    "description": "Brand exploration: mark, color, and motion language developed in parallel as one continuous identity system.",
+    "orientation": "landscape"
   },
   {
     "id": "g12",
@@ -229,30 +162,36 @@
     "title": "Spatial Campaign Mockup",
     "images": [],
     "coverImage": "/api/assets/ms9zqpu9-ktb3wu.png",
-    "description": "A spatial campaign mockup exploring the interplay between physical and digital surfaces in a unified outdoor moment."
+    "description": "A spatial campaign mockup exploring the interplay between physical and digital surfaces in a unified outdoor moment.",
+    "orientation": "landscape"
   },
   {
     "id": "g13",
     "kind": "small",
     "role": "Graphic Design",
-    "slug": "series-cover-studies",
+    "slug": "print-design",
     "tags": [
       "Graphic Design",
-      "Composition",
-      "Series"
+      "Composition"
     ],
     "year": "2023",
     "order": 5,
-    "title": "Series Cover Studies",
-    "images": [],
-    "coverImage": "https://framerusercontent.com/images/j6k32JA4B6tio65D35VMQ3HQwM.png?width=1200",
-    "description": "Series cover studies — composition and contrast experiments running across a small set of related artworks."
+    "title": "Print Design",
+    "images": [
+      {
+        "src": "/api/assets/mupxjqk6-rpudpa.png",
+        "columns": 2
+      }
+    ],
+    "coverImage": "/api/assets/mupxjqk6-rpudpa.png",
+    "description": "",
+    "orientation": "landscape"
   },
   {
     "id": "g14",
     "kind": "small",
     "role": "Animation",
-    "slug": "animation-still",
+    "slug": "short-animation-illustration",
     "tags": [
       "Animation",
       "Motion",
@@ -260,9 +199,29 @@
     ],
     "year": "2023",
     "order": 6,
-    "title": "Animation Still",
+    "title": "Short Animation Illustration",
     "images": [],
     "coverImage": "/api/assets/ms9yxl2p-72yson.png",
-    "description": "A frame from a short motion piece — held still to study lighting, palette, and silhouette away from the moving image."
+    "description": "A frame from a short motion piece held still to study lighting, palette, and silhouette away from the moving image.",
+    "orientation": "landscape"
+  },
+  {
+    "id": "1789807713894",
+    "kind": "small",
+    "role": "Graphic Design / User Experience Design",
+    "slug": "new-item-1789807713894",
+    "tags": [],
+    "year": "2024",
+    "order": 7,
+    "title": "Theater Dance Design",
+    "images": [
+      {
+        "src": "/api/assets/mu85bdq8-c4nn46.jpg",
+        "columns": 2
+      }
+    ],
+    "coverImage": "/api/assets/mu85bdq8-c4nn46.jpg",
+    "description": "",
+    "orientation": "landscape"
   }
 ]

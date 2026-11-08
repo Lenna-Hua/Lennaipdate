@@ -585,9 +585,9 @@ function ImageEditor({
                 onChange={(e) => setFormat(e.target.value as OutFormat)}
                 className="bg-[color:var(--adm-surface)] border border-[color:var(--adm-line-strong)] text-[color:var(--adm-text)] px-2 py-1 text-xs"
               >
-                <option value="image/jpeg">JPG — photos, smallest</option>
-                <option value="image/webp">WebP — small, keeps transparency</option>
-                <option value="image/png">PNG — lossless, large</option>
+                <option value="image/jpeg">JPG: photos, smallest</option>
+                <option value="image/webp">WebP: small, keeps transparency</option>
+                <option value="image/png">PNG: lossless, large</option>
               </select>
             </label>
             {format !== "image/png" && (
@@ -607,7 +607,7 @@ function ImageEditor({
             />
             {file.size > hardMax && (
               <p className="text-[11px] text-red-400">
-                The original is over the {formatSize(hardMax)} upload limit — use Apply & upload to shrink it.
+                The original is over the {formatSize(hardMax)} upload limit: use Apply & upload to shrink it.
               </p>
             )}
             {estimate && estimate.type !== format && (
@@ -687,7 +687,7 @@ function InfoOnly({
             </p>
           )}
           {file.type === "image/svg+xml" && (
-            <p className="text-xs text-[color:var(--adm-muted)]">SVGs are vector — they stay sharp at any size, so no editing needed.</p>
+            <p className="text-xs text-[color:var(--adm-muted)]">SVGs are vector: they stay sharp at any size, so no editing needed.</p>
           )}
           {isVideo && (
             <div className="text-xs text-[color:var(--adm-muted)] flex flex-col gap-1">

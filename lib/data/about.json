@@ -1,16 +1,16 @@
 {
   "bio": [
-    "I'm a Product Designer who turns user insights into product strategy, information architecture, and high-fidelity design with a background in graphic and event experience design that shapes how I think about hierarchy, storytelling, and brand identity.",
-    "My work spans both digital and physical experiences. For one client, I improved website comprehension from a baseline understanding to 60% clarity through research-led redesign; for another, I reduced cognitive load and increased task speed by 30% by simplifying flows and removing friction. I also led the transformation of a legacy POS system for two restaurants moving from a slow, opaque, hard-to-learn system to one that cuts checkout time by 50%, reduces order errors, and gives owners real-time sales visibility, all while making menu edits fast enough that no one needs to visit in person anymore.",
-    "I use personas, journey maps, service blueprints, decision matrices, and fishbone analysis to surface friction and prioritize what actually moves the needle. Depending on the project, I've worked as a solo lead, a founder, and a cross-functional partner alongside product, engineering, and marketing teams because good design rarely happens alone, but it always starts with understanding people."
+    "I'm a Product Designer who turns user insights into product strategy, information architecture, and high fidelity design with a background in graphic and event experience design that shapes how I think about hierarchy, storytelling, and brand identity.",
+    "My work spans both digital and physical experiences. For one client, I improved website comprehension from a baseline understanding to 60% clarity through research led redesign; for another, I reduced cognitive load and increased task speed by 30% by simplifying flows and removing friction. I also led the transformation of a legacy POS system for two restaurants moving from a slow, opaque, hard to learn system to one that cuts checkout time by 50%, reduces order errors, and gives owners real time sales visibility, all while making menu edits fast enough that no one needs to visit in person anymore.",
+    "I use personas, journey maps, service blueprints, decision matrices, and fishbone analysis to surface friction and prioritize what actually moves the needle. Depending on the project, I've worked as a solo lead, a founder, and a cross functional partner alongside product, engineering, and marketing teams because good design rarely happens alone, but it always starts with understanding people."
   ],
-  "photo": "/migrated/WpperrIedfASy9HLtJo8UMFw.jpg",
+  "photo": "/api/assets/mtf2pe9j-7fud8g.jpg",
   "skills": [
     {
       "items": [
         "User research",
         "Moderated usability testing",
-        "Think-aloud protocols",
+        "Think aloud protocols",
         "Personas & journey mapping",
         "Service blueprints",
         "Decision matrices & fishbone analysis"
@@ -43,11 +43,11 @@
         "Figma",
         "Adobe Creative Suite",
         "Stakeholder collaboration",
-        "Cross-functional delivery (product, engineering, marketing)"
+        "Cross functional delivery (product, engineering, marketing)"
       ],
       "category": "Tools & Collaboration"
     }
   ],
   "community": "Designed and led inclusive beginner design workshops to help 50+ young people from diverse backgrounds build confidence and access creative opportunities. Volunteer with Get REAL Movement, supporting LGBTQ+ education and inclusive community events across Canada.",
-  "yearsExperience": "3+"
+  "yearsExperience": "4+"
 }

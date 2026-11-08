@@ -61,7 +61,7 @@ export const MEDIA_GUIDELINES: Record<MediaUsage, MediaGuideline> = {
     label: "Card hover video",
     aspect: [4, 5],
     video: { width: 1080, height: 1350, targetBytes: 4 * MB, maxSeconds: 6, format: MP4 },
-    note: "Plays muted on long hover — short loops load fastest.",
+    note: "Plays muted on long hover: short loops load fastest.",
   },
   "section-image": {
     label: "Case study image",
@@ -77,7 +77,7 @@ export const MEDIA_GUIDELINES: Record<MediaUsage, MediaGuideline> = {
   "artwork-cover": {
     label: "Artwork cover",
     image: { width: 2000, height: 2500, targetBytes: 800 * KB, format: PHOTO },
-    note: "Portrait or landscape both work — the slideshow picks the card shape from the image.",
+    note: "Portrait or landscape both work: the slideshow picks the card shape from the image.",
   },
   artwork: {
     label: "Artwork image",
@@ -151,12 +151,12 @@ export function assessMedia(input: {
   if (input.bytes > hardMax) {
     out.push({
       level: "error",
-      text: `${formatSize(input.bytes)} is over the ${formatMaxMb(hardMax)} MB upload limit — ${isVideo ? "compress the video first" : "resize or lower the quality below"}.`,
+      text: `${formatSize(input.bytes)} is over the ${formatMaxMb(hardMax)} MB upload limit: ${isVideo ? "compress the video first" : "resize or lower the quality below"}.`,
     });
   } else if (spec && input.bytes > spec.targetBytes) {
     out.push({
       level: "warn",
-      text: `${formatSize(input.bytes)} is heavier than the suggested ${formatSize(spec.targetBytes)} — it will load slowly on phones.`,
+      text: `${formatSize(input.bytes)} is heavier than the suggested ${formatSize(spec.targetBytes)}: it will load slowly on phones.`,
     });
   }
 
@@ -167,7 +167,7 @@ export function assessMedia(input: {
     if (long < recLong * 0.6) {
       out.push({ level: "warn", text: `${width}×${height} is small for this spot (aim for ~${spec.width}×${spec.height}) and may look blurry.` });
     } else if (!isVideo && long > recLong * 1.6) {
-      out.push({ level: "warn", text: `${width}×${height} is bigger than needed — resizing to ~${recLong} px saves bandwidth with no visible loss.` });
+      out.push({ level: "warn", text: `${width}×${height} is bigger than needed: resizing to ~${recLong} px saves bandwidth with no visible loss.` });
     }
     if (g.aspect) {
       const want = g.aspect[0] / g.aspect[1];
@@ -175,17 +175,17 @@ export function assessMedia(input: {
       if (Math.abs(have - want) / want > 0.03) {
         out.push({
           level: "warn",
-          text: `Shape is ${formatAspect(width, height)}; the site shows it at ${g.aspect[0]}:${g.aspect[1]}${isVideo ? " and will crop the edges" : " — crop now to control the framing"}.`,
+          text: `Shape is ${formatAspect(width, height)}; the site shows it at ${g.aspect[0]}:${g.aspect[1]}${isVideo ? " and will crop the edges" : ": crop now to control the framing"}.`,
         });
       }
     }
   }
 
   if (isVideo && g.video && input.duration && input.duration > g.video.maxSeconds) {
-    out.push({ level: "warn", text: `${Math.round(input.duration)}s is long for this spot — trim to ${g.video.maxSeconds}s or less.` });
+    out.push({ level: "warn", text: `${Math.round(input.duration)}s is long for this spot: trim to ${g.video.maxSeconds}s or less.` });
   }
   if (isVideo && !/mp4|webm/.test(input.mime)) {
-    out.push({ level: "warn", text: `${input.mime} may not play in every browser — export as MP4 (H.264).` });
+    out.push({ level: "warn", text: `${input.mime} may not play in every browser: export as MP4 (H.264).` });
   }
 
   if (out.length === 0) out.push({ level: "ok", text: "Size and dimensions look good for this spot." });
