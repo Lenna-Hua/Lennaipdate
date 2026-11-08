@@ -184,26 +184,26 @@ function MobileChrome({
   return (
     <>
       <header className="md:hidden fixed top-0 inset-x-0 z-50 h-[var(--chrome-h)] px-4 flex items-center justify-between bg-background/90 backdrop-blur-md border-b border-[#0000000a] dark:border-[#ffffff0d]">
-        <div className="flex items-center gap-2.5">
-          <AnimatedLogo size={42} />
-          <Link href="/" className="font-display font-black uppercase tracking-tight text-xl text-foreground">
+        <div className="flex items-center gap-2.5 shrink-0">
+          <AnimatedLogo size={42} className="shrink-0" />
+          <Link href="/" className="font-display font-black uppercase tracking-tight text-xl text-foreground whitespace-nowrap">
             {name}
           </Link>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 min-[320px]:gap-3 shrink-0">
           <button
             type="button"
             onClick={toggleTheme}
             aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
-            className="p-1.5 text-foreground hover:text-primary transition-colors font-mono text-xs uppercase tracking-wider"
+            className="p-1 min-[320px]:p-1.5 text-foreground hover:text-primary transition-colors font-mono text-xs uppercase tracking-wider whitespace-nowrap"
           >
             {theme === "dark" ? (
-              <span className="px-2 py-0.5 border border-primary text-primary">
-                DARK ☾
+              <span className="inline-block px-2 py-0.5 border border-primary text-primary">
+                <span className="hidden min-[300px]:inline">DARK </span>☾
               </span>
             ) : (
-              <span className="px-2 py-0.5 border border-foreground/30 text-foreground">
-                LIGHT ☼
+              <span className="inline-block px-2 py-0.5 border border-foreground/30 text-foreground">
+                <span className="hidden min-[300px]:inline">LIGHT </span>☼
               </span>
             )}
           </button>

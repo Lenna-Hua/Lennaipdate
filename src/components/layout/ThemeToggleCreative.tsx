@@ -31,7 +31,7 @@ export function ThemeToggleCreative({ className = "" }: { className?: string }) 
 
       {/* Mode Text (Remains completely stationary in position) */}
       <span
-        className={`transition-colors duration-200 block ${
+        className={`transition-colors duration-200 hidden min-[300px]:block ${
           isDark
             ? "text-primary group-hover:text-primary"
             : "text-foreground/85 group-hover:text-primary"
