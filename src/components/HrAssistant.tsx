@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowRight, Bot, Send, Sparkles, X } from "lucide-react";
+import { ArrowRight, Send, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useContent } from "@/lib/use-content";
 import { BRAND } from "@/lib/brand";
+import avatarFront from "@/assets/avatar/avatar-front.png";
 import {
   HR_QUICK_ACTIONS,
   buildHrResponse,
@@ -96,6 +97,22 @@ function MessageBody({
         </div>
       )}
     </div>
+  );
+}
+
+function AssistantAvatar({ className = "" }: { className?: string }) {
+  return (
+    <span
+      className={`flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-white ring-1 ring-border ${className}`}
+    >
+      <img
+        src={avatarFront}
+        alt=""
+        aria-hidden
+        className="h-full w-full scale-[1.35] object-cover pointer-events-none select-none"
+        draggable={false}
+      />
+    </span>
   );
 }
 
@@ -356,12 +373,7 @@ export function HrAssistant() {
           >
             <header className="flex items-center justify-between gap-3 border-b border-border/70 px-4 py-3">
               <div className="flex items-center gap-2.5 min-w-0">
-                <div
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white"
-                  style={{ background: `linear-gradient(135deg, ${BRAND.blue}, ${BRAND.teal})` }}
-                >
-                  <Bot className="h-4.5 w-4.5" aria-hidden />
-                </div>
+                <AssistantAvatar className="h-9 w-9" />
                 <div className="min-w-0">
                   <p className="truncate font-sans text-sm font-semibold">Fast Assistant</p>
                   <p className="truncate text-xs text-muted-foreground">
@@ -488,12 +500,7 @@ export function HrAssistant() {
 
               <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-border/60">
                 <div className="flex items-center gap-1.5">
-                  <div
-                    className="flex h-4 w-4 items-center justify-center rounded-full text-white"
-                    style={{ background: `linear-gradient(135deg, ${BRAND.blue}, ${BRAND.teal})` }}
-                  >
-                    <Sparkles className="h-2.5 w-2.5" />
-                  </div>
+                  <AssistantAvatar className="h-5 w-5" />
                   <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                     Fast Assistant
                   </span>
@@ -566,12 +573,7 @@ export function HrAssistant() {
         aria-hidden={open}
         aria-label="Open Fast Assistant"
       >
-        <span
-          className="flex h-8 w-8 items-center justify-center rounded-full text-white"
-          style={{ background: `linear-gradient(135deg, ${BRAND.blue}, ${BRAND.teal})` }}
-        >
-          <Bot className="h-4 w-4" aria-hidden />
-        </span>
+        <AssistantAvatar className="h-8 w-8" />
         <span className="hidden sm:inline pr-1">Fast Assistant</span>
       </motion.button>
     </>
