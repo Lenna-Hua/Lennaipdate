@@ -428,6 +428,14 @@ export function GalleryEditor({
             <span className="text-[color:var(--adm-faint)] text-[11px] font-sans">
               Extra images appear on the artwork detail page and in the popup gallery.
             </span>
+            <TextInput
+              label='Popup CTA button label (default: "All images")'
+              value={item.ctaLabel ?? ""}
+              onChange={(v) => update(selectedIdx, { ctaLabel: v })}
+            />
+            <span className="text-[color:var(--adm-faint)] text-[11px] font-sans">
+              Customizes the outline button text shown in the studio lightbox popup when this artwork has additional images. Leave blank to use the default ("All images").
+            </span>
             {(item.images ?? []).map((entry, i) => {
               const src = galleryImageSrc(entry);
               return (

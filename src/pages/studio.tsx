@@ -17,6 +17,8 @@ export default function StudioPage() {
   const studio = mergeStudio(useContent("studio", studioSeed as Studio));
   const [openId, setOpenId] = useState<string | null>(null);
 
+  const defaultCtaLabel = studio.artworksCtaLabel?.trim() || "All images";
+
   const artworks = useMemo(
     (): LightboxItem[] =>
       galleryData
@@ -28,9 +30,9 @@ export default function StudioPage() {
           meta: joinMeta(g.role, g.year),
           description: g.description,
           href: g.images?.length ? `/studio/${g.slug}` : undefined,
-          hrefLabel: "All images",
+          hrefLabel: g.ctaLabel?.trim() || defaultCtaLabel,
         })),
-    [galleryData],
+    [galleryData, defaultCtaLabel],
   );
 
   const tiles = useMemo(

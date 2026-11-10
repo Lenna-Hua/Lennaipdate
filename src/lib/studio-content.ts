@@ -14,6 +14,7 @@ export const DEFAULT_STUDIO: Studio = {
   artworksBlurb:
     "Smaller pieces, studies, and standalone artworks. Click any piece to view it larger.",
   artworksCardSize: "lg",
+  artworksCtaLabel: "All images",
   artworksDefaultStyle: "slideshow",
   showPlay: true,
   playEyebrow: "Interactive",

@@ -228,6 +228,8 @@ export type GalleryItem = {
   order?: number;
   linkUrl?: string;
   linkLabel?: string;
+  /** Custom label for the studio popup CTA linking to `/studio/<slug>` (defaults to studio.artworksCtaLabel or "All images"). */
+  ctaLabel?: string;
   /** Slideshow card shape. When omitted, the slideshow detects it from the cover image. */
   orientation?: "portrait" | "landscape";
   /** @deprecated Artworks always render as slideshow cards. */
@@ -348,6 +350,8 @@ export type Studio = {
   artworksEyebrow: string;
   artworksHeading: string;
   artworksBlurb: string;
+  /** Default label for the studio popup CTA button linking to the artwork detail page (default: "All images"). */
+  artworksCtaLabel?: string;
   artworksCardSize: "md" | "lg" | "xl";
   artworksDefaultStyle: "slideshow" | "tag" | "folder";
   /** Kern game section (/play redirects here). */

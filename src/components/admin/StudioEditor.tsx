@@ -90,6 +90,14 @@ export function StudioEditor({
         />
 
         <div className="flex flex-col gap-2">
+          <TextInput
+            label='Popup CTA button label (default: "All images")'
+            value={data.artworksCtaLabel ?? ""}
+            onChange={(v) => patch({ artworksCtaLabel: v })}
+          />
+          <p className="text-[color:var(--adm-muted)] text-xs mb-2">
+            Default text for the outline CTA button in the lightbox popup when an artwork has additional images. Can also be overridden per artwork in the Artworks tab.
+          </p>
           <label className="text-[color:var(--adm-muted)] text-xs uppercase tracking-widest">Card size</label>
           <div className="flex gap-2 flex-wrap">
             {(["md", "lg", "xl"] as const).map((size) => (
