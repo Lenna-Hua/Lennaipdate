@@ -21,6 +21,11 @@ export type MasonryItem = {
   role?: string;
   year?: string;
   protected?: boolean;
+  cardDescription?: string;
+  description?: string;
+  users?: string;
+  methods?: string;
+  tags?: string[];
 };
 
 export type MasonrySize = "md" | "lg" | "xl";
@@ -60,6 +65,10 @@ export type CardCustomProps = {
   titleSize?: "sm" | "md" | "lg" | "xl" | (string & {});
   titleWeight?: "normal" | "medium" | "bold" | "black" | (string & {});
   titleCase?: "uppercase" | "normal" | (string & {});
+  showCardDetails?: boolean;
+  showSubtitle?: boolean;
+  showDescription?: boolean;
+  showMetadataStrip?: boolean;
 };
 
 export function ParallaxMasonry({
@@ -75,6 +84,10 @@ export function ParallaxMasonry({
   titleSize = "md",
   titleWeight = "bold",
   titleCase = "uppercase",
+  showCardDetails = true,
+  showSubtitle = true,
+  showDescription = true,
+  showMetadataStrip = true,
 }: {
   items: MasonryItem[];
   onOpen?: (id: string) => void;
@@ -106,6 +119,10 @@ export function ParallaxMasonry({
           titleSize={titleSize}
           titleWeight={titleWeight}
           titleCase={titleCase}
+          showCardDetails={showCardDetails}
+          showSubtitle={showSubtitle}
+          showDescription={showDescription}
+          showMetadataStrip={showMetadataStrip}
         />
       ))}
     </div>
@@ -124,6 +141,10 @@ function Column({
   titleSize,
   titleWeight,
   titleCase,
+  showCardDetails,
+  showSubtitle,
+  showDescription,
+  showMetadataStrip,
 }: {
   items: MasonryItem[];
   onOpen?: (id: string) => void;
@@ -146,6 +167,10 @@ function Column({
           titleSize={titleSize}
           titleWeight={titleWeight}
           titleCase={titleCase}
+          showCardDetails={showCardDetails}
+          showSubtitle={showSubtitle}
+          showDescription={showDescription}
+          showMetadataStrip={showMetadataStrip}
         />
       ))}
     </div>
@@ -163,6 +188,10 @@ function Tile({
   titleSize = "md",
   titleWeight = "bold",
   titleCase = "uppercase",
+  showCardDetails = true,
+  showSubtitle = true,
+  showDescription = true,
+  showMetadataStrip = true,
 }: {
   item: MasonryItem;
   index?: number;
@@ -331,6 +360,50 @@ function Tile({
           <span className="text-xs text-muted-foreground shrink-0">{item.meta}</span>
         ) : null}
       </div>
+
+      {showCardDetails && (
+        <div className="mt-2 flex flex-col gap-1.5 min-w-0">
+          {showSubtitle && item.subtitle ? (
+            <p className="text-xs sm:text-[13px] font-sans font-medium text-foreground/85 leading-snug line-clamp-2">
+              {item.subtitle}
+            </p>
+          ) : null}
+          {showDescription && (item.cardDescription || item.description) ? (
+            <p className="text-xs font-sans text-muted-foreground leading-relaxed line-clamp-2">
+              {item.cardDescription || item.description}
+            </p>
+          ) : null}
+          {showMetadataStrip && (
+            <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+              {item.role ? (
+                <span className="text-[9px] uppercase tracking-wider font-sans font-bold px-2.5 py-0.5 rounded-none bg-foreground/10 text-foreground border border-foreground/15">
+                  {item.role}
+                </span>
+              ) : null}
+              {item.users ? (
+                <span className="text-[10px] font-sans text-muted-foreground bg-muted/60 px-2.5 py-0.5 rounded-none border border-border/60">
+                  <span className="text-foreground/75 font-semibold">Users:</span> {item.users}
+                </span>
+              ) : null}
+              {item.methods ? (
+                <span className="text-[10px] font-sans text-muted-foreground bg-muted/60 px-2.5 py-0.5 rounded-none border border-border/60">
+                  <span className="text-foreground/75 font-semibold">Methods:</span> {item.methods}
+                </span>
+              ) : null}
+              {!item.users && !item.methods && item.tags && item.tags.length > 0
+                ? item.tags.slice(0, 3).map((tag) => (
+                    <span
+                      key={tag}
+                      className="text-[9px] uppercase tracking-wider font-sans font-bold px-2 py-0.5 rounded-none bg-foreground/5 text-muted-foreground border border-foreground/10"
+                    >
+                      {tag}
+                    </span>
+                  ))
+                : null}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 

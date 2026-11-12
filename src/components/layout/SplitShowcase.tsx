@@ -16,7 +16,7 @@ export function SplitShowcase({
 }) {
   return (
     <div className={`grid gap-10 md:gap-8 ${SPLIT_COLUMNS}`}>
-      <aside className="flex flex-col justify-between gap-10 md:sticky md:top-[var(--chrome-h)] md:h-[calc(100svh-var(--chrome-h)-1.5rem)]">
+      <aside className="flex flex-col justify-between gap-10 md:sticky md:top-[var(--chrome-h)] md:max-h-[calc(100svh-var(--chrome-h)-1.5rem)]">
         <div className="flex flex-col gap-6">{asideTop}</div>
         {asideBottom && <div className="flex flex-col gap-5">{asideBottom}</div>}
       </aside>

@@ -33,6 +33,10 @@ type HomeCopy = (typeof homepageSeed)["home"] & {
   selectedWorkTitleSize?: "sm" | "md" | "lg" | "xl";
   selectedWorkTitleWeight?: "normal" | "medium" | "bold" | "black";
   selectedWorkTitleCase?: "uppercase" | "normal";
+  selectedWorkCardDetailsMode?: "show" | "hide";
+  selectedWorkShowSubtitle?: boolean;
+  selectedWorkShowDescription?: boolean;
+  selectedWorkShowMetadataStrip?: boolean;
 };
 
 const HERO_MEDIA_ID = "hero-media";
@@ -75,6 +79,11 @@ export default function Home() {
         title: p.title,
         shortTitle: (p as { shortTitle?: string }).shortTitle,
         subtitle: p.subtitle,
+        cardDescription: (p as { cardDescription?: string }).cardDescription,
+        description: p.description,
+        users: (p as { users?: string }).users,
+        methods: (p as { methods?: string }).methods,
+        tags: p.tags,
         role: p.type,
         year: p.year,
         protected: (p as { protected?: boolean }).protected,
@@ -138,19 +147,43 @@ export default function Home() {
             </>
           }
         >
-          <ParallaxMasonry
-            items={gridItems}
-            onOpen={setOpenId}
-            variant="case-study"
-            size={hp.selectedWorkCardSize ?? "md"}
-            cardAspect={hp.selectedWorkCardAspect}
-            cardRoleTagMode={hp.selectedWorkCardRoleTag ?? "hidden"}
-            titleDisplayMode={hp.selectedWorkTitleDisplay ?? "always"}
-            titleFont={hp.selectedWorkTitleFont}
-            titleSize={hp.selectedWorkTitleSize}
-            titleWeight={hp.selectedWorkTitleWeight}
-            titleCase={hp.selectedWorkTitleCase}
-          />
+          <div className="flex flex-col gap-6">
+            <ParallaxMasonry
+              items={gridItems}
+              onOpen={setOpenId}
+              variant="case-study"
+              size={hp.selectedWorkCardSize ?? "md"}
+              cardAspect={hp.selectedWorkCardAspect}
+              cardRoleTagMode={hp.selectedWorkCardRoleTag ?? "hidden"}
+              titleDisplayMode={hp.selectedWorkTitleDisplay ?? "always"}
+              titleFont={hp.selectedWorkTitleFont}
+              titleSize={hp.selectedWorkTitleSize}
+              titleWeight={hp.selectedWorkTitleWeight}
+              titleCase={hp.selectedWorkTitleCase}
+              showCardDetails={hp.selectedWorkCardDetailsMode !== "hide"}
+              showSubtitle={hp.selectedWorkShowSubtitle ?? true}
+              showDescription={hp.selectedWorkShowDescription ?? true}
+              showMetadataStrip={hp.selectedWorkShowMetadataStrip ?? true}
+            />
+            <div className="flex items-center justify-between border-t border-border pt-4">
+              <span className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+                {hp.selectedWorkHeading || "Selected Work"}
+              </span>
+              <Link
+                href={hp.primaryCtaHref || "/work"}
+                className="group inline-flex items-center gap-2 border border-foreground/20 px-4 py-2 text-xs font-mono uppercase tracking-[0.2em] text-foreground hover:border-primary hover:bg-primary hover:text-primary-foreground transition-all duration-200"
+              >
+                <span>
+                  {hp.selectedWorkLinkLabel && hp.selectedWorkLinkLabel !== "View All →"
+                    ? hp.selectedWorkLinkLabel.replace(/\s*→\s*$/, "")
+                    : "See more work"}
+                </span>
+                <span aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-1">
+                  →
+                </span>
+              </Link>
+            </div>
+          </div>
         </SplitShowcase>
       </div>
 

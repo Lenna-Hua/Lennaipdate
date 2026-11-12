@@ -1,4 +1,4 @@
-/**
+﻿/**
  * PreflightCheck — pre-save diagnostics: section sizes, inline media detection.
  */
 import type { ContentData, GalleryItem, PreflightInfo } from "./types";
@@ -69,6 +69,17 @@ function findAllInlineMedia(data: ContentData): { section: string; itemLabel: st
           itemLabel: label,
           field: `section "${sec.title || sec.id}"`,
         });
+      }
+      if (Array.isArray(sec.images)) {
+        for (let i = 0; i < sec.images.length; i++) {
+          if (typeof sec.images[i] === "string" && sec.images[i].startsWith("data:")) {
+            found.push({
+              section: "projects",
+              itemLabel: label,
+              field: `section "${sec.title || sec.id}" image [${i + 1}]`,
+            });
+          }
+        }
       }
     }
   }

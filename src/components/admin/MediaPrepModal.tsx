@@ -33,6 +33,12 @@ export type MediaPrepOptions = {
   usage?: MediaUsage;
   /** Multi-file uploads: lets the user skip the editor for the rest of the batch. */
   batch?: { index: number; total: number };
+  mode?: "upload" | "library";
+  saveAsCopyLabel?: string;
+  saveAndApplyLabel?: string;
+  onSaveAsCopy?: (file: File) => Promise<void>;
+  onSaveAndApply?: (file: File) => Promise<void>;
+  onUseOriginal?: () => void;
 };
 export type MediaPrepFn = (file: File, opts?: MediaPrepOptions) => Promise<File | null>;
 
@@ -191,7 +197,7 @@ function formatDuration(s: number): string {
 
 // ── Modal ──────────────────────────────────────────────────────────────
 
-function MediaPrepModal({
+export function MediaPrepModal({
   file,
   opts,
   onDone,
@@ -242,11 +248,21 @@ function MediaPrepModal({
         <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-[color:var(--adm-line)]">
           <div className="min-w-0">
             <h2 className="font-serif text-xl text-[color:var(--adm-text)]">
-              {canEdit ? "Edit before upload" : isVideo ? "Check video before upload" : "Check file before upload"}
+              {opts.mode === "library"
+                ? "Edit library image"
+                : canEdit
+                ? "Edit before upload"
+                : isVideo
+                ? "Check video before upload"
+                : "Check file before upload"}
             </h2>
             <p className="text-xs text-[color:var(--adm-muted)] truncate" title={file.name}>
               {file.name}
-              {batch ? ` · ${batch.index + 1} of ${batch.total}` : ""}
+              {opts.mode === "library"
+                ? " · Crop, adjust, and choose save option"
+                : batch
+                ? ` · ${batch.index + 1} of ${batch.total}`
+                : ""}
             </p>
           </div>
           <button
@@ -267,6 +283,7 @@ function MediaPrepModal({
             img={loaded.img!}
             usage={opts.usage}
             remaining={remaining}
+            opts={opts}
             onDone={onDone}
           />
         ) : (
@@ -284,12 +301,14 @@ function ImageEditor({
   img,
   usage,
   remaining,
+  opts,
   onDone,
 }: {
   file: File;
   img: HTMLImageElement;
   usage?: MediaUsage;
   remaining: number;
+  opts?: MediaPrepOptions;
   onDone: (file: File | null, skipRemaining?: boolean) => void;
 }) {
   const guide = guidelineFor(usage);
@@ -313,6 +332,7 @@ function ImageEditor({
   const [quality, setQuality] = useState(85);
   const [estimate, setEstimate] = useState<{ bytes: number; width: number; height: number; type: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [busyAction, setBusyAction] = useState<"copy" | "apply" | "upload" | null>(null);
   const [err, setErr] = useState("");
 
   const swap = rotation % 180 !== 0;
@@ -445,7 +465,43 @@ function ImageEditor({
     setCrop(fitAspect(guide.aspect ? (guide.aspect[0] / guide.aspect[1]) * (img.naturalHeight / img.naturalWidth) : null));
   };
 
+  const handleSaveAsCopy = async () => {
+    if (!opts?.onSaveAsCopy) return;
+    setBusy(true);
+    setBusyAction("copy");
+    setErr("");
+    try {
+      const { blob } = await renderOutput();
+      const dot = file.name.lastIndexOf(".");
+      const base = dot > 0 ? file.name.slice(0, dot) : file.name;
+      const copyName = `${base}-copy.${EXT[blob.type] ?? "png"}`;
+      const outFile = new File([blob], copyName, { type: blob.type, lastModified: Date.now() });
+      await opts.onSaveAsCopy(outFile);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Failed to save copy.");
+      setBusy(false);
+      setBusyAction(null);
+    }
+  };
+
+  const handleSaveAndApply = async () => {
+    if (!opts?.onSaveAndApply) return;
+    setBusy(true);
+    setBusyAction("apply");
+    setErr("");
+    try {
+      const { blob } = await renderOutput();
+      const outFile = new File([blob], renamed(file.name, blob.type), { type: blob.type, lastModified: Date.now() });
+      await opts.onSaveAndApply(outFile);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Failed to save and apply.");
+      setBusy(false);
+      setBusyAction(null);
+    }
+  };
+
   const apply = async () => {
+    setBusyAction("upload");
     setBusy(true);
     setErr("");
     try {
@@ -454,6 +510,7 @@ function ImageEditor({
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Couldn't process the image.");
       setBusy(false);
+      setBusyAction(null);
     }
   };
 
@@ -623,23 +680,70 @@ function ImageEditor({
       <Footer>
         {err && <p className="text-xs text-red-400 mr-auto">{err}</p>}
         <button type="button" className={btn("ghost")} onClick={() => onDone(null)}>Cancel</button>
-        {remaining > 0 && (
-          <button type="button" className={btn("ghost")} onClick={() => onDone(file, true)} disabled={file.size > hardMax}>
-            Upload this & {remaining} more as-is
-          </button>
+        {opts?.mode === "library" ? (
+          <>
+            {opts.onUseOriginal && (
+              <button
+                type="button"
+                className={btn("ghost")}
+                onClick={opts.onUseOriginal}
+                disabled={busy}
+              >
+                Use original
+              </button>
+            )}
+            <button
+              type="button"
+              className={btn("outline")}
+              onClick={handleSaveAsCopy}
+              disabled={busy || !estimate || outTooBig}
+            >
+              {busyAction === "copy"
+                ? "Saving copy…"
+                : (opts.saveAsCopyLabel ?? "Save as a copy and use it")}
+            </button>
+            <button
+              type="button"
+              className={btn("primary")}
+              onClick={handleSaveAndApply}
+              disabled={busy || !estimate || outTooBig}
+            >
+              {busyAction === "apply"
+                ? "Saving & applying…"
+                : (opts.saveAndApplyLabel ?? "Save and apply")}
+            </button>
+          </>
+        ) : (
+          <>
+            {remaining > 0 && (
+              <button
+                type="button"
+                className={btn("ghost")}
+                onClick={() => onDone(file, true)}
+                disabled={file.size > hardMax || busy}
+              >
+                Upload this & {remaining} more as-is
+              </button>
+            )}
+            <button
+              type="button"
+              className={btn("outline")}
+              onClick={() => onDone(file)}
+              disabled={file.size > hardMax || busy}
+              title={file.size > hardMax ? "Original is over the upload limit" : undefined}
+            >
+              Upload original
+            </button>
+            <button
+              type="button"
+              className={btn("primary")}
+              onClick={apply}
+              disabled={busy || !estimate || outTooBig}
+            >
+              {busy ? "Processing…" : "Apply & upload"}
+            </button>
+          </>
         )}
-        <button
-          type="button"
-          className={btn("outline")}
-          onClick={() => onDone(file)}
-          disabled={file.size > hardMax}
-          title={file.size > hardMax ? "Original is over the upload limit" : undefined}
-        >
-          Upload original
-        </button>
-        <button type="button" className={btn("primary")} onClick={apply} disabled={busy || !estimate || outTooBig}>
-          {busy ? "Processing…" : "Apply & upload"}
-        </button>
       </Footer>
     </>
   );
@@ -652,12 +756,14 @@ function InfoOnly({
   loaded,
   usage,
   remaining,
+  opts,
   onDone,
 }: {
   file: File;
   loaded: Loaded;
   usage?: MediaUsage;
   remaining: number;
+  opts?: MediaPrepOptions;
   onDone: (file: File | null, skipRemaining?: boolean) => void;
 }) {
   const isVideo = file.type.startsWith("video/");

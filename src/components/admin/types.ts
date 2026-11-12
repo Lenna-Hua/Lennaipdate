@@ -1,4 +1,4 @@
-/** Shared types for the admin panel components. */
+﻿﻿﻿/** Shared types for the admin panel components. */
 
 import type { GalleryImageColumns, GalleryImageEntry } from "@/lib/gallery-image";
 import type { MockupDevice, MockupLayout, ScreenMeta } from "@/lib/device-mockup";
@@ -58,6 +58,12 @@ export type Section = {
    * Consecutive half/third sections share a row.
    */
   columns?: 1 | 2 | 3;
+  /** Image section: turn into an interactive slideshow (click to see next image). */
+  slideshow?: boolean;
+  /** Image slideshow: ordered list of slide image URLs. */
+  images?: string[];
+  /** Image slideshow: optional per-slide captions aligned with images. */
+  imageCaptions?: string[];
   /** Mockup: full-bleed screenshots placed inside device frames. */
   screens?: string[];
   device?: MockupDevice;
@@ -108,12 +114,20 @@ export type Project = {
   solution: string;
   /** "Impact" block on the case study page. */
   impact: string;
-  /** Image or video (mp4/webm). */
+  /** Image or video (mp4/webm). Used on Work/Home grid cards. */
   coverImage: string;
   /** MIME from library upload/pick — lets /api/assets URLs without an extension render as video. */
   coverMime?: string;
   /** Video covers only: still frame for the lock screen and before the video loads. */
   coverPoster?: string;
+  /**
+   * Optional separate hero image shown at the top of the case study page.
+   * When set, the case study hero uses this instead of coverImage.
+   * Cards on Work/Home still use coverImage.
+   */
+  heroImage?: string;
+  /** MIME type for heroImage u{2014} lets /api/assets URLs without extension render as video. */
+  heroImageMime?: string;
   /**
    * Video covers only, on Work/Home cards. "loop" (default) plays while on screen;
    * "hover" waits on the first frame until the card is hovered.
@@ -322,6 +336,14 @@ export type Homepage = {
     selectedWorkTitleWeight?: "normal" | "medium" | "bold" | "black";
     /** Text transform for card title: "uppercase" | "normal". */
     selectedWorkTitleCase?: "uppercase" | "normal";
+    /** Selected work card details display on the homepage: "show" | "hide" (defaults to "show"). */
+    selectedWorkCardDetailsMode?: "show" | "hide";
+    /** Whether to show subtitle on homepage project cards (defaults to true). */
+    selectedWorkShowSubtitle?: boolean;
+    /** Whether to show description on homepage project cards (defaults to true). */
+    selectedWorkShowDescription?: boolean;
+    /** Whether to show metadata strip on homepage project cards (defaults to true). */
+    selectedWorkShowMetadataStrip?: boolean;
     /** Rotating flower sticker in the hero; links to primaryCtaHref. */
     badgeLabel?: string;
     showStudioBand?: boolean;
@@ -403,6 +425,16 @@ export type Appearance = {
   workTitleLine1Color?: string;
   /** Custom hex color for "Works" on the /work page (defaults to #5E9BFF). */
   workTitleLine2Color?: string;
+  /** Project card details display on the /work page: "show" | "hide" (defaults to "show"). */
+  workCardDetailsMode?: "show" | "hide";
+  /** Whether to show subtitle on project cards (defaults to true). */
+  workCardShowSubtitle?: boolean;
+  /** Whether to show description on project cards (defaults to true). */
+  workCardShowDescription?: boolean;
+  /** Whether to show metadata strip (Role, Users, Methods, Year, Tags) on project cards (defaults to true). */
+  workCardShowMetadataStrip?: boolean;
+  /** Placement of card details: "below" (beneath card image) or "overlay" (inside card) (defaults to "below"). */
+  workCardDetailsPlacement?: "below" | "overlay";
 };
 
 export type ContentData = {

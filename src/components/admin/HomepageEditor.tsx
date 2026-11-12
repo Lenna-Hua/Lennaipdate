@@ -376,6 +376,88 @@ export function HomepageEditor({
                   </div>
                 </div>
               </div>
+
+              {/* Card Details (Subtitle, Description, Metadata Strip) */}
+              <div className="border-t border-[color:var(--adm-line)] pt-3 flex flex-col gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-baseline justify-between">
+                    <label className="text-[color:var(--adm-text)] text-xs font-medium">
+                      Description, Subtitle & Metadata Strip (Below Project Card)
+                    </label>
+                    <span className="text-[10px] text-[color:var(--adm-faint)]">
+                      {(data.home.selectedWorkCardDetailsMode ?? "show") === "show" ? "Showing" : "Not Showing"}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { value: "show", label: "Show (Turned On)" },
+                      { value: "hide", label: "Not Showing (Turned Off)" },
+                    ].map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => updateHome({ selectedWorkCardDetailsMode: opt.value as "show" | "hide" })}
+                        className={`py-2 px-3 rounded border text-xs text-center transition-colors ${
+                          (data.home.selectedWorkCardDetailsMode ?? "show") === opt.value
+                            ? "border-[color:var(--adm-accent)] bg-[color:var(--adm-accent)]/10 text-[color:var(--adm-text)] font-semibold"
+                            : "border-[color:var(--adm-line-strong)] text-[color:var(--adm-muted)] hover:border-[color:var(--adm-accent)]"
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {(data.home.selectedWorkCardDetailsMode ?? "show") === "show" && (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => updateHome({ selectedWorkShowSubtitle: !(data.home.selectedWorkShowSubtitle ?? true) })}
+                      className={`p-2 rounded border text-xs text-left transition-colors ${
+                        (data.home.selectedWorkShowSubtitle ?? true)
+                          ? "border-[color:var(--adm-accent)] bg-[color:var(--adm-accent)]/10 text-[color:var(--adm-text)]"
+                          : "border-[color:var(--adm-line-strong)] text-[color:var(--adm-muted)]"
+                      }`}
+                    >
+                      <span className="block font-medium">Subtitle</span>
+                      <span className="block text-[10px] opacity-70">
+                        {(data.home.selectedWorkShowSubtitle ?? true) ? "✓ Showing" : "✕ Not Showing"}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => updateHome({ selectedWorkShowDescription: !(data.home.selectedWorkShowDescription ?? true) })}
+                      className={`p-2 rounded border text-xs text-left transition-colors ${
+                        (data.home.selectedWorkShowDescription ?? true)
+                          ? "border-[color:var(--adm-accent)] bg-[color:var(--adm-accent)]/10 text-[color:var(--adm-text)]"
+                          : "border-[color:var(--adm-line-strong)] text-[color:var(--adm-muted)]"
+                      }`}
+                    >
+                      <span className="block font-medium">Description</span>
+                      <span className="block text-[10px] opacity-70">
+                        {(data.home.selectedWorkShowDescription ?? true) ? "✓ Showing" : "✕ Not Showing"}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => updateHome({ selectedWorkShowMetadataStrip: !(data.home.selectedWorkShowMetadataStrip ?? true) })}
+                      className={`p-2 rounded border text-xs text-left transition-colors ${
+                        (data.home.selectedWorkShowMetadataStrip ?? true)
+                          ? "border-[color:var(--adm-accent)] bg-[color:var(--adm-accent)]/10 text-[color:var(--adm-text)]"
+                          : "border-[color:var(--adm-line-strong)] text-[color:var(--adm-muted)]"
+                      }`}
+                    >
+                      <span className="block font-medium">Metadata Strip</span>
+                      <span className="block text-[10px] opacity-70">
+                        {(data.home.selectedWorkShowMetadataStrip ?? true) ? "✓ Showing" : "✕ Not Showing"}
+                      </span>
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

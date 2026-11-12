@@ -18,7 +18,7 @@ import {
   formatMaxMb,
 } from "@/lib/asset-limits";
 import { guidelineSummary, type MediaUsage } from "@/lib/media-guidelines";
-import { UploadCancelledError } from "./MediaPrepModal";
+import { UploadCancelledError, MediaPrepModal } from "./MediaPrepModal";
 
 // ── Constants ──────────────────────────────────────────────────────────
 
@@ -146,6 +146,78 @@ async function uploadAssetFileDirect(
   const body = (await res.json().catch(() => ({}))) as { asset?: Asset; error?: string };
   if (!res.ok || !body.asset) {
     throw new Error(body.error ?? `Upload failed (${res.status}).`);
+  }
+  return body.asset;
+}
+
+export function isEditableAsset(asset: Asset): boolean {
+  const mime = (asset.mime || "").toLowerCase();
+  return (
+    mime.startsWith("image/") &&
+    mime !== "image/gif" &&
+    mime !== "image/svg+xml"
+  );
+}
+
+export async function assetToFile(asset: Asset): Promise<File> {
+  const url = resolveAssetUrl(asset.url);
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`Failed to load "${asset.filename}" (${res.status}).`);
+  }
+  const blob = await res.blob();
+  const extMatch = /\.([a-z0-9]+)$/i.exec(asset.filename);
+  const ext = extMatch ? extMatch[1].toLowerCase() : "";
+  const fallbackMime =
+    ext === "jpg" || ext === "jpeg"
+      ? "image/jpeg"
+      : ext === "png"
+      ? "image/png"
+      : ext === "webp"
+      ? "image/webp"
+      : "image/jpeg";
+  const mime = asset.mime || blob.type || fallbackMime;
+  return new File([blob], asset.filename, {
+    type: mime,
+    lastModified: Date.now(),
+  });
+}
+
+export async function replaceAssetFile(
+  id: string,
+  file: File,
+  sessionToken: string,
+): Promise<Asset> {
+  if (!sessionToken) throw new Error("Session expired: log out and back in.");
+  if (!/^image\//.test(file.type) && !/^video\//.test(file.type)) {
+    throw new Error(`Unsupported file type: ${file.type || "unknown"}.`);
+  }
+  const maxBytes = Math.min(
+    maxAssetBytesForFileType(file.type),
+    MAX_FUNCTION_UPLOAD_BYTES,
+  );
+  if (file.size > maxBytes) {
+    throw new Error(
+      `File is too large for replace (max ${formatMaxMb(maxBytes)} MB).`,
+    );
+  }
+  const dims = await readAssetDimensions(file);
+  const fd = new FormData();
+  if (dims?.width != null) fd.append("width", String(dims.width));
+  if (dims?.height != null) fd.append("height", String(dims.height));
+  fd.append("file", file, file.name);
+  const url = `${import.meta.env.BASE_URL}api/admin/assets/${encodeURIComponent(id)}/replace`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${sessionToken}` },
+    body: fd,
+  });
+  const body = (await res.json().catch(() => ({}))) as {
+    asset?: Asset;
+    error?: string;
+  };
+  if (!res.ok || !body.asset) {
+    throw new Error(body.error ?? "Replace failed");
   }
   return body.asset;
 }
@@ -342,6 +414,7 @@ export function UploadToLibraryDashed({
 
 export function AssetPickerModal({
   open,
+  sessionToken = "",
   assets,
   loading,
   error,
@@ -354,6 +427,7 @@ export function AssetPickerModal({
   onRefresh,
 }: {
   open: boolean;
+  sessionToken?: string;
   assets: Asset[];
   loading: boolean;
   error: string;
@@ -365,14 +439,38 @@ export function AssetPickerModal({
   onClose: () => void;
   onRefresh: () => void;
 }) {
+  const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
+  const [editingFile, setEditingFile] = useState<File | null>(null);
+  const [loadingAssetId, setLoadingAssetId] = useState<string | null>(null);
+  const [editError, setEditError] = useState("");
+
+  const handleStartEdit = async (a: Asset) => {
+    setLoadingAssetId(a.id);
+    setEditError("");
+    try {
+      const file = await assetToFile(a);
+      setEditingAsset(a);
+      setEditingFile(file);
+    } catch (e) {
+      setEditError(e instanceof Error ? e.message : "Failed to load image for editing.");
+    } finally {
+      setLoadingAssetId(null);
+    }
+  };
+
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
       <div className="w-full max-w-4xl max-h-[85vh] flex flex-col bg-[color:var(--adm-surface)] border border-[color:var(--adm-line)]">
         <div className="flex items-center justify-between px-4 py-3 border-b border-[color:var(--adm-line)]">
-          <h2 className="font-serif text-xl text-[color:var(--adm-text)]">
-            Insert from library
-          </h2>
+          <div>
+            <h2 className="font-serif text-xl text-[color:var(--adm-text)]">
+              Insert from library
+            </h2>
+            <p className="text-[11px] text-[color:var(--adm-muted)]">
+              Click any image to use it directly, or click Edit to crop and adjust before saving.
+            </p>
+          </div>
           <button
             type="button"
             onClick={onClose}
@@ -415,33 +513,131 @@ export function AssetPickerModal({
               {error}
             </p>
           )}
+          {editError && (
+            <p className="text-red-400 text-sm border border-red-900/40 bg-red-950/20 px-3 py-2 mb-3">
+              {editError}
+            </p>
+          )}
           {!loading && assets.length === 0 && !error && (
             <p className="text-[color:var(--adm-muted)] text-sm">
               No assets yet. Upload some in the Assets tab first.
             </p>
           )}
           <div className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(140px,1fr))]">
-            {assets.map((a) => (
-              <button
-                key={a.id}
-                type="button"
-                onClick={() => onPick(a)}
-                className="group flex flex-col gap-1 text-left border border-[color:var(--adm-line)] hover:border-[color:var(--adm-accent)] transition-colors p-1"
-              >
-                <div className="aspect-square overflow-hidden">
-                  <AssetThumb asset={a} />
-                </div>
+            {assets.map((a) => {
+              const editable = isEditableAsset(a);
+              const isLoading = loadingAssetId === a.id;
+              return (
                 <div
-                  className="text-[10px] text-[color:var(--adm-muted)] truncate px-1"
-                  title={a.filename}
+                  key={a.id}
+                  className="group flex flex-col justify-between border border-[color:var(--adm-line)] hover:border-[color:var(--adm-accent)] transition-colors p-1 bg-[color:var(--adm-surface)]"
                 >
-                  {a.filename}
+                  <div
+                    className="relative aspect-square overflow-hidden cursor-pointer bg-[color:var(--adm-input)]"
+                    onClick={() => onPick(a)}
+                    title={`Click to use "${a.filename}"`}
+                  >
+                    <AssetThumb asset={a} />
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1.5 p-2">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onPick(a);
+                        }}
+                        className="w-full text-[11px] font-semibold uppercase tracking-widest text-white bg-[color:var(--adm-accent)] hover:opacity-90 py-1 px-2 rounded-sm text-center shadow"
+                      >
+                        Use
+                      </button>
+                      {editable && (
+                        <button
+                          type="button"
+                          disabled={isLoading}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void handleStartEdit(a);
+                          }}
+                          className="w-full text-[10px] uppercase tracking-widest text-white bg-black/80 hover:bg-black border border-white/30 py-1 px-2 rounded-sm text-center disabled:opacity-50"
+                        >
+                          {isLoading ? "Loading…" : "✏️ Edit"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1 pt-1.5 px-0.5">
+                    <div
+                      className="text-[11px] text-[color:var(--adm-text)] font-medium truncate"
+                      title={a.filename}
+                    >
+                      {a.filename}
+                    </div>
+                    <div className="flex items-center justify-between text-[10px] text-[color:var(--adm-faint)]">
+                      <span>{formatBytes(a.size)}</span>
+                      {a.width && a.height ? <span>{a.width}×{a.height}</span> : null}
+                    </div>
+                    <div className="flex items-center gap-1 mt-1 pt-1 border-t border-[color:var(--adm-line)]">
+                      <button
+                        type="button"
+                        onClick={() => onPick(a)}
+                        className="flex-1 text-[10px] uppercase tracking-wider py-1 px-1 text-[color:var(--adm-accent)] border border-[color:var(--adm-accent)] hover:bg-[color:var(--adm-accent)] hover:text-[color:var(--adm-on-accent)] transition-colors text-center font-medium rounded-sm"
+                      >
+                        Use
+                      </button>
+                      {editable && (
+                        <button
+                          type="button"
+                          disabled={isLoading}
+                          onClick={() => void handleStartEdit(a)}
+                          className="flex-1 text-[10px] uppercase tracking-wider py-1 px-1 text-[color:var(--adm-muted)] border border-[color:var(--adm-line-strong)] hover:border-[color:var(--adm-accent)] hover:text-[color:var(--adm-accent)] transition-colors text-center rounded-sm disabled:opacity-50"
+                        >
+                          {isLoading ? "…" : "Edit"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </button>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
+
+      {editingFile && editingAsset && (
+        <MediaPrepModal
+          file={editingFile}
+          opts={{
+            mode: "library",
+            saveAsCopyLabel: "Save as a copy and use it",
+            saveAndApplyLabel: "Save and apply",
+            onUseOriginal: () => {
+              const target = editingAsset;
+              setEditingFile(null);
+              setEditingAsset(null);
+              onPick(target);
+            },
+            onSaveAsCopy: async (outFile) => {
+              const newAsset = await uploadAssetFile(outFile, sessionToken);
+              onRefresh();
+              setEditingFile(null);
+              setEditingAsset(null);
+              onPick(newAsset);
+            },
+            onSaveAndApply: async (outFile) => {
+              const updated = await replaceAssetFile(editingAsset.id, outFile, sessionToken);
+              onRefresh();
+              setEditingFile(null);
+              setEditingAsset(null);
+              onPick(updated);
+            },
+          }}
+          onDone={(result) => {
+            if (!result) {
+              setEditingFile(null);
+              setEditingAsset(null);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -483,6 +679,24 @@ export function AssetsEditor({
   const [renaming, setRenaming] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [copied, setCopied] = useState<string | null>(null);
+  const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
+  const [editingFile, setEditingFile] = useState<File | null>(null);
+  const [loadingAssetId, setLoadingAssetId] = useState<string | null>(null);
+  const [editError, setEditError] = useState("");
+
+  const handleStartEdit = async (a: Asset) => {
+    setLoadingAssetId(a.id);
+    setEditError("");
+    try {
+      const file = await assetToFile(a);
+      setEditingAsset(a);
+      setEditingFile(file);
+    } catch (e) {
+      setEditError(e instanceof Error ? e.message : "Failed to load image for editing.");
+    } finally {
+      setLoadingAssetId(null);
+    }
+  };
 
   const onCopy = async (a: Asset) => {
     try {
@@ -663,6 +877,16 @@ export function AssetsEditor({
                   >
                     {copied === a.id ? "Copied!" : "Copy URL"}
                   </button>
+                  {isEditableAsset(a) && (
+                    <button
+                      type="button"
+                      disabled={loadingAssetId === a.id || busyId === a.id}
+                      onClick={() => void handleStartEdit(a)}
+                      className="text-[10px] uppercase tracking-widest text-[color:var(--adm-accent)] border border-[color:var(--adm-accent)] px-2 py-1 hover:bg-[color:var(--adm-accent)] hover:text-[color:var(--adm-on-accent)] disabled:opacity-50"
+                    >
+                      {loadingAssetId === a.id ? "Loading…" : "Edit"}
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => {
@@ -717,6 +941,35 @@ export function AssetsEditor({
             </div>
           ))}
         </div>
+      )}
+
+      {editingFile && editingAsset && (
+        <MediaPrepModal
+          file={editingFile}
+          opts={{
+            mode: "library",
+            saveAsCopyLabel: "Save as copy",
+            saveAndApplyLabel: "Save and apply",
+            onSaveAsCopy: async (outFile) => {
+              await onUploadFiles([outFile]);
+              onRefresh();
+              setEditingFile(null);
+              setEditingAsset(null);
+            },
+            onSaveAndApply: async (outFile) => {
+              await onReplace(editingAsset.id, outFile);
+              onRefresh();
+              setEditingFile(null);
+              setEditingAsset(null);
+            },
+          }}
+          onDone={(result) => {
+            if (!result) {
+              setEditingFile(null);
+              setEditingAsset(null);
+            }
+          }}
+        />
       )}
     </div>
   );

@@ -1,4 +1,4 @@
-/**
+﻿﻿﻿/**
  * ProjectEditor — edit project details, sections, cover images, tags, etc.
  * Includes SectionsEditor for managing text/image/problem-solution blocks.
  */
@@ -249,6 +249,8 @@ function parseJsonProject(raw: string): ParseResult {
   if (typeof obj.solution === "string") patch.solution = obj.solution;
   if (typeof obj.impact === "string") patch.impact = obj.impact;
   if (typeof obj.coverImage === "string") patch.coverImage = obj.coverImage;
+  if (typeof obj.heroImage === "string") patch.heroImage = obj.heroImage;
+  if (typeof obj.heroImageMime === "string") patch.heroImageMime = obj.heroImageMime;
   if (typeof obj.logo === "string") patch.logo = obj.logo;
   if (obj.cardLayout === "vertical" || obj.cardLayout === "horizontal") {
     patch.cardLayout = obj.cardLayout;
@@ -427,6 +429,177 @@ function MediaLinkFields({
   );
 }
 
+function ImageSlideshowEditor({
+  section,
+  onChange,
+}: {
+  section: Section;
+  onChange: (patch: Partial<Section>) => void;
+}) {
+  const slides = (section.images && section.images.length > 0 ? section.images : (section.src ? [section.src] : []));
+  const captions = section.imageCaptions ?? [];
+
+  const setSlides = (nextSlides: string[], nextCaptions?: string[]) => {
+    onChange({
+      images: nextSlides,
+      src: nextSlides[0] ?? "",
+      ...(nextCaptions !== undefined ? { imageCaptions: nextCaptions } : {}),
+    });
+  };
+
+  const moveSlide = (idx: number, delta: -1 | 1) => {
+    const target = idx + delta;
+    if (target < 0 || target >= slides.length) return;
+    const nextS = [...slides];
+    const nextC = [...captions];
+    const [itemS] = nextS.splice(idx, 1);
+    const [itemC] = nextC.splice(idx, 1);
+    nextS.splice(target, 0, itemS);
+    nextC.splice(target, 0, itemC ?? "");
+    setSlides(nextS, nextC);
+  };
+
+  const removeSlide = (idx: number) => {
+    const nextS = slides.filter((_, i) => i !== idx);
+    const nextC = captions.filter((_, i) => i !== idx);
+    setSlides(nextS, nextC);
+  };
+
+  const updateSlideUrl = (idx: number, url: string) => {
+    const nextS = [...slides];
+    nextS[idx] = url;
+    setSlides(nextS);
+  };
+
+  const updateSlideCaption = (idx: number, cap: string) => {
+    const nextC = [...captions];
+    while (nextC.length <= idx) nextC.push("");
+    nextC[idx] = cap;
+    onChange({ imageCaptions: nextC });
+  };
+
+  return (
+    <div className="flex flex-col gap-3 p-3 rounded border border-[color:var(--adm-line-strong)] bg-[color:var(--adm-surface)]">
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] font-mono uppercase tracking-wider text-[color:var(--adm-accent)] font-semibold">
+          Slideshow Images ({slides.length})
+        </span>
+        <span className="text-[10px] text-[color:var(--adm-faint)]">
+          Click image in case study to see next slide
+        </span>
+      </div>
+
+      {slides.length === 0 ? (
+        <p className="text-xs text-[color:var(--adm-faint)] italic py-2">
+          No slides added yet. Upload or pick images below to create the slideshow.
+        </p>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {slides.map((imgSrc, i) => (
+            <div
+              key={i}
+              className="flex items-start gap-2.5 p-2 rounded border border-[color:var(--adm-line)] bg-[color:var(--adm-input)]/50"
+            >
+              <div className="flex flex-col items-center gap-1 shrink-0 pt-0.5">
+                <span className="text-[10px] font-mono font-medium text-[color:var(--adm-muted)]">
+                  #{i + 1}
+                </span>
+                {imgSrc ? (
+                  <SafeImage
+                    src={imgSrc}
+                    alt=""
+                    className="w-14 h-14 object-contain rounded bg-black/10 border border-[color:var(--adm-line)]"
+                    fallbackAspect="1 / 1"
+                  />
+                ) : (
+                  <div className="w-14 h-14 rounded bg-[color:var(--adm-input)] border border-dashed border-[color:var(--adm-line-strong)] flex items-center justify-center text-[10px] text-[color:var(--adm-faint)]">
+                    Empty
+                  </div>
+                )}
+              </div>
+
+              <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+                <input
+                  type="text"
+                  value={imgSrc}
+                  placeholder="Slide image URL"
+                  onChange={(e) => updateSlideUrl(i, e.target.value)}
+                  className="w-full bg-transparent border-b border-[color:var(--adm-line-strong)] text-[color:var(--adm-text)] py-1 text-xs focus:outline-none focus:border-[color:var(--adm-accent)] font-mono"
+                />
+                <input
+                  type="text"
+                  value={captions[i] ?? ""}
+                  placeholder="Slide caption (optional)"
+                  onChange={(e) => updateSlideCaption(i, e.target.value)}
+                  className="w-full bg-transparent border-b border-[color:var(--adm-line-strong)]/60 text-[color:var(--adm-text)]/90 py-0.5 text-[11px] focus:outline-none focus:border-[color:var(--adm-accent)]"
+                />
+              </div>
+
+              <div className="flex items-center gap-1 shrink-0 pt-1">
+                <button
+                  type="button"
+                  disabled={i === 0}
+                  onClick={() => moveSlide(i, -1)}
+                  className="px-1.5 py-0.5 text-xs text-[color:var(--adm-muted)] hover:text-[color:var(--adm-text)] disabled:opacity-25"
+                  title="Move slide earlier"
+                >
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  disabled={i === slides.length - 1}
+                  onClick={() => moveSlide(i, 1)}
+                  className="px-1.5 py-0.5 text-xs text-[color:var(--adm-muted)] hover:text-[color:var(--adm-text)] disabled:opacity-25"
+                  title="Move slide later"
+                >
+                  ↓
+                </button>
+                <button
+                  type="button"
+                  onClick={() => removeSlide(i)}
+                  className="px-1.5 py-0.5 text-xs text-[color:var(--adm-faint)] hover:text-red-400"
+                  title="Remove slide"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="flex items-center gap-2 flex-wrap pt-1 border-t border-[color:var(--adm-line)]">
+        <SectionImageUploader
+          accept="image/*,.gif,.png,.jpg,.jpeg,.webp"
+          label="+ Upload slide"
+          usage="section-image"
+          onPicked={(url) => setSlides([...slides, url], [...captions, ""])}
+        />
+        <PickFromLibraryButton
+          type="image"
+          label="From library"
+          onPick={(url) => setSlides([...slides, url], [...captions, ""])}
+        />
+        <button
+          type="button"
+          onClick={() => setSlides([...slides, ""], [...captions, ""])}
+          className="text-xs border border-[color:var(--adm-accent)] text-[color:var(--adm-accent)] px-2.5 py-1.5 hover:bg-[color:var(--adm-accent)] hover:text-[color:var(--adm-on-accent)] transition-colors uppercase tracking-widest"
+        >
+          + Add URL
+        </button>
+        {slides.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setSlides([], [])}
+            className="text-xs text-[color:var(--adm-faint)] hover:text-red-400 ml-auto"
+          >
+            Clear all
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
 const SECTION_TYPE_LABEL: Record<SectionType, string> = {
   text: "Text",
   image: "Image",
@@ -473,7 +646,7 @@ function newSectionId(): string {
 function createSection(type: SectionType): Section {
   const id = newSectionId();
   if (type === "text") return { id, type, visibility: "always", title: "", summary: "", body: "" };
-  if (type === "image") return { id, type, visibility: "always", src: "", caption: "", href: "", linkLabel: "" };
+  if (type === "image") return { id, type, visibility: "always", src: "", caption: "", body: "", href: "", linkLabel: "" };
   if (type === "video") return { id, type, visibility: "always", src: "", caption: "", title: "", href: "", linkLabel: "" };
   if (type === "embed") return { id, type, visibility: "always", src: "", title: "", caption: "", height: 500 };
   if (type === "cta") return { id, type, visibility: "always", title: "", href: "", linkLabel: "Click here to try the product →" };
@@ -496,7 +669,7 @@ function createSection(type: SectionType): Section {
 }
 
 function sectionDisplayName(sec: Section): string {
-  const raw = sec.title || (sec.type === "problem-solution" ? sec.problem : "") || (sec.type === "cta" ? (sec.linkLabel || sec.href) : "") || sec.caption || "";
+  const raw = sec.title || (sec.type === "problem-solution" ? sec.problem : "") || (sec.type === "cta" ? (sec.linkLabel || sec.href) : "") || sec.caption || sec.body || "";
   const s = stripRichText(raw).trim().replace(/\s+/g, " ");
   return s.length > 48 ? `${s.slice(0, 47)}…` : s;
 }
@@ -804,20 +977,64 @@ function SectionsEditor({
           {sec.type === "image" && (
             <>
               <TextInput label="Title (optional)" value={sec.title ?? ""} onChange={(v) => update(idx, { title: v })} />
-              <TextInput label="Image URL" value={sec.src ?? ""} onChange={(v) => update(idx, { src: v })} />
-              <div className="flex items-center gap-2 flex-wrap">
-                <SectionImageUploader
-                  accept="image/*,.gif,.png,.jpg,.jpeg,.webp"
-                  label="↑ Upload image"
-                  usage="section-image"
-                  onPicked={(url) => update(idx, { src: url })}
+
+              <CheckboxInput
+                label="Turn into slideshow (click to see next image)"
+                checked={!!sec.slideshow}
+                onChange={(checked) => {
+                  if (checked) {
+                    const initialImages = (sec.images && sec.images.length > 0)
+                      ? sec.images
+                      : (sec.src ? [sec.src] : []);
+                    update(idx, { slideshow: true, images: initialImages, src: initialImages[0] ?? sec.src });
+                  } else {
+                    update(idx, { slideshow: false });
+                  }
+                }}
+              />
+              <p className="text-[color:var(--adm-faint)] text-xs -mt-2">
+                Enable to turn this into a slideshow. In the case study, clicking the image advances to the next slide.
+              </p>
+
+              {sec.slideshow ? (
+                <ImageSlideshowEditor
+                  section={sec}
+                  onChange={(patch) => update(idx, patch)}
                 />
-                <PickFromLibraryButton
-                  type="image"
-                  onPick={(url) => update(idx, { src: url })}
-                />
-              </div>
+              ) : (
+                <>
+                  <TextInput label="Image URL" value={sec.src ?? ""} onChange={(v) => update(idx, { src: v })} />
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <SectionImageUploader
+                      accept="image/*,.gif,.png,.jpg,.jpeg,.webp"
+                      label="↑ Upload image"
+                      usage="section-image"
+                      onPicked={(url) => update(idx, { src: url })}
+                    />
+                    <PickFromLibraryButton
+                      type="image"
+                      onPick={(url) => update(idx, { src: url })}
+                    />
+                  </div>
+                  {sec.src && (
+                    <div className="mt-1 self-start" style={sec.transparent ? CHECKERBOARD : undefined}>
+                      <SafeImage
+                        src={sec.src}
+                        alt=""
+                        className={`h-24 ${sec.transparent ? "object-contain" : "object-cover opacity-60"}`}
+                      />
+                    </div>
+                  )}
+                </>
+              )}
+
               <TextInput label="Caption (optional)" value={sec.caption ?? ""} onChange={(v) => update(idx, { caption: v })} />
+              <TextareaInput
+                label="Text below image (optional)"
+                value={sec.body ?? ""}
+                onChange={(v) => update(idx, { body: v })}
+                rows={4}
+              />
               <MediaLinkFields
                 href={sec.href}
                 linkLabel={sec.linkLabel}
@@ -832,15 +1049,6 @@ function SectionsEditor({
               <p className="text-[color:var(--adm-faint)] text-xs -mt-1">
                 For PNG, WebP or GIF files with see-through areas: removes the card behind the image.
               </p>
-              {sec.src && (
-                <div className="mt-1 self-start" style={sec.transparent ? CHECKERBOARD : undefined}>
-                  <SafeImage
-                    src={sec.src}
-                    alt=""
-                    className={`h-24 ${sec.transparent ? "object-contain" : "object-cover opacity-60"}`}
-                  />
-                </div>
-              )}
             </>
           )}
 
@@ -861,6 +1069,12 @@ function SectionsEditor({
                 />
               </div>
               <TextInput label="Caption (optional)" value={sec.caption ?? ""} onChange={(v) => update(idx, { caption: v })} />
+              <TextareaInput
+                label="Text below video (optional)"
+                value={sec.body ?? ""}
+                onChange={(v) => update(idx, { body: v })}
+                rows={4}
+              />
               <MediaLinkFields
                 href={sec.href}
                 linkLabel={sec.linkLabel}
@@ -1590,6 +1804,57 @@ export function ProjectsEditor({
                         />
                       </div>
                     </div>
+                  </div>
+                )}
+              </EditorBox>
+
+              <EditorBox
+                code="D5b"
+                title="Case study hero image (optional)"
+                hint="Shown as the full-width hero at the top of the case study page. Leave empty to use the cover image above. Cards on Work/Home always use the cover image."
+              >
+                <input
+                  type="text"
+                  value={project.heroImage ?? ""}
+                  onChange={(e) =>
+                    updateProject(selectedIdx, { heroImage: e.target.value || undefined, heroImageMime: undefined })
+                  }
+                  placeholder="Paste URL (jpg, png, mp4, webm) — leave empty to reuse cover image"
+                  className="bg-[color:var(--adm-input)] border border-[color:var(--adm-line-strong)] rounded-md text-[color:var(--adm-text)] px-3 py-2 text-sm focus:outline-none focus:border-[color:var(--adm-accent)] transition-colors placeholder:text-[color:var(--adm-placeholder)]"
+                />
+                <div className="flex items-center gap-2 flex-wrap">
+                  <UploadToLibraryDashed
+                    label="↑ Upload hero image"
+                    usage="project-cover"
+                    accept="image/*,video/mp4,video/webm,.gif,.mp4,.webm"
+                    onUploaded={(url, meta) =>
+                      updateProject(selectedIdx, { heroImage: url, heroImageMime: meta?.mime || undefined })
+                    }
+                  />
+                  <PickFromLibraryButton
+                    onPick={(url, meta) =>
+                      updateProject(selectedIdx, { heroImage: url, heroImageMime: meta?.mime || undefined })
+                    }
+                  />
+                  {project.heroImage && (
+                    <button
+                      type="button"
+                      onClick={() => updateProject(selectedIdx, { heroImage: undefined, heroImageMime: undefined })}
+                      className="text-xs text-[color:var(--adm-muted)] hover:text-[color:var(--adm-danger,#f00)] underline"
+                    >
+                      Clear hero image
+                    </button>
+                  )}
+                </div>
+                {project.heroImage && (
+                  <div className="rounded overflow-hidden border border-[color:var(--adm-line-strong)]" style={{ maxHeight: "130px" }}>
+                    <CoverMedia
+                      src={project.heroImage}
+                      alt="hero preview"
+                      mimeHint={project.heroImageMime}
+                      className="w-full object-cover"
+                      style={{ maxHeight: "130px" }}
+                    />
                   </div>
                 )}
               </EditorBox>

@@ -1,9 +1,12 @@
 import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
+  Columns4,
   Columns3,
   Columns2,
   Square,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import projectsSeed from "@/data/projects.json";
 import gallerySeed from "@/data/gallery.json";
@@ -35,8 +38,17 @@ import {
 const ACCENTS = BRAND_DECK;
 const FILTERS = ["All", "UX Research", "Product Design", "Analysis", "Studio"];
 
-type ColumnCount = 1 | 2 | 3;
+type ColumnCount = 1 | 2 | 3 | 4;
 const COLUMNS_STORAGE_KEY = "work-columns";
+const CARD_DETAILS_STORAGE_KEY = "work-card-details";
+
+function readStoredCardDetails(): boolean | null {
+  if (typeof window === "undefined") return null;
+  const v = window.localStorage.getItem(CARD_DETAILS_STORAGE_KEY);
+  if (v === "true") return true;
+  if (v === "false") return false;
+  return null;
+}
 
 /* Each choice is a maximum: narrower screens step down automatically.
    Class strings stay literal so Tailwind can see them. */
@@ -44,6 +56,12 @@ const COLUMN_LAYOUTS: Record<
   ColumnCount,
   { grid: string; aspect: string; label: string; Icon: typeof Square }
 > = {
+  4: {
+    grid: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4",
+    aspect: "aspect-[4/5]",
+    label: "4 columns",
+    Icon: Columns4,
+  },
   3: {
     grid: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
     aspect: "aspect-[4/5]",
@@ -65,9 +83,9 @@ const COLUMN_LAYOUTS: Record<
 };
 
 function readStoredColumns(): ColumnCount {
-  if (typeof window === "undefined") return 3;
+  if (typeof window === "undefined") return 4;
   const n = Number(window.localStorage.getItem(COLUMNS_STORAGE_KEY));
-  return n === 1 || n === 2 || n === 3 ? n : 3;
+  return n === 1 || n === 2 || n === 3 || n === 4 ? n : 4;
 }
 
 type Project = (typeof projectsSeed)[number] & { archived?: boolean };
@@ -83,6 +101,7 @@ function galleryBigToCard(g: GalleryItem): PinterestCardProject {
     type: g.role || "Studio",
     subtitle: g.description,
     cardDescription: g.description,
+    description: g.description,
     href: `/studio/${g.slug}`,
     cardLayout: g.cardLayout,
   };
@@ -102,6 +121,9 @@ function workToCard(p: Project): PinterestCardProject {
     type: p.type,
     subtitle: p.subtitle,
     cardDescription: (p as { cardDescription?: string }).cardDescription,
+    description: (p as { description?: string }).description,
+    users: (p as { users?: string }).users,
+    methods: (p as { methods?: string }).methods,
     href: `/work/${p.slug}`,
     hoverVideo: (p as { hoverVideo?: string }).hoverVideo,
     liveUrl: (p as { liveUrl?: string }).liveUrl,
@@ -130,6 +152,23 @@ export default function WorkIndex() {
   );
   const [filter, setFilter] = useState("All");
   const [columns, setColumns] = useState<ColumnCount>(readStoredColumns);
+  const [showCardDetails, setShowCardDetails] = useState<boolean>(() => {
+    const stored = readStoredCardDetails();
+    if (stored !== null) return stored;
+    return appearanceData?.workCardDetailsMode !== "hide";
+  });
+
+  const toggleCardDetails = () => {
+    setShowCardDetails((prev) => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem(CARD_DETAILS_STORAGE_KEY, String(next));
+      } catch {
+        /* storage unavailable */
+      }
+      return next;
+    });
+  };
   const layout = COLUMN_LAYOUTS[columns];
   const motionProfile = useMotionProfile();
 
@@ -244,11 +283,34 @@ export default function WorkIndex() {
             </div>
 
             <div
-              className="hidden sm:inline-flex items-center gap-1 p-1 rounded-md border border-foreground/15"
+              className="flex items-center gap-2 flex-wrap"
+            >
+              <button
+                type="button"
+                onClick={toggleCardDetails}
+                aria-pressed={showCardDetails}
+                aria-label={showCardDetails ? "Hide project card details" : "Show project card details"}
+                title={showCardDetails ? "Card details are currently showing (click to hide)" : "Card details are not showing (click to show)"}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-mono transition-all duration-300 border ${
+                  showCardDetails
+                    ? "bg-foreground text-background border-foreground font-semibold shadow-sm"
+                    : "text-muted-foreground hover:text-foreground hover:bg-foreground/5 border-foreground/15"
+                }`}
+              >
+                {showCardDetails ? (
+                  <Eye size={13} strokeWidth={2} aria-hidden />
+                ) : (
+                  <EyeOff size={13} strokeWidth={2} aria-hidden />
+                )}
+                <span>Details: {showCardDetails ? "Show" : "Not Showing"}</span>
+              </button>
+
+              <div
+                className="hidden sm:inline-flex items-center gap-1 p-1 rounded-md border border-foreground/15"
               role="group"
               aria-label="Cards per row"
             >
-              {([3, 2, 1] as const).map((n) => {
+              {([4, 3, 2, 1] as const).map((n) => {
                 const { Icon, label } = COLUMN_LAYOUTS[n];
                 const isActive = columns === n;
                 return (
@@ -270,6 +332,7 @@ export default function WorkIndex() {
                   </button>
                 );
               })}
+            </div>
             </div>
           </motion.div>
         </section>
@@ -303,6 +366,11 @@ export default function WorkIndex() {
                     i={i}
                     isDark={isDark}
                     aspectClass={layout.aspect}
+                    showDetails={showCardDetails}
+                    showSubtitle={appearanceData?.workCardShowSubtitle ?? true}
+                    showDescription={appearanceData?.workCardShowDescription ?? true}
+                    showMetadataStrip={appearanceData?.workCardShowMetadataStrip ?? true}
+                    detailsPlacement={appearanceData?.workCardDetailsPlacement ?? "below"}
                   />
                 </motion.div>
               );

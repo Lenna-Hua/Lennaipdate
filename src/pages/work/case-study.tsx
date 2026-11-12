@@ -1,4 +1,4 @@
-import { useParams, Link } from "wouter";
+﻿﻿﻿﻿﻿﻿import { useParams, Link } from "wouter";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
@@ -8,7 +8,7 @@ import contactSeed from "@/data/contact.json";
 import { useContent } from "@/lib/use-content";
 import { BRAND_EASE } from "@/lib/brand";
 import { useFloatIn } from "@/lib/motion";
-import { AlertCircle, CheckCircle2, Lock, Pause, Play, Volume2, VolumeX } from "lucide-react";
+import { AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, Lock, Maximize2, Pause, Play, Volume2, VolumeX } from "lucide-react";
 import { SafeImage } from "@/components/SafeImage";
 import { CoverVideo, EmbedCover, isVideo } from "@/components/CoverMedia";
 import {
@@ -119,6 +119,9 @@ interface ContentSection {
   transparent?: boolean;
   loop?: boolean;
   columns?: 1 | 2 | 3;
+  slideshow?: boolean;
+  images?: string[];
+  imageCaptions?: string[];
   screens?: string[];
   device?: string;
   layout?: string;
@@ -145,6 +148,8 @@ interface Project {
   coverImage: string;
   coverMime?: string;
   coverPoster?: string;
+  heroImage?: string;
+  heroImageMime?: string;
   hoverVideo?: string;
   liveUrl?: string;
   year: string;
@@ -627,8 +632,11 @@ const OUTLINE_BUTTON =
  */
 function CaseStudyCover({ project, onExpand }: { project: Project; onExpand: () => void }) {
   const [errored, setErrored] = useState(false);
-  const embed = parseVideoEmbed(project.coverImage);
-  const video = !embed && isVideo(project.coverImage, project.coverMime);
+  // Use heroImage (case study page only) when set; fall back to coverImage (card thumbnail)
+  const heroSrc = project.heroImage?.trim() || project.coverImage;
+  const heroMime = project.heroImage?.trim() ? project.heroImageMime : project.coverMime;
+  const embed = parseVideoEmbed(heroSrc);
+  const video = !embed && isVideo(heroSrc, heroMime);
   const backgroundEmbed = embed && canPlayInBackground(embed) ? embed : null;
   const playable = video || Boolean(backgroundEmbed);
   const hasSound = video || Boolean(backgroundEmbed && embedSupportsSound(backgroundEmbed));
@@ -682,7 +690,7 @@ function CaseStudyCover({ project, onExpand }: { project: Project; onExpand: () 
       ) : video ? (
         <CoverVideo
           ref={videoRef}
-          src={project.coverImage}
+          src={heroSrc}
           poster={project.coverPoster}
           label={project.title}
           onError={() => setErrored(true)}
@@ -691,7 +699,7 @@ function CaseStudyCover({ project, onExpand }: { project: Project; onExpand: () 
         />
       ) : (
         <SafeImage
-          src={project.coverImage}
+          src={heroSrc}
           alt={project.title}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
           onError={() => setErrored(true)}
@@ -914,7 +922,7 @@ function SectionBlock({
     return <CtaSection section={section} />;
   }
   if (section.type === "image" || section.type === "video") {
-    return <ImageSection section={section} onImageClick={onImageClick} />;
+    return <ImageSection section={section} expanded={expanded} onImageClick={onImageClick} />;
   }
   if (section.type === "embed") {
     return <EmbedSection section={section} />;
@@ -1143,15 +1151,156 @@ function SectionVideo({ src, loop, label }: { src: string; loop: boolean; label?
   );
 }
 
-function ImageSection({
+function ImageSlideshow({
   section,
+  slides,
   onImageClick,
 }: {
   section: ContentSection;
+  slides: string[];
+  onImageClick: (src: string, caption?: string) => void;
+}) {
+  const [activeIdx, setActiveIdx] = useState(0);
+  const currentSrc = slides[activeIdx] ?? slides[0];
+  const currentCaption =
+    section.imageCaptions?.[activeIdx]?.trim() || section.caption?.trim() || "";
+
+  const nextSlide = () => setActiveIdx((prev) => (prev + 1) % slides.length);
+  const prevSlide = () => setActiveIdx((prev) => (prev - 1 + slides.length) % slides.length);
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div
+        className={`w-full overflow-hidden group relative flex items-center justify-center cursor-pointer select-none border border-border/60 ${
+          section.transparent ? "" : "bg-muted/70"
+        }`}
+        onClick={nextSlide}
+        role="region"
+        aria-roledescription="carousel"
+        aria-label={section.title || "Image slideshow (click to see next image)"}
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "ArrowRight" || e.key === " " || e.key === "Enter") {
+            e.preventDefault();
+            nextSlide();
+          } else if (e.key === "ArrowLeft") {
+            e.preventDefault();
+            prevSlide();
+          }
+        }}
+      >
+        {/* Subtle click-to-advance hover hint */}
+        <div className="absolute top-3 left-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-background/90 backdrop-blur-sm px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground border border-border/60 pointer-events-none">
+          Click for next slide →
+        </div>
+
+        {/* Expand in lightbox button */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onImageClick(currentSrc, currentCaption);
+          }}
+          aria-label="Expand image"
+          className="absolute top-3 right-3 z-10 bg-background/90 hover:bg-background text-foreground backdrop-blur-sm px-2.5 py-1 text-[11px] font-mono uppercase tracking-wider border border-border/60 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-sm cursor-zoom-in"
+        >
+          <Maximize2 className="w-3.5 h-3.5" aria-hidden="true" />
+          <span>Expand</span>
+        </button>
+
+        {/* Navigation Arrows */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            prevSlide();
+          }}
+          aria-label="Previous slide"
+          className="absolute left-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-background/90 hover:bg-background text-foreground shadow-sm border border-border flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-105 focus-visible:opacity-100"
+        >
+          <ChevronLeft className="w-5 h-5" aria-hidden="true" />
+        </button>
+
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            nextSlide();
+          }}
+          aria-label="Next slide"
+          className="absolute right-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-background/90 hover:bg-background text-foreground shadow-sm border border-border flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-105 focus-visible:opacity-100"
+        >
+          <ChevronRight className="w-5 h-5" aria-hidden="true" />
+        </button>
+
+        {/* Slide Counter & Dots */}
+        <div className="absolute bottom-3 inset-x-0 z-10 flex justify-center pointer-events-none">
+          <div
+            className="pointer-events-auto flex items-center gap-1.5 bg-background/90 backdrop-blur-md px-3 py-1.5 rounded-full border border-border/80 shadow-sm"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {slides.map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => setActiveIdx(i)}
+                aria-label={`Go to slide ${i + 1}`}
+                className={`h-1.5 rounded-full transition-all duration-200 ${
+                  i === activeIdx ? "w-6 bg-primary" : "w-1.5 bg-foreground/30 hover:bg-foreground/60"
+                }`}
+              />
+            ))}
+            <span className="text-[10px] font-mono font-medium ml-1.5 text-foreground/80 tabular-nums">
+              {activeIdx + 1} / {slides.length}
+            </span>
+          </div>
+        </div>
+
+        {/* Slide Image with AnimatePresence */}
+        <div className="w-full flex items-center justify-center min-h-[260px] md:min-h-[380px] p-2">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeIdx}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="w-full flex items-center justify-center"
+            >
+              <SafeImage
+                src={currentSrc}
+                alt={currentCaption || `Slide ${activeIdx + 1}`}
+                className="block max-w-full max-h-[50vh] md:max-h-[65vh] w-auto h-auto object-contain transition-transform duration-500 group-hover:scale-[1.01]"
+                loading="lazy"
+                fallbackAspect="16 / 9"
+              />
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </div>
+
+      {currentCaption && (
+        <p className={CAPTION}>
+          {renderRichText(currentCaption)}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function ImageSection({
+  section,
+  expanded,
+  onImageClick,
+}: {
+  section: ContentSection;
+  expanded?: boolean;
   onImageClick: (src: string, caption?: string) => void;
 }) {
   const floatIn = useFloatIn();
   const [errored, setErrored] = useState(false);
+  const body = pickExpanded(Boolean(expanded), section.body, section.bodyDetail);
+  const bullets = pickExpanded(Boolean(expanded), section.bullets, section.bulletsDetail);
   const videoEmbed = section.src ? parseVideoEmbed(section.src) : null;
   const isVideo =
     section.type === "video" ||
@@ -1159,6 +1308,37 @@ function ImageSection({
     (!!section.src &&
       (/\.(mp4|webm|ogg|mov)(\?|$)/i.test(section.src) || section.src.startsWith("data:video")));
   const clickable = !errored && !!section.src && !isVideo;
+  const isSlideshow = !isVideo && (!!section.slideshow || (Array.isArray(section.images) && section.images.length > 1));
+  const rawSlides = section.images && section.images.length > 0 ? section.images : (section.src ? [section.src] : []);
+  const slides = rawSlides.map((s) => s.trim()).filter(Boolean);
+
+  if (isSlideshow && slides.length > 1) {
+    return (
+      <motion.div
+        id={`cs-${section.id}`}
+        className="flex flex-col gap-3"
+        {...floatIn}
+      >
+        {section.title && (
+          <h2 className={SECTION_TITLE}>
+            {section.title}
+          </h2>
+        )}
+        <ImageSlideshow
+          section={section}
+          slides={slides}
+          onImageClick={onImageClick}
+        />
+        {body && (
+          <p className="max-w-3xl text-foreground/80 text-base md:text-lg leading-relaxed whitespace-pre-line">
+            {renderRichText(body)}
+          </p>
+        )}
+        {bullets && bullets.length > 0 && <DashList items={bullets} />}
+        <MediaCta href={section.href} linkLabel={section.linkLabel} />
+      </motion.div>
+    );
+  }
 
   if (isVideo) {
     return (
@@ -1192,6 +1372,12 @@ function ImageSection({
             {renderRichText(section.caption)}
           </p>
         )}
+        {body && (
+          <p className="max-w-3xl text-foreground/80 text-base md:text-lg leading-relaxed whitespace-pre-line">
+            {renderRichText(body)}
+          </p>
+        )}
+        {bullets && bullets.length > 0 && <DashList items={bullets} />}
         <MediaCta href={section.href} linkLabel={section.linkLabel} />
       </motion.div>
     );
@@ -1235,11 +1421,16 @@ function ImageSection({
           {renderRichText(section.caption)}
         </p>
       )}
+      {body && (
+        <p className="max-w-3xl text-foreground/80 text-base md:text-lg leading-relaxed whitespace-pre-line">
+          {renderRichText(body)}
+        </p>
+      )}
+      {bullets && bullets.length > 0 && <DashList items={bullets} />}
       <MediaCta href={section.href} linkLabel={section.linkLabel} />
     </motion.div>
   );
 }
-
 function SectionBlockText({
   section,
   expanded,
@@ -1473,7 +1664,7 @@ export default function CaseStudy({ full = false }: { full?: boolean }) {
                 {(project.tags ?? []).map((tag) => (
                   <span
                     key={tag}
-                    className="inline-block px-2 py-0.5 text-xs bg-muted border border-border/80 text-foreground/85 font-medium rounded-sm"
+                    className="inline-block px-2 py-0.5 text-xs bg-muted border border-border/80 text-foreground/85 font-medium rounded-none"
                   >
                     {tag}
                   </span>
@@ -1572,13 +1763,15 @@ export default function CaseStudy({ full = false }: { full?: boolean }) {
         </motion.div>
       </section>
 
-      {project.coverImage && (
+      {(project.heroImage?.trim() || project.coverImage) && (
         <CaseStudyCover
           key={project.slug}
           project={project}
-          onExpand={() =>
-            setLightbox({ src: project.coverImage, caption: project.title, mime: project.coverMime })
-          }
+          onExpand={() => {
+            const src = project.heroImage?.trim() || project.coverImage;
+            const mime = project.heroImage?.trim() ? project.heroImageMime : project.coverMime;
+            setLightbox({ src, caption: project.title, mime });
+          }}
         />
       )}
 

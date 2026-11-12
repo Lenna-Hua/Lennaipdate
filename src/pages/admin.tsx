@@ -68,6 +68,7 @@ import {
   AssetPickerModal,
   AssetsEditor,
   uploadAssetFile,
+  replaceAssetFile,
   readAssetDimensions,
   resolveAssetUrl,
   MAX_ASSET_BYTES,
@@ -617,34 +618,8 @@ export default function Admin() {
   const handleAssetReplace = async (id: string, picked: File) => {
     const file = await mediaPrep.prepare(picked, { usage: "general" });
     if (!file) return;
-    if (!/^image\//.test(file.type) && !/^video\//.test(file.type)) {
-      throw new Error(`Unsupported file type: ${file.type || "unknown"}.`);
-    }
-    const maxBytes = Math.min(maxAssetBytesForFileType(file.type), MAX_FUNCTION_UPLOAD_BYTES);
-    if (file.size > maxBytes) {
-      throw new Error(
-        `Replace supports files up to ${formatMaxMb(maxBytes)} MB: upload this one as a new asset instead.`,
-      );
-    }
-    const dims = await readAssetDimensions(file);
-    const fd = new FormData();
-    if (dims?.width != null) fd.append("width", String(dims.width));
-    if (dims?.height != null) fd.append("height", String(dims.height));
-    fd.append("file", file, file.name);
-    const url = `${import.meta.env.BASE_URL}api/admin/assets/${encodeURIComponent(id)}/replace`;
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${sessionToken}` },
-      body: fd,
-    });
-    const body = (await res.json().catch(() => ({}))) as {
-      asset?: Asset;
-      error?: string;
-    };
-    if (!res.ok || !body.asset) {
-      throw new Error(body.error ?? "Replace failed");
-    }
-    setAssets((prev) => prev.map((a) => (a.id === id ? body.asset! : a)));
+    const updated = await replaceAssetFile(id, file, sessionToken);
+    setAssets((prev) => prev.map((a) => (a.id === id ? updated : a)));
   };
 
   const handleLibraryUpload: AssetUploadFn = async (picked, opts) => {
@@ -1284,6 +1259,7 @@ export default function Admin() {
       <AssetUploadContext.Provider value={handleLibraryUpload}>
       <AssetPickerModal
         open={pickerOpen}
+        sessionToken={sessionToken}
         assets={assets}
         loading={assetsLoading}
         error={assetsError}

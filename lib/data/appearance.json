@@ -9,5 +9,10 @@
     "Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700"
   ],
   "sidebarBg": "#f3f0e2",
-  "sidebarBgDark": "#151513"
+  "sidebarBgDark": "#151513",
+  "workCardDetailsMode": "show",
+  "workCardShowSubtitle": true,
+  "workCardShowDescription": true,
+  "workCardShowMetadataStrip": true,
+  "workCardDetailsPlacement": "below"
 }

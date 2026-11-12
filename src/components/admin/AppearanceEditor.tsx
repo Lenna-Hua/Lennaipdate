@@ -464,6 +464,124 @@ export function AppearanceEditor({
         </div>
       </section>
 
+      {/* ── Work Page Project Cards (Description, Subtitle, Metadata Strip) ── */}
+      <section className="border border-[color:var(--adm-line)] p-4 flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <span className="text-[color:var(--adm-accent)] text-xs uppercase tracking-widest font-semibold">
+            Work Page Project Cards (Selected Works)
+          </span>
+          <span className="text-[10px] font-mono text-[color:var(--adm-faint)]">
+            {(data.workCardDetailsMode ?? "show") === "show" ? "Showing" : "Not Showing"}
+          </span>
+        </div>
+
+        <p className="text-[color:var(--adm-muted)] text-xs leading-relaxed -mt-1">
+          Control whether the description below the project card, subtitle, and metadata strip (Role, Users, Methods, Year) are displayed. Visitors on the Work page can also toggle this with the “Details” button in the toolbar.
+        </p>
+
+        {/* Master Details Toggle */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-[color:var(--adm-text)] text-xs font-medium">
+            Card Details Visibility (Default state on site)
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { value: "show", label: "Show (Turned On)" },
+              { value: "hide", label: "Not Showing (Turned Off)" },
+            ].map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => onChange({ ...data, workCardDetailsMode: opt.value as "show" | "hide" })}
+                className={`py-2 px-3 rounded border text-xs text-center transition-colors ${
+                  (data.workCardDetailsMode ?? "show") === opt.value
+                    ? "border-[color:var(--adm-accent)] bg-[color:var(--adm-accent)]/10 text-[color:var(--adm-text)] font-semibold"
+                    : "border-[color:var(--adm-line-strong)] text-[color:var(--adm-muted)] hover:border-[color:var(--adm-accent)]"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {(data.workCardDetailsMode ?? "show") === "show" && (
+          <div className="flex flex-col gap-3 pt-1 border-t border-[color:var(--adm-line)]">
+            {/* Placement */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[color:var(--adm-text)] text-xs font-medium">Details Placement</label>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { value: "below", label: "Below Project Card (Recommended)" },
+                  { value: "overlay", label: "Inside Card (Overlay on hover)" },
+                ].map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => onChange({ ...data, workCardDetailsPlacement: opt.value as "below" | "overlay" })}
+                    className={`py-1.5 px-3 rounded border text-xs text-center transition-colors ${
+                      (data.workCardDetailsPlacement ?? "below") === opt.value
+                        ? "border-[color:var(--adm-accent)] bg-[color:var(--adm-accent)]/10 text-[color:var(--adm-text)] font-semibold"
+                        : "border-[color:var(--adm-line-strong)] text-[color:var(--adm-muted)] hover:border-[color:var(--adm-accent)]"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Individual elements */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+              <button
+                type="button"
+                onClick={() => onChange({ ...data, workCardShowSubtitle: !(data.workCardShowSubtitle ?? true) })}
+                className={`p-2.5 rounded border text-xs text-left transition-colors ${
+                  (data.workCardShowSubtitle ?? true)
+                    ? "border-[color:var(--adm-accent)] bg-[color:var(--adm-accent)]/10 text-[color:var(--adm-text)]"
+                    : "border-[color:var(--adm-line-strong)] text-[color:var(--adm-muted)]"
+                }`}
+              >
+                <span className="block font-medium">Subtitle</span>
+                <span className="block text-[10px] opacity-70">
+                  {(data.workCardShowSubtitle ?? true) ? "✓ Showing" : "✕ Not Showing"}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onChange({ ...data, workCardShowDescription: !(data.workCardShowDescription ?? true) })}
+                className={`p-2.5 rounded border text-xs text-left transition-colors ${
+                  (data.workCardShowDescription ?? true)
+                    ? "border-[color:var(--adm-accent)] bg-[color:var(--adm-accent)]/10 text-[color:var(--adm-text)]"
+                    : "border-[color:var(--adm-line-strong)] text-[color:var(--adm-muted)]"
+                }`}
+              >
+                <span className="block font-medium">Description</span>
+                <span className="block text-[10px] opacity-70">
+                  {(data.workCardShowDescription ?? true) ? "✓ Showing" : "✕ Not Showing"}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onChange({ ...data, workCardShowMetadataStrip: !(data.workCardShowMetadataStrip ?? true) })}
+                className={`p-2.5 rounded border text-xs text-left transition-colors ${
+                  (data.workCardShowMetadataStrip ?? true)
+                    ? "border-[color:var(--adm-accent)] bg-[color:var(--adm-accent)]/10 text-[color:var(--adm-text)]"
+                    : "border-[color:var(--adm-line-strong)] text-[color:var(--adm-muted)]"
+                }`}
+              >
+                <span className="block font-medium">Metadata Strip</span>
+                <span className="block text-[10px] opacity-70">
+                  {(data.workCardShowMetadataStrip ?? true) ? "✓ Showing" : "✕ Not Showing"}
+                </span>
+              </button>
+            </div>
+          </div>
+        )}
+      </section>
+
       <section className="flex flex-col gap-2">
         <p className="text-[color:var(--adm-faint)] text-[11px] font-sans leading-relaxed">
           Live preview (not saved until Save to Site):
