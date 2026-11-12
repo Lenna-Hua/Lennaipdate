@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿import { useParams, Link } from "wouter";
+﻿﻿﻿﻿import { useParams, Link } from "wouter";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
@@ -25,6 +25,7 @@ import { MockupStage } from "@/components/DeviceMockup";
 import { Eyebrow, SPLIT_COLUMNS } from "@/components/layout/SplitShowcase";
 import { scrollPageTo, useLenis, useScrollLock } from "@/lib/smooth-scroll";
 import { CaseStudyLock } from "@/components/CaseStudyLock";
+import { AdjustmentFrame } from "@/components/AdjustmentFrame";
 import { ProcessStack, parseStepsFromBullets, type ProcessLayout, type ProcessStep } from "@/components/ProcessStack";
 import { renderRichText, stripRichText } from "@/lib/rich-text";
 import { isMockupDevice, isMockupLayout, type ScreenMeta } from "@/lib/device-mockup";
@@ -577,9 +578,16 @@ function ProblemCard({ text }: { text: React.ReactNode }) {
               The Problem
             </span>
           </div>
-          <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-muted-foreground/80 px-2 py-0.5 border border-border/70 bg-background/60">
-            Challenge
-          </span>
+          <AdjustmentFrame
+            dashedColor="border-[#E8715A]/60 dark:border-[#E8715A]/80"
+            handleColor="bg-[#E8715A]"
+            handleBorderColor="border-card"
+            className="px-2.5 py-0.5 bg-background/80"
+          >
+            <span className="text-[10px] font-mono uppercase tracking-[0.18em] font-semibold text-[#C45A44] dark:text-[#E8715A]">
+              Challenge
+            </span>
+          </AdjustmentFrame>
         </div>
         <ClampedText lines={6}>{text}</ClampedText>
       </div>
@@ -600,9 +608,16 @@ function SolutionCard({ text }: { text: React.ReactNode }) {
               The Solution
             </span>
           </div>
-          <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-primary/80 px-2 py-0.5 border border-primary/25 bg-primary/10">
-            Approach
-          </span>
+          <AdjustmentFrame
+            dashedColor="border-primary/60 dark:border-primary/80"
+            handleColor="bg-primary"
+            handleBorderColor="border-card"
+            className="px-2.5 py-0.5 bg-background/80"
+          >
+            <span className="text-[10px] font-mono uppercase tracking-[0.18em] font-semibold text-primary">
+              Approach
+            </span>
+          </AdjustmentFrame>
         </div>
         <ClampedText lines={6}>{text}</ClampedText>
       </div>

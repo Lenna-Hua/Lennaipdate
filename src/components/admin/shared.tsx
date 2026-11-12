@@ -4,11 +4,13 @@
 import { useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import {
   Bold,
+  Eye,
   Italic,
   Underline,
   Link2,
   List,
   ListOrdered,
+  PenLine,
   RemoveFormatting,
   Type,
 } from "lucide-react";
@@ -144,6 +146,7 @@ function toggleWrapSelection(
   const end = el.selectionEnd ?? 0;
   const hasSelection = end > start;
   const selected = hasSelection ? value.slice(start, end) : value;
+  const isColorTag = /^<color=#[0-9a-fA-F]{3,8}>$/.test(openTag);
 
   if (!hasSelection && !value) {
     const next = `${openTag}text${closeTag}`;
@@ -156,6 +159,24 @@ function toggleWrapSelection(
   }
 
   if (!hasSelection) {
+    // If applying a color to the entire field, check if already color-wrapped
+    if (isColorTag) {
+      const wholeColorMatch = value.match(/^<color=#[0-9a-fA-F]{3,8}>([\s\S]*?)<\/color>$/);
+      if (wholeColorMatch) {
+        if (value.startsWith(openTag)) {
+          // Toggle off
+          onChange(wholeColorMatch[1]);
+          requestAnimationFrame(() => el.focus());
+          return;
+        }
+        // Replace with new color
+        const inner = wholeColorMatch[1].replace(/<\/?color(?:=#[^>]*?)?>/gi, "");
+        onChange(`${openTag}${inner}${closeTag}`);
+        requestAnimationFrame(() => el.focus());
+        return;
+      }
+    }
+
     // Wrap or unwrap the entire field when nothing is highlighted
     if (value.startsWith(openTag) && value.endsWith(closeTag)) {
       const unwrapped = value.slice(openTag.length, value.length - closeTag.length);
@@ -167,6 +188,60 @@ function toggleWrapSelection(
       requestAnimationFrame(() => el.focus());
     }
     return;
+  }
+
+  // Check if selection is already wrapped immediately outside with color
+  if (isColorTag) {
+    const beforeColorMatch = value.slice(0, start).match(/<color=#[0-9a-fA-F]{3,8}>$/);
+    const afterColorMatch = value.slice(end).match(/^<\/color>/);
+    if (beforeColorMatch && afterColorMatch) {
+      const openPos = start - beforeColorMatch[0].length;
+      const closePos = end + afterColorMatch[0].length;
+      if (beforeColorMatch[0] === openTag) {
+        // Toggle off
+        const next = value.slice(0, openPos) + selected + value.slice(closePos);
+        onChange(next);
+        requestAnimationFrame(() => {
+          el.focus();
+          el.setSelectionRange(openPos, openPos + selected.length);
+        });
+        return;
+      }
+      // Replace existing color
+      const next = value.slice(0, openPos) + openTag + selected + closeTag + value.slice(closePos);
+      onChange(next);
+      requestAnimationFrame(() => {
+        el.focus();
+        el.setSelectionRange(openPos + openTag.length, openPos + openTag.length + selected.length);
+      });
+      return;
+    }
+
+    // Check if selected itself starts with <color=...> and ends with </color>
+    const selectedColorMatch = selected.match(/^<color=#[0-9a-fA-F]{3,8}>([\s\S]*?)<\/color>$/);
+    if (selectedColorMatch) {
+      if (selected.startsWith(openTag)) {
+        // Toggle off
+        const inner = selectedColorMatch[1];
+        const next = value.slice(0, start) + inner + value.slice(end);
+        onChange(next);
+        requestAnimationFrame(() => {
+          el.focus();
+          el.setSelectionRange(start, start + inner.length);
+        });
+        return;
+      } else {
+        // Replace existing color
+        const inner = selectedColorMatch[1].replace(/<\/?color(?:=#[^>]*?)?>/gi, "");
+        const next = value.slice(0, start) + openTag + inner + closeTag + value.slice(end);
+        onChange(next);
+        requestAnimationFrame(() => {
+          el.focus();
+          el.setSelectionRange(start + openTag.length, start + openTag.length + inner.length);
+        });
+        return;
+      }
+    }
   }
 
   // Check if already wrapped inside or around selection
@@ -196,11 +271,11 @@ function toggleWrapSelection(
     return;
   }
 
-  // If applying a size or color tag, strip existing outer size/color tag on selection first
-  const cleanedSelected = /^<(sm|lg|xl)>/.test(openTag)
-    ? selected.replace(/^<(sm|lg|xl)>([\s\S]*?)<\/\1>$/, "$2")
-    : /^<color=#[0-9a-fA-F]{3,8}>$/.test(openTag)
-      ? selected.replace(/^<color=#[0-9a-fA-F]{3,8}>([\s\S]*?)<\/color>$/, "$1")
+  // If applying a size or color tag, strip existing outer/nested size/color tag on selection first
+  const cleanedSelected = isColorTag
+    ? selected.replace(/<\/?color(?:=#[^>]*?)?>/gi, "")
+    : /^<(sm|lg|xl)>/.test(openTag)
+      ? selected.replace(/^<(sm|lg|xl)>([\s\S]*?)<\/\1>$/, "$2")
       : selected;
 
   const replacement = `${openTag}${cleanedSelected}${closeTag}`;
@@ -302,13 +377,41 @@ function TextFormattingBar({
   value,
   onChange,
   multiline = false,
+  isPreview = false,
+  onTogglePreview,
 }: {
   inputRef: React.RefObject<HTMLInputElement | HTMLTextAreaElement | null>;
   value: string;
   onChange: (v: string) => void;
   multiline?: boolean;
+  isPreview?: boolean;
+  onTogglePreview?: () => void;
 }) {
   const preventFocusLoss = (e: React.MouseEvent) => e.preventDefault();
+  const savedSelectionRef = useRef<{ start: number; end: number } | null>(null);
+
+  const captureSelection = () => {
+    if (inputRef.current) {
+      savedSelectionRef.current = {
+        start: inputRef.current.selectionStart ?? 0,
+        end: inputRef.current.selectionEnd ?? 0,
+      };
+    }
+  };
+
+  const applyColor = (hex: string) => {
+    const saved = savedSelectionRef.current;
+    if (
+      saved &&
+      inputRef.current &&
+      inputRef.current.selectionStart === 0 &&
+      inputRef.current.selectionEnd === 0 &&
+      saved.end > saved.start
+    ) {
+      inputRef.current.setSelectionRange(saved.start, saved.end);
+    }
+    toggleWrapSelection(inputRef.current, value, onChange, `<color=${hex}>`, "</color>");
+  };
 
   return (
     <div
@@ -384,9 +487,10 @@ function TextFormattingBar({
       <span className="mx-1 h-3.5 w-px bg-[color:var(--adm-line)]" aria-hidden />
 
       <label
-        className={`${fmtBtnClass} gap-1 relative`}
+        className={`${fmtBtnClass} gap-1 relative cursor-pointer`}
         title="Adjust text color"
         aria-label="Adjust text color"
+        onMouseDown={captureSelection}
       >
         <span className="font-serif font-bold text-[11px] leading-none border-b-2 border-[#E85D4A]">
           A
@@ -394,15 +498,8 @@ function TextFormattingBar({
         <input
           type="color"
           defaultValue="#E85D4A"
-          onChange={(e) =>
-            toggleWrapSelection(
-              inputRef.current,
-              value,
-              onChange,
-              `<color=${e.target.value}>`,
-              "</color>",
-            )
-          }
+          onFocus={captureSelection}
+          onChange={(e) => applyColor(e.target.value)}
           className="sr-only"
         />
       </label>
@@ -413,9 +510,8 @@ function TextFormattingBar({
         <button
           key={sw.hex}
           type="button"
-          onClick={() =>
-            toggleWrapSelection(inputRef.current, value, onChange, `<color=${sw.hex}>`, "</color>")
-          }
+          onMouseDown={captureSelection}
+          onClick={() => applyColor(sw.hex)}
           title={`Text color: ${sw.label} (${sw.hex})`}
           aria-label={`Set text color ${sw.label}`}
           className="inline-flex items-center justify-center h-4 w-4 rounded-sm border border-black/20 hover:scale-110 transition-transform mx-0.5 cursor-pointer"
@@ -462,10 +558,25 @@ function TextFormattingBar({
         </>
       )}
 
+      {onTogglePreview && (
+        <button
+          type="button"
+          onClick={onTogglePreview}
+          className={`${fmtBtnClass} gap-1 ml-auto text-[11px] ${
+            isPreview ? "bg-[color:var(--adm-accent)] text-white hover:bg-[color:var(--adm-accent)]" : ""
+          }`}
+          title={isPreview ? "Switch to edit mode" : "Preview formatted text in place"}
+          aria-label={isPreview ? "Switch to edit mode" : "Preview formatted text in place"}
+        >
+          {isPreview ? <PenLine className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+          <span>{isPreview ? "Edit" : "Preview"}</span>
+        </button>
+      )}
+
       <button
         type="button"
         onClick={() => clearFormattingSelection(inputRef.current, value, onChange)}
-        className={`${fmtBtnClass} ml-auto`}
+        className={`${fmtBtnClass} ${onTogglePreview ? "ml-1" : "ml-auto"}`}
         title="Clear formatting"
         aria-label="Clear formatting"
       >
@@ -516,45 +627,92 @@ export function TextInput({
 }) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [focused, setFocused] = useState(false);
+  const [isPreview, setIsPreview] = useState(false);
   const showToolbar =
     (toolbar ?? shouldEnableToolbarForInput(label, placeholder)) &&
     (focused || hasRichTextFormatting(value));
 
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-[color:var(--adm-text)] text-[13px] font-medium">{label}</label>
+      <div className="flex items-center justify-between gap-2">
+        <label className="text-[color:var(--adm-text)] text-[13px] font-medium">{label}</label>
+        {showToolbar && hasRichTextFormatting(value) && (
+          <div className="inline-flex items-center rounded bg-[color:var(--adm-subtle)] p-0.5 border border-[color:var(--adm-line)] text-[11px]">
+            <button
+              type="button"
+              onClick={() => {
+                setIsPreview(false);
+                requestAnimationFrame(() => inputRef.current?.focus());
+              }}
+              className={`px-2 py-0.5 rounded transition-colors font-medium cursor-pointer ${
+                !isPreview
+                  ? "bg-[color:var(--adm-surface)] text-[color:var(--adm-text)] shadow-xs"
+                  : "text-[color:var(--adm-muted)] hover:text-[color:var(--adm-text)]"
+              }`}
+            >
+              Write
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsPreview(true)}
+              className={`px-2 py-0.5 rounded transition-colors font-medium cursor-pointer ${
+                isPreview
+                  ? "bg-[color:var(--adm-surface)] text-[color:var(--adm-text)] shadow-xs"
+                  : "text-[color:var(--adm-muted)] hover:text-[color:var(--adm-text)]"
+              }`}
+            >
+              Preview
+            </button>
+          </div>
+        )}
+      </div>
+
       {hint && (
         <p className="text-[color:var(--adm-faint)] text-xs leading-relaxed -mt-0.5 mb-0.5">{hint}</p>
       )}
-      <div className="flex flex-col">
-        <input
-          ref={inputRef}
-          type="text"
-          value={value}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-          onChange={(e) => onChange(e.target.value)}
-          onKeyDown={(e) => handleRichTextKeyDown(e, inputRef.current, value, onChange)}
-          placeholder={placeholder}
-          className={`bg-[color:var(--adm-input)] border border-[color:var(--adm-line-strong)] ${
-            showToolbar ? "rounded-t-md" : "rounded-md"
-          } text-[color:var(--adm-text)] px-3 py-2 text-sm focus:outline-none focus:border-[color:var(--adm-accent)] focus:ring-2 focus:ring-[color:var(--adm-accent)]/15 transition-colors placeholder:text-[color:var(--adm-placeholder)]`}
-        />
-        {showToolbar && (
-          <TextFormattingBar
-            inputRef={inputRef}
+
+      {isPreview ? (
+        <div
+          onClick={() => {
+            setIsPreview(false);
+            requestAnimationFrame(() => inputRef.current?.focus());
+          }}
+          title="Click to edit"
+          className="bg-[color:var(--adm-input)] border border-[color:var(--adm-line-strong)] rounded-md px-3 py-2 text-sm text-[color:var(--adm-text)] cursor-text hover:border-[color:var(--adm-accent)]/50 transition-colors truncate min-h-[38px] flex items-center"
+        >
+          {value ? (
+            renderRichText(value)
+          ) : (
+            <span className="text-[color:var(--adm-placeholder)] italic">
+              {placeholder || "Nothing to preview"}
+            </span>
+          )}
+        </div>
+      ) : (
+        <div className="flex flex-col">
+          <input
+            ref={inputRef}
+            type="text"
             value={value}
-            onChange={onChange}
-            multiline={false}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            onChange={(e) => onChange(e.target.value)}
+            onKeyDown={(e) => handleRichTextKeyDown(e, inputRef.current, value, onChange)}
+            placeholder={placeholder}
+            className={`bg-[color:var(--adm-input)] border border-[color:var(--adm-line-strong)] ${
+              showToolbar ? "rounded-t-md" : "rounded-md"
+            } text-[color:var(--adm-text)] px-3 py-2 text-sm focus:outline-none focus:border-[color:var(--adm-accent)] focus:ring-2 focus:ring-[color:var(--adm-accent)]/15 transition-colors placeholder:text-[color:var(--adm-placeholder)]`}
           />
-        )}
-      </div>
-      {hasRichTextFormatting(value) && (
-        <div className="text-xs text-[color:var(--adm-text)] bg-[color:var(--adm-subtle)] border border-[color:var(--adm-line)] rounded px-2.5 py-1.5 leading-relaxed">
-          <span className="text-[10px] uppercase tracking-widest text-[color:var(--adm-faint)] mr-2">
-            Preview:
-          </span>
-          {renderRichText(value)}
+          {showToolbar && (
+            <TextFormattingBar
+              inputRef={inputRef}
+              value={value}
+              onChange={onChange}
+              multiline={false}
+              isPreview={isPreview}
+              onTogglePreview={() => setIsPreview((v) => !v)}
+            />
+          )}
         </div>
       )}
     </div>
@@ -579,40 +737,88 @@ export function TextareaInput({
   toolbar?: boolean;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const [isPreview, setIsPreview] = useState(false);
 
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-[color:var(--adm-text)] text-[13px] font-medium">{label}</label>
+      <div className="flex items-center justify-between gap-2">
+        <label className="text-[color:var(--adm-text)] text-[13px] font-medium">{label}</label>
+        {toolbar && (
+          <div className="inline-flex items-center rounded bg-[color:var(--adm-subtle)] p-0.5 border border-[color:var(--adm-line)] text-[11px]">
+            <button
+              type="button"
+              onClick={() => {
+                setIsPreview(false);
+                requestAnimationFrame(() => textareaRef.current?.focus());
+              }}
+              className={`px-2 py-0.5 rounded transition-colors font-medium cursor-pointer ${
+                !isPreview
+                  ? "bg-[color:var(--adm-surface)] text-[color:var(--adm-text)] shadow-xs"
+                  : "text-[color:var(--adm-muted)] hover:text-[color:var(--adm-text)]"
+              }`}
+            >
+              Write
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsPreview(true)}
+              className={`px-2 py-0.5 rounded transition-colors font-medium cursor-pointer ${
+                isPreview
+                  ? "bg-[color:var(--adm-surface)] text-[color:var(--adm-text)] shadow-xs"
+                  : "text-[color:var(--adm-muted)] hover:text-[color:var(--adm-text)]"
+              }`}
+            >
+              Preview
+            </button>
+          </div>
+        )}
+      </div>
+
       {hint && (
         <p className="text-[color:var(--adm-faint)] text-xs leading-relaxed -mt-0.5 mb-0.5">{hint}</p>
       )}
-      <div className="flex flex-col">
-        <textarea
-          ref={textareaRef}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onKeyDown={(e) => handleRichTextKeyDown(e, textareaRef.current, value, onChange)}
-          rows={rows}
-          placeholder={placeholder}
-          className={`bg-[color:var(--adm-input)] border border-[color:var(--adm-line-strong)] ${
-            toolbar ? "rounded-t-md" : "rounded-md"
-          } text-[color:var(--adm-text)] py-2 px-3 text-sm focus:outline-none focus:border-[color:var(--adm-accent)] focus:ring-2 focus:ring-[color:var(--adm-accent)]/15 transition-colors resize-y placeholder:text-[color:var(--adm-placeholder)]`}
-        />
-        {toolbar && (
-          <TextFormattingBar
-            inputRef={textareaRef}
+
+      {isPreview ? (
+        <div
+          onClick={() => {
+            setIsPreview(false);
+            requestAnimationFrame(() => textareaRef.current?.focus());
+          }}
+          title="Click to edit"
+          className="bg-[color:var(--adm-input)] border border-[color:var(--adm-line-strong)] rounded-md py-2 px-3 text-sm text-[color:var(--adm-text)] leading-relaxed whitespace-pre-line cursor-text hover:border-[color:var(--adm-accent)]/50 transition-colors"
+          style={{ minHeight: `${Math.max(rows, 3) * 1.5 + 1}rem` }}
+        >
+          {value ? (
+            renderRichText(value)
+          ) : (
+            <span className="text-[color:var(--adm-placeholder)] italic">
+              {placeholder || "Nothing to preview"}
+            </span>
+          )}
+        </div>
+      ) : (
+        <div className="flex flex-col">
+          <textarea
+            ref={textareaRef}
             value={value}
-            onChange={onChange}
-            multiline={true}
+            onChange={(e) => onChange(e.target.value)}
+            onKeyDown={(e) => handleRichTextKeyDown(e, textareaRef.current, value, onChange)}
+            rows={rows}
+            placeholder={placeholder}
+            className={`bg-[color:var(--adm-input)] border border-[color:var(--adm-line-strong)] ${
+              toolbar ? "rounded-t-md" : "rounded-md"
+            } text-[color:var(--adm-text)] py-2 px-3 text-sm focus:outline-none focus:border-[color:var(--adm-accent)] focus:ring-2 focus:ring-[color:var(--adm-accent)]/15 transition-colors resize-y placeholder:text-[color:var(--adm-placeholder)]`}
           />
-        )}
-      </div>
-      {hasRichTextFormatting(value) && (
-        <div className="text-xs text-[color:var(--adm-text)] bg-[color:var(--adm-subtle)] border border-[color:var(--adm-line)] rounded px-2.5 py-1.5 leading-relaxed whitespace-pre-line">
-          <span className="text-[10px] uppercase tracking-widest text-[color:var(--adm-faint)] block mb-0.5">
-            Formatted Preview
-          </span>
-          {renderRichText(value)}
+          {toolbar && (
+            <TextFormattingBar
+              inputRef={textareaRef}
+              value={value}
+              onChange={onChange}
+              multiline={true}
+              isPreview={isPreview}
+              onTogglePreview={() => setIsPreview((v) => !v)}
+            />
+          )}
         </div>
       )}
     </div>

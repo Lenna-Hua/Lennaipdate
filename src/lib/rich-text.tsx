@@ -31,7 +31,9 @@ export function stripRichText(text: string | undefined | null): string {
     .replace(/<color=#[0-9a-fA-F]{3,8}>([\s\S]+?)<\/color>/g, "$1")
     .replace(/__([\s\S]+?)__/g, "$1")
     .replace(/\[([^\]]+)\]\((?:https?:\/\/|\/|mailto:)[^)]+\)/g, "$1")
-    .replace(/\*([^\s*][^*]*?)\*/g, "$1");
+    .replace(/\*([^\s*][^*]*?)\*/g, "$1")
+    .replace(/<\/?color(?:=#[^>]*?)?>/gi, "")
+    .replace(/<\/?(?:b|strong|i|em|u|sm|lg|xl)>/gi, "");
 }
 
 function parseInline(text: string, keyPrefix = "rt"): ReactNode[] {

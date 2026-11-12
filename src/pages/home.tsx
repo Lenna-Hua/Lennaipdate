@@ -12,6 +12,7 @@ import type { CoverPlayback } from "@/components/CoverMedia";
 import { ParallaxMasonry, type MasonryItem } from "@/components/ParallaxMasonry";
 import { MediaLightbox, type LightboxItem } from "@/components/MediaLightbox";
 import { BigCount, SplitShowcase } from "@/components/layout/SplitShowcase";
+import { AdjustmentFrame } from "@/components/AdjustmentFrame";
 import { DEFAULT_PROCESS_STEPS, ProcessStack, type ProcessLayout, type ProcessStep } from "@/components/ProcessStack";
 
 type Project = (typeof projectsSeed)[number] & {
@@ -127,8 +128,14 @@ export default function Home() {
               {hp.heroEyebrow && (
                 <span className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">{hp.heroEyebrow}</span>
               )}
-              <h1 className="font-display font-black uppercase leading-[0.88] tracking-tight text-foreground text-[clamp(2.75rem,5vw,4.75rem)]">
-                {identityData.name}
+              <h1 className="font-display font-black uppercase leading-[0.88] tracking-tight text-foreground text-[clamp(2.75rem,5vw,4.75rem)] inline-flex my-1">
+                <AdjustmentFrame
+                  className="px-3 py-1.5 sm:px-4 sm:py-2"
+                  dashedColor="border-foreground/50"
+                  handleColor="bg-foreground"
+                >
+                  {identityData.name}
+                </AdjustmentFrame>
               </h1>
               <BigCount value={featuredWork.length} label={hp.selectedWorkHeading} />
             </>
