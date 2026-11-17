@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
+import { Eye, EyeOff } from "lucide-react";
 import projectsSeed from "@/data/projects.json";
 import aboutSeed from "@/data/about.json";
 import identitySeed from "@/data/identity.json";
@@ -67,6 +68,25 @@ export default function Home() {
   const heroMedia = hp.heroMedia?.trim() ?? "";
   const [openId, setOpenId] = useState<string | null>(null);
 
+  const [showCardDetails, setShowCardDetails] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      const stored = window.localStorage.getItem("home-card-details");
+      if (stored === "true") return true;
+      if (stored === "false") return false;
+    }
+    return hp.selectedWorkCardDetailsMode !== "hide";
+  });
+
+  const toggleCardDetails = () => {
+    setShowCardDetails((prev) => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem("home-card-details", String(next));
+      } catch {}
+      return next;
+    });
+  };
+
   const featuredWork = useMemo((): MasonryItem[] => {
     return projectsData
       .filter((p) => !p.archived && p.featured)
@@ -90,6 +110,7 @@ export default function Home() {
         protected: (p as { protected?: boolean }).protected,
         meta: joinMeta(p.type, p.year),
         href: `/work/${p.slug}`,
+        showCardDetails: (p as { showCardDetails?: boolean }).showCardDetails,
       }));
   }, [projectsData]);
 
@@ -168,6 +189,30 @@ export default function Home() {
           }
         >
           <div className="flex flex-col gap-6">
+            <div className="flex items-center justify-between pb-1 flex-wrap gap-2">
+              <span className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground font-mono">
+                {featuredWork.length} Selected Project{featuredWork.length === 1 ? "" : "s"}
+              </span>
+              <button
+                type="button"
+                onClick={toggleCardDetails}
+                aria-pressed={showCardDetails}
+                aria-label={showCardDetails ? "Hide information below cards" : "Show information below cards"}
+                title={showCardDetails ? "Information below cards is showing (click to hide)" : "Information below cards is hidden (click to show)"}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-mono transition-all duration-300 border ${
+                  showCardDetails
+                    ? "bg-foreground text-background border-foreground font-semibold shadow-sm"
+                    : "text-muted-foreground hover:text-foreground hover:bg-foreground/5 border-foreground/15"
+                }`}
+              >
+                {showCardDetails ? (
+                  <Eye size={13} strokeWidth={2} aria-hidden />
+                ) : (
+                  <EyeOff size={13} strokeWidth={2} aria-hidden />
+                )}
+                <span>Details: {showCardDetails ? "Show" : "Not Showing"}</span>
+              </button>
+            </div>
             <ParallaxMasonry
               items={gridItems}
               onOpen={setOpenId}
@@ -180,7 +225,7 @@ export default function Home() {
               titleSize={hp.selectedWorkTitleSize}
               titleWeight={hp.selectedWorkTitleWeight}
               titleCase={hp.selectedWorkTitleCase}
-              showCardDetails={hp.selectedWorkCardDetailsMode !== "hide"}
+              showCardDetails={showCardDetails}
               showSubtitle={hp.selectedWorkShowSubtitle ?? true}
               showDescription={hp.selectedWorkShowDescription ?? true}
               showMetadataStrip={hp.selectedWorkShowMetadataStrip ?? true}

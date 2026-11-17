@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Link } from "wouter";
 import { motion, useReducedMotion } from "framer-motion";
-import { Lock } from "lucide-react";
+import { Lock, Eye, EyeOff } from "lucide-react";
 import { CoverMedia, type CoverPlayback } from "@/components/CoverMedia";
 import { embedAspect, parseVideoEmbed } from "@/lib/video-embed";
 
@@ -26,6 +26,7 @@ export type MasonryItem = {
   users?: string;
   methods?: string;
   tags?: string[];
+  showCardDetails?: boolean;
 };
 
 export type MasonrySize = "md" | "lg" | "xl";
@@ -199,6 +200,19 @@ function Tile({
   onOpen?: (id: string) => void;
 } & CardCustomProps) {
   const [hover, setHover] = useState(false);
+  const [localShowDetails, setLocalShowDetails] = useState<boolean>(() => {
+    if (item.showCardDetails !== undefined) return item.showCardDetails;
+    return showCardDetails;
+  });
+
+  useEffect(() => {
+    if (item.showCardDetails !== undefined) {
+      setLocalShowDetails(item.showCardDetails);
+    } else {
+      setLocalShowDetails(showCardDetails);
+    }
+  }, [showCardDetails, item.showCardDetails]);
+
   const reduce = useReducedMotion();
   const embed = parseVideoEmbed(item.src);
   const isStudio = variant === "studio";
@@ -340,7 +354,7 @@ function Tile({
         )}
       </div>
 
-      {/* ── Below card: Clean Short Title + Year (Alex Boland Style - no paragraph description) ── */}
+      {/* ── Below card: Clean Short Title + Year + Inline Info Toggle ── */}
       <div
         className={`mt-3 flex items-baseline justify-between border-t border-border pt-2.5 gap-3 transition-all duration-300 ${
           titleDisplayMode === "hover"
@@ -354,14 +368,44 @@ function Tile({
         >
           {displayTitle}
         </h3>
-        {item.year ? (
-          <span className="text-xs tabular-nums text-muted-foreground font-mono shrink-0">{item.year}</span>
-        ) : item.meta ? (
-          <span className="text-xs text-muted-foreground shrink-0">{item.meta}</span>
-        ) : null}
+        <div className="flex items-center gap-2 shrink-0">
+          {item.year ? (
+            <span className="text-xs tabular-nums text-muted-foreground font-mono shrink-0">{item.year}</span>
+          ) : item.meta ? (
+            <span className="text-xs text-muted-foreground shrink-0">{item.meta}</span>
+          ) : null}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setLocalShowDetails((prev) => !prev);
+            }}
+            aria-pressed={localShowDetails}
+            aria-label={localShowDetails ? "Hide information below card" : "Show information below card"}
+            title={localShowDetails ? "Hide info below card" : "Show info below card"}
+            className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-mono uppercase tracking-wider rounded border transition-colors cursor-pointer ${
+              localShowDetails
+                ? "border-foreground/30 text-foreground bg-foreground/5 font-semibold"
+                : "border-foreground/20 text-muted-foreground hover:text-foreground hover:border-foreground/40 hover:bg-foreground/5"
+            }`}
+          >
+            {localShowDetails ? (
+              <>
+                <EyeOff size={11} strokeWidth={2} aria-hidden />
+                <span className="hidden sm:inline">Hide</span>
+              </>
+            ) : (
+              <>
+                <Eye size={11} strokeWidth={2} aria-hidden />
+                <span>Info</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
-      {showCardDetails && (
+      {localShowDetails && (
         <div className="mt-2 flex flex-col gap-1.5 min-w-0">
           {showSubtitle && item.subtitle ? (
             <p className="text-xs sm:text-[13px] font-sans font-medium text-foreground/85 leading-snug line-clamp-2">

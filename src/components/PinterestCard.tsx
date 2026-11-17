@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
-import { Lock, Play } from "lucide-react";
+import { Lock, Play, Eye, EyeOff } from "lucide-react";
 import { CoverMedia, isPlayableCover, type CoverPlayback } from "@/components/CoverMedia";
 import { BRAND_DECK, BRAND_RGB } from "@/lib/brand";
 import type { CardLayout } from "@/components/admin/types";
@@ -43,6 +43,8 @@ export type PinterestCardProject = {
   cardLayout?: CardLayout;
   /** Password-protected case study — shows a lock badge. */
   protected?: boolean;
+  /** Explicit per-project override to show/hide details below the card. */
+  showCardDetails?: boolean;
 };
 
 /**
@@ -148,9 +150,22 @@ export const PinterestCard = memo(function PinterestCard({
 
   useEffect(() => () => clearHoverTimer(), [clearHoverTimer]);
 
+  const [localShowDetails, setLocalShowDetails] = useState<boolean>(() => {
+    if (project.showCardDetails !== undefined) return project.showCardDetails;
+    return showDetails;
+  });
+
+  useEffect(() => {
+    if (project.showCardDetails !== undefined) {
+      setLocalShowDetails(project.showCardDetails);
+    } else {
+      setLocalShowDetails(showDetails);
+    }
+  }, [showDetails, project.showCardDetails]);
+
   const horizontal = project.cardLayout === "horizontal";
-  const isBelow = showDetails && detailsPlacement === "below";
-  const isOverlay = showDetails && detailsPlacement === "overlay";
+  const isBelow = detailsPlacement === "below";
+  const isOverlay = detailsPlacement === "overlay";
   const effectiveDescription = project.cardDescription || project.description || "";
 
   // The inner media box containing image, video, overlays, and badges
@@ -370,76 +385,111 @@ export const PinterestCard = memo(function PinterestCard({
         {/* ── Below the Project Card Details ───────────────────────────── */}
         {isBelow && (
           <div className="mt-3.5 flex flex-col gap-2 min-w-0 flex-1">
-            {/* Title & Year */}
+            {/* Title & Year + Inline Info Toggle */}
             <div className="flex items-baseline justify-between gap-3 min-w-0">
               <h3 className="font-display font-black uppercase text-base sm:text-lg lg:text-xl leading-[1.15] tracking-[0.02em] text-foreground group-hover/card:text-primary transition-colors duration-300 truncate">
                 {project.title}
               </h3>
-              {project.year ? (
-                <span className="text-xs font-mono font-bold text-muted-foreground shrink-0 tabular-nums">
-                  {project.year}
-                </span>
-              ) : null}
+              <div className="flex items-center gap-2 shrink-0">
+                {project.year ? (
+                  <span className="text-xs font-mono font-bold text-muted-foreground shrink-0 tabular-nums">
+                    {project.year}
+                  </span>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setLocalShowDetails((prev) => !prev);
+                  }}
+                  aria-pressed={localShowDetails}
+                  aria-label={localShowDetails ? "Hide information below card" : "Show information below card"}
+                  title={localShowDetails ? "Hide info below card" : "Show info below card"}
+                  className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-mono uppercase tracking-wider rounded border transition-colors cursor-pointer ${
+                    localShowDetails
+                      ? "border-foreground/30 text-foreground bg-foreground/5 font-semibold"
+                      : "border-foreground/20 text-muted-foreground hover:text-foreground hover:border-foreground/40 hover:bg-foreground/5"
+                  }`}
+                >
+                  {localShowDetails ? (
+                    <>
+                      <EyeOff size={11} strokeWidth={2} aria-hidden />
+                      <span className="hidden sm:inline">Hide</span>
+                    </>
+                  ) : (
+                    <>
+                      <Eye size={11} strokeWidth={2} aria-hidden />
+                      <span>Info</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
 
-            {/* Subtitle */}
-            {showSubtitle && project.subtitle ? (
-              <p className="text-xs sm:text-[13px] font-sans font-medium text-foreground/80 leading-snug line-clamp-2">
-                {project.subtitle}
-              </p>
-            ) : null}
-
-            {/* Description */}
-            {showDescription && effectiveDescription ? (
-              <p className="text-xs font-sans text-muted-foreground leading-relaxed line-clamp-2">
-                {effectiveDescription}
-              </p>
-            ) : null}
-
-            {/* Metadata strip (Role · Users · Methods / Tags) — Sharp corner blocks following brand guidelines */}
-            {showMetadataStrip && (
-              <div className="flex items-center gap-1.5 flex-wrap pt-0.5 mt-auto">
-                {project.type ? (
-                  <span
-                    className="text-[9px] uppercase tracking-wider font-sans font-bold px-2.5 py-0.5 rounded-none border shadow-none"
-                    style={{
-                      background: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)",
-                      color: isDark ? "rgba(255,255,255,0.9)" : "rgba(0,0,0,0.85)",
-                      borderColor: isDark ? "rgba(255,255,255,0.16)" : "rgba(0,0,0,0.14)",
-                    }}
-                  >
-                    {project.type}
-                  </span>
+            {/* Extra information showing below the card: toggled on/off */}
+            {localShowDetails && (
+              <>
+                {/* Subtitle */}
+                {showSubtitle && project.subtitle ? (
+                  <p className="text-xs sm:text-[13px] font-sans font-medium text-foreground/80 leading-snug line-clamp-2">
+                    {project.subtitle}
+                  </p>
                 ) : null}
 
-                {project.users ? (
-                  <span className="text-[10px] font-sans text-muted-foreground bg-muted/60 px-2.5 py-0.5 rounded-none border border-border/60">
-                    <span className="text-foreground/75 font-semibold">Users:</span> {project.users}
-                  </span>
+                {/* Description */}
+                {showDescription && effectiveDescription ? (
+                  <p className="text-xs font-sans text-muted-foreground leading-relaxed line-clamp-2">
+                    {effectiveDescription}
+                  </p>
                 ) : null}
 
-                {project.methods ? (
-                  <span className="text-[10px] font-sans text-muted-foreground bg-muted/60 px-2.5 py-0.5 rounded-none border border-border/60">
-                    <span className="text-foreground/75 font-semibold">Methods:</span> {project.methods}
-                  </span>
-                ) : null}
-
-                {!project.users && !project.methods && project.tags && project.tags.length > 0
-                  ? project.tags.slice(0, 3).map((tag) => (
+                {/* Metadata strip (Role · Users · Methods / Tags) — Sharp corner blocks following brand guidelines */}
+                {showMetadataStrip && (
+                  <div className="flex items-center gap-1.5 flex-wrap pt-0.5 mt-auto">
+                    {project.type ? (
                       <span
-                        key={tag}
-                        className="text-[9px] uppercase tracking-wider font-sans font-bold px-2 py-0.5 rounded-none border"
+                        className="text-[9px] uppercase tracking-wider font-sans font-bold px-2.5 py-0.5 rounded-none border shadow-none"
                         style={{
-                          background: `rgba(${rgb}, 0.12)`,
-                          color: `rgba(${rgb}, 0.95)`,
-                          borderColor: `rgba(${rgb}, 0.28)`,
+                          background: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)",
+                          color: isDark ? "rgba(255,255,255,0.9)" : "rgba(0,0,0,0.85)",
+                          borderColor: isDark ? "rgba(255,255,255,0.16)" : "rgba(0,0,0,0.14)",
                         }}
                       >
-                        {tag}
+                        {project.type}
                       </span>
-                    ))
-                  : null}
-              </div>
+                    ) : null}
+
+                    {project.users ? (
+                      <span className="text-[10px] font-sans text-muted-foreground bg-muted/60 px-2.5 py-0.5 rounded-none border border-border/60">
+                        <span className="text-foreground/75 font-semibold">Users:</span> {project.users}
+                      </span>
+                    ) : null}
+
+                    {project.methods ? (
+                      <span className="text-[10px] font-sans text-muted-foreground bg-muted/60 px-2.5 py-0.5 rounded-none border border-border/60">
+                        <span className="text-foreground/75 font-semibold">Methods:</span> {project.methods}
+                      </span>
+                    ) : null}
+
+                    {!project.users && !project.methods && project.tags && project.tags.length > 0
+                      ? project.tags.slice(0, 3).map((tag) => (
+                          <span
+                            key={tag}
+                            className="text-[9px] uppercase tracking-wider font-sans font-bold px-2 py-0.5 rounded-none border"
+                            style={{
+                              background: `rgba(${rgb}, 0.12)`,
+                              color: `rgba(${rgb}, 0.95)`,
+                              borderColor: `rgba(${rgb}, 0.28)`,
+                            }}
+                          >
+                            {tag}
+                          </span>
+                        ))
+                      : null}
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}

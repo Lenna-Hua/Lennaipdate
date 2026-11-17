@@ -157,6 +157,8 @@ export type Project = {
   logo?: string;
   /** Card shape on Work/Home grids. Defaults to "vertical". */
   cardLayout?: CardLayout;
+  /** Controls whether information (subtitle, description, metadata) displays below card. */
+  showCardDetails?: boolean;
   year: string;
   period?: string;
   featured: boolean;
