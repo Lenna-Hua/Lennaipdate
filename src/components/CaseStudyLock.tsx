@@ -75,7 +75,7 @@ export function CaseStudyLock({
         </div>
 
         {coverImage && (
-          <div className="relative w-full overflow-hidden bg-muted" style={{ aspectRatio: "16/7" }}>
+          <div className="relative w-full overflow-hidden bg-muted" style={{ aspectRatio: "16/9" }}>
             {still ? (
               <SafeImage src={still} alt="" className={blurClass} />
             ) : (

@@ -64,6 +64,14 @@ export type Section = {
   images?: string[];
   /** Image slideshow: optional per-slide captions aligned with images. */
   imageCaptions?: string[];
+  /** Image layout when section has multiple images: "slideshow" | "stacked". Defaults to "slideshow". */
+  imageLayout?: "slideshow" | "stacked";
+  /** When true, removes vertical gap below this image section so it touches the next image section seamlessly. */
+  noGap?: boolean;
+  /** Spacing between images inside a multi-image section: "gap" (default) or "no-gap" (seamless). */
+  imageGap?: "gap" | "no-gap";
+  /** Image display height: when true, displays at full natural height without height cap and fills container width without side blanks. */
+  fullHeight?: boolean;
   /** Mockup: full-bleed screenshots placed inside device frames. */
   screens?: string[];
   device?: MockupDevice;
@@ -104,6 +112,8 @@ export type Project = {
   users?: string;
   /** Shown as "Methods" in the case study metadata strip. */
   methods?: string;
+  /** Spacing between consecutive image sections in the case study: "gap" (default) or "no-gap" (seamless). */
+  imageGap?: "gap" | "no-gap";
   tags: string[];
   /** Overview paragraph on the case study page. */
   description: string;

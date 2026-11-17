@@ -1,5 +1,6 @@
-/** Shared upload size limits for images and videos. */
+/** Shared upload size limits for images, GIFs, and videos. */
 export const MAX_IMAGE_ASSET_BYTES = 4 * 1024 * 1024;
+export const MAX_GIF_ASSET_BYTES = 15 * 1024 * 1024; // GIFs / animated clips allowed up to 15 MB
 export const MAX_VIDEO_ASSET_BYTES = 100 * 1024 * 1024;
 
 /**
@@ -12,11 +13,15 @@ export const MAX_FUNCTION_UPLOAD_BYTES = 4 * 1024 * 1024;
 export const MAX_ASSET_BYTES = MAX_IMAGE_ASSET_BYTES;
 
 export function maxAssetBytesForMime(mime: string): number {
-  return mime.startsWith("video/") ? MAX_VIDEO_ASSET_BYTES : MAX_IMAGE_ASSET_BYTES;
+  if (mime.startsWith("video/")) return MAX_VIDEO_ASSET_BYTES;
+  if (mime === "image/gif") return MAX_GIF_ASSET_BYTES;
+  return MAX_IMAGE_ASSET_BYTES;
 }
 
 export function maxAssetBytesForFileType(type: string): number {
-  return type.startsWith("video/") ? MAX_VIDEO_ASSET_BYTES : MAX_IMAGE_ASSET_BYTES;
+  if (type.startsWith("video/")) return MAX_VIDEO_ASSET_BYTES;
+  if (type === "image/gif") return MAX_GIF_ASSET_BYTES;
+  return MAX_IMAGE_ASSET_BYTES;
 }
 
 export function formatMaxMb(bytes: number): number {

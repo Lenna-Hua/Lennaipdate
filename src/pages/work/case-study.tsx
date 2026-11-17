@@ -1,4 +1,4 @@
-﻿﻿﻿﻿import { useParams, Link } from "wouter";
+﻿﻿import { useParams, Link } from "wouter";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
@@ -123,6 +123,10 @@ interface ContentSection {
   slideshow?: boolean;
   images?: string[];
   imageCaptions?: string[];
+  imageLayout?: "slideshow" | "stacked";
+  noGap?: boolean;
+  imageGap?: "gap" | "no-gap";
+  fullHeight?: boolean;
   screens?: string[];
   device?: string;
   layout?: string;
@@ -140,6 +144,7 @@ interface Project {
   type: string;
   users?: string;
   methods?: string;
+  imageGap?: "gap" | "no-gap";
   tags: string[];
   description: string;
   bullets?: string[];
@@ -691,7 +696,7 @@ function CaseStudyCover({ project, onExpand }: { project: Project; onExpand: () 
       initial={{ opacity: 0, scale: 1.02 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ delay: 0.2, duration: 1, ease: BRAND_EASE }}
-      style={{ aspectRatio: "16/7" }}
+      style={{ aspectRatio: "16/9" }}
     >
       {embed ? (
         <EmbedCover
@@ -865,7 +870,7 @@ function CtaSection({ section }: { section: ContentSection }) {
   );
 }
 
-type SectionRow = { key: string; sections: ContentSection[]; shared: boolean };
+type SectionRow = { key: string; sections: ContentSection[]; shared: boolean; seamless?: boolean };
 
 const SHARED_ROW_SPAN: Record<2 | 3, string> = { 2: "md:col-span-3", 3: "md:col-span-2" };
 
@@ -873,14 +878,31 @@ function sharesRow(s: ContentSection): s is ContentSection & { columns: 2 | 3 } 
   return (s.type === "image" || s.type === "video") && (s.columns === 2 || s.columns === 3);
 }
 
-/** Consecutive Half / Third image or video sections go into one 6-column grid. */
-function groupSectionRows(sections: ContentSection[]): SectionRow[] {
+function isFullWidthImage(s: ContentSection): boolean {
+  return s.type === "image" && (!s.columns || s.columns === 1);
+}
+
+function shouldBeSeamless(s: ContentSection, projectImageGap?: "gap" | "no-gap"): boolean {
+  if (s.type !== "image") return false;
+  if (s.noGap === true) return true;
+  if (s.noGap === false) return false;
+  return projectImageGap === "no-gap";
+}
+
+/** Consecutive Half / Third image or video sections go into one 6-column grid. Full-width images with no gap are grouped seamlessly. */
+function groupSectionRows(sections: ContentSection[], projectImageGap?: "gap" | "no-gap"): SectionRow[] {
   const rows: SectionRow[] = [];
   for (const s of sections) {
     const shared = sharesRow(s);
+    const seamless = !shared && isFullWidthImage(s) && shouldBeSeamless(s, projectImageGap);
     const last = rows[rows.length - 1];
-    if (shared && last?.shared) last.sections.push(s);
-    else rows.push({ key: s.id, sections: [s], shared });
+    if (shared && last?.shared) {
+      last.sections.push(s);
+    } else if (seamless && last?.seamless) {
+      last.sections.push(s);
+    } else {
+      rows.push({ key: s.id, sections: [s], shared, seamless });
+    }
   }
   return rows;
 }
@@ -928,16 +950,20 @@ function SectionBlock({
   section,
   expanded,
   onImageClick,
+  seamless,
+  projectImageGap,
 }: {
   section: ContentSection;
   expanded: boolean;
   onImageClick: (src: string, caption?: string) => void;
+  seamless?: boolean;
+  projectImageGap?: "gap" | "no-gap";
 }) {
   if (section.type === "cta") {
     return <CtaSection section={section} />;
   }
   if (section.type === "image" || section.type === "video") {
-    return <ImageSection section={section} expanded={expanded} onImageClick={onImageClick} />;
+    return <ImageSection section={section} expanded={expanded} onImageClick={onImageClick} seamless={seamless} projectImageGap={projectImageGap} />;
   }
   if (section.type === "embed") {
     return <EmbedSection section={section} />;
@@ -1166,6 +1192,60 @@ function SectionVideo({ src, loop, label }: { src: string; loop: boolean; label?
   );
 }
 
+// Detect image natural dimensions from URL
+function useImageDimensions(src: string): { w: number; h: number } | null {
+  const [dim, setDim] = useState<{ w: number; h: number } | null>(null);
+  useEffect(() => {
+    if (!src) { setDim(null); return; }
+    const img = new Image();
+    img.onload = () => setDim({ w: img.naturalWidth, h: img.naturalHeight });
+    img.onerror = () => setDim(null);
+    img.src = src;
+  }, [src]);
+  return dim;
+}
+
+// Get the dominant aspect ratio for a set of slides (most common rounded ratio)
+function getDominantRatio(dims: (({ w: number; h: number }) | null)[]): string | null {
+  const ratios = dims.flatMap(d => {
+    if (!d) return [];
+    const r = d.w / d.h;
+    if (r >= 1.7) return ["16:9"];
+    if (r >= 1.4) return ["3:2"];
+    if (r >= 1.2) return ["4:3"];
+    if (r >= 0.95 && r <= 1.05) return ["1:1"];
+    if (r >= 0.75) return ["4:5"];
+    if (r >= 0.6) return ["3:4"];
+    return ["9:16"];
+  });
+  if (!ratios.length) return null;
+  const counts: Record<string, number> = {};
+  for (const r of ratios) counts[r] = (counts[r] ?? 0) + 1;
+  return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+}
+
+function SlideRatioBadge({
+  dim,
+  dominantRatio,
+}: {
+  dim: { w: number; h: number } | null;
+  dominantRatio: string | null;
+}) {
+  if (!dim || !dominantRatio) return null;
+  const r = dim.w / dim.h;
+  const isHorizontal = r >= 1.7 ? "16:9" : r >= 1.4 ? "3:2" : r >= 1.2 ? "4:3" : null;
+  const thisRatio = isHorizontal ?? (r >= 0.95 && r <= 1.05 ? "1:1" : r >= 0.75 ? "4:5" : r >= 0.6 ? "3:4" : "9:16");
+  if (thisRatio === dominantRatio) return null;
+
+  return (
+    <div className="absolute top-2.5 left-2.5 z-20 pointer-events-none">
+      <span className="inline-flex items-center gap-1 bg-amber-500/90 backdrop-blur-sm text-black text-[9px] font-bold px-2 py-0.5 rounded-full shadow-md uppercase tracking-widest">
+        ⚠ {dim.w}×{dim.h} · Recommend crop: {dominantRatio}
+      </span>
+    </div>
+  );
+}
+
 function ImageSlideshow({
   section,
   slides,
@@ -1176,19 +1256,70 @@ function ImageSlideshow({
   onImageClick: (src: string, caption?: string) => void;
 }) {
   const [activeIdx, setActiveIdx] = useState(0);
+  const [direction, setDirection] = useState<1 | -1>(1);
   const currentSrc = slides[activeIdx] ?? slides[0];
   const currentCaption =
     section.imageCaptions?.[activeIdx]?.trim() || section.caption?.trim() || "";
 
-  const nextSlide = () => setActiveIdx((prev) => (prev + 1) % slides.length);
-  const prevSlide = () => setActiveIdx((prev) => (prev - 1 + slides.length) % slides.length);
+  // Load dimensions for all slides (for ratio mismatch detection)
+  const [allDims, setAllDims] = useState<(({ w: number; h: number }) | null)[]>(() => slides.map(() => null));
+  useEffect(() => {
+    setAllDims(slides.map(() => null));
+    slides.forEach((src, i) => {
+      const img = new Image();
+      img.onload = () => setAllDims(prev => { const next = [...prev]; next[i] = { w: img.naturalWidth, h: img.naturalHeight }; return next; });
+      img.src = src;
+    });
+  }, [slides]);
+  const dominantRatio = getDominantRatio(allDims);
+  const activeDim = allDims[activeIdx] ?? null;
+
+  // Fill-width: use object-cover in a fixed-ratio container so no blank bars
+  const isFullHeight = !!section.fullHeight;
+
+  const goTo = (idx: number) => {
+    setDirection(idx > activeIdx ? 1 : -1);
+    setActiveIdx(idx);
+  };
+  const nextSlide = () => { setDirection(1); setActiveIdx((prev) => (prev + 1) % slides.length); };
+  const prevSlide = () => { setDirection(-1); setActiveIdx((prev) => (prev - 1 + slides.length) % slides.length); };
+
+  // Slide animation variants — smooth slide + zoom from side
+  const slideVariants = {
+    enter: (dir: number) => ({
+      x: dir > 0 ? "55%" : "-55%",
+      scale: 0.88,
+      opacity: 0,
+      filter: "blur(2px)",
+    }),
+    center: {
+      x: "0%",
+      scale: 1,
+      opacity: 1,
+      filter: "blur(0px)",
+    },
+    exit: (dir: number) => ({
+      x: dir > 0 ? "-40%" : "40%",
+      scale: 0.92,
+      opacity: 0,
+      filter: "blur(1px)",
+    }),
+  };
+
+  const transition = {
+    x: { type: "spring" as const, stiffness: 380, damping: 36, mass: 0.8 },
+    scale: { type: "spring" as const, stiffness: 380, damping: 36, mass: 0.8 },
+    opacity: { duration: 0.2, ease: "easeOut" },
+    filter: { duration: 0.25, ease: "easeOut" },
+  };
 
   return (
     <div className="flex flex-col gap-3">
       <div
-        className={`w-full overflow-hidden group relative flex items-center justify-center cursor-pointer select-none border border-border/60 ${
-          section.transparent ? "" : "bg-muted/70"
+        className={`w-full overflow-hidden group relative cursor-pointer select-none border border-border/60 ${
+          section.transparent ? "" : "bg-black"
         }`}
+        style={isFullHeight ? undefined : { aspectRatio: "16 / 9" }}
         onClick={nextSlide}
         role="region"
         aria-roledescription="carousel"
@@ -1204,9 +1335,12 @@ function ImageSlideshow({
           }
         }}
       >
+        {/* Ratio mismatch badge */}
+        <SlideRatioBadge dim={activeDim} dominantRatio={dominantRatio} />
+
         {/* Subtle click-to-advance hover hint */}
-        <div className="absolute top-3 left-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-background/90 backdrop-blur-sm px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground border border-border/60 pointer-events-none">
-          Click for next slide →
+        <div className="absolute top-3 left-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-black/70 backdrop-blur-sm px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-white/80 border border-white/15 pointer-events-none rounded-sm">
+          Click for next →
         </div>
 
         {/* Expand in lightbox button */}
@@ -1217,7 +1351,7 @@ function ImageSlideshow({
             onImageClick(currentSrc, currentCaption);
           }}
           aria-label="Expand image"
-          className="absolute top-3 right-3 z-10 bg-background/90 hover:bg-background text-foreground backdrop-blur-sm px-2.5 py-1 text-[11px] font-mono uppercase tracking-wider border border-border/60 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-sm cursor-zoom-in"
+          className="absolute top-3 right-3 z-10 bg-black/70 hover:bg-black/90 text-white backdrop-blur-sm px-2.5 py-1 text-[11px] font-mono uppercase tracking-wider border border-white/20 rounded-sm flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-sm cursor-zoom-in"
         >
           <Maximize2 className="w-3.5 h-3.5" aria-hidden="true" />
           <span>Expand</span>
@@ -1226,24 +1360,18 @@ function ImageSlideshow({
         {/* Navigation Arrows */}
         <button
           type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            prevSlide();
-          }}
+          onClick={(e) => { e.stopPropagation(); prevSlide(); }}
           aria-label="Previous slide"
-          className="absolute left-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-background/90 hover:bg-background text-foreground shadow-sm border border-border flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-105 focus-visible:opacity-100"
+          className="absolute left-3 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-black/60 hover:bg-black/90 text-white shadow-lg border border-white/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-110 focus-visible:opacity-100 backdrop-blur-sm"
         >
           <ChevronLeft className="w-5 h-5" aria-hidden="true" />
         </button>
 
         <button
           type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            nextSlide();
-          }}
+          onClick={(e) => { e.stopPropagation(); nextSlide(); }}
           aria-label="Next slide"
-          className="absolute right-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-background/90 hover:bg-background text-foreground shadow-sm border border-border flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-105 focus-visible:opacity-100"
+          className="absolute right-3 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-black/60 hover:bg-black/90 text-white shadow-lg border border-white/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-110 focus-visible:opacity-100 backdrop-blur-sm"
         >
           <ChevronRight className="w-5 h-5" aria-hidden="true" />
         </button>
@@ -1251,43 +1379,52 @@ function ImageSlideshow({
         {/* Slide Counter & Dots */}
         <div className="absolute bottom-3 inset-x-0 z-10 flex justify-center pointer-events-none">
           <div
-            className="pointer-events-auto flex items-center gap-1.5 bg-background/90 backdrop-blur-md px-3 py-1.5 rounded-full border border-border/80 shadow-sm"
+            className="pointer-events-auto flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/20 shadow-md"
             onClick={(e) => e.stopPropagation()}
           >
             {slides.map((_, i) => (
               <button
                 key={i}
                 type="button"
-                onClick={() => setActiveIdx(i)}
+                onClick={() => goTo(i)}
                 aria-label={`Go to slide ${i + 1}`}
-                className={`h-1.5 rounded-full transition-all duration-200 ${
-                  i === activeIdx ? "w-6 bg-primary" : "w-1.5 bg-foreground/30 hover:bg-foreground/60"
+                className={`rounded-full transition-all duration-300 ${
+                  i === activeIdx
+                    ? "w-6 h-1.5 bg-white"
+                    : "w-1.5 h-1.5 bg-white/40 hover:bg-white/70"
                 }`}
               />
             ))}
-            <span className="text-[10px] font-mono font-medium ml-1.5 text-foreground/80 tabular-nums">
+            <span className="text-[10px] font-mono font-medium ml-2 text-white/80 tabular-nums">
               {activeIdx + 1} / {slides.length}
             </span>
           </div>
         </div>
 
-        {/* Slide Image with AnimatePresence */}
-        <div className="w-full flex items-center justify-center min-h-[260px] md:min-h-[380px] p-2">
-          <AnimatePresence mode="wait">
+        {/* Slide Image — full-width fill, no blank bars */}
+        <div className={`relative w-full overflow-hidden ${isFullHeight ? "flex items-center justify-center" : "absolute inset-0"}`}>
+          <AnimatePresence initial={false} custom={direction} mode="popLayout">
             <motion.div
               key={activeIdx}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="w-full flex items-center justify-center"
+              custom={direction}
+              variants={slideVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={transition}
+              className={`${isFullHeight ? "relative" : "absolute inset-0"} w-full`}
+              style={{ willChange: "transform, opacity" }}
             >
-              <SafeImage
+              <img
                 src={currentSrc}
                 alt={currentCaption || `Slide ${activeIdx + 1}`}
-                className="block max-w-full max-h-[50vh] md:max-h-[65vh] w-auto h-auto object-contain transition-transform duration-500 group-hover:scale-[1.01]"
+                className={`block ${
+                  isFullHeight
+                    ? "w-full h-auto"
+                    : "absolute inset-0 w-full h-full object-cover"
+                }`}
+                draggable={false}
                 loading="lazy"
-                fallbackAspect="16 / 9"
               />
             </motion.div>
           </AnimatePresence>
@@ -1307,10 +1444,14 @@ function ImageSection({
   section,
   expanded,
   onImageClick,
+  seamless,
+  projectImageGap,
 }: {
   section: ContentSection;
   expanded?: boolean;
   onImageClick: (src: string, caption?: string) => void;
+  seamless?: boolean;
+  projectImageGap?: "gap" | "no-gap";
 }) {
   const floatIn = useFloatIn();
   const [errored, setErrored] = useState(false);
@@ -1323,9 +1464,71 @@ function ImageSection({
     (!!section.src &&
       (/\.(mp4|webm|ogg|mov)(\?|$)/i.test(section.src) || section.src.startsWith("data:video")));
   const clickable = !errored && !!section.src && !isVideo;
-  const isSlideshow = !isVideo && (!!section.slideshow || (Array.isArray(section.images) && section.images.length > 1));
   const rawSlides = section.images && section.images.length > 0 ? section.images : (section.src ? [section.src] : []);
   const slides = rawSlides.map((s) => s.trim()).filter(Boolean);
+  const isStacked = section.imageLayout === "stacked" || (slides.length > 1 && section.slideshow === false);
+  const isSlideshow = !isVideo && !isStacked && (!!section.slideshow || slides.length > 1);
+
+  if (isStacked && slides.length > 1) {
+    const isNoGap = section.imageGap === "no-gap" || seamless || projectImageGap === "no-gap";
+    return (
+      <motion.div
+        id={`cs-${section.id}`}
+        className={`flex flex-col ${isNoGap ? "gap-0" : "gap-4 md:gap-6"}`}
+        {...floatIn}
+      >
+        {section.title && (
+          <h2 className={`${SECTION_TITLE} ${isNoGap ? "mb-3" : ""}`}>
+            {section.title}
+          </h2>
+        )}
+        <div className={`flex flex-col ${isNoGap ? "gap-0" : "gap-4 md:gap-6"} w-full`}>
+          {slides.map((slideSrc, i) => {
+            const caption = section.imageCaptions?.[i];
+            return (
+              <div key={i} className={`flex flex-col ${isNoGap ? "gap-0" : "gap-1.5"} w-full`}>
+                <div
+                  className={`w-full overflow-hidden group relative cursor-zoom-in ${section.transparent ? "" : "bg-black"} ${
+                    isNoGap || section.fullHeight ? "" : "aspect-video"
+                  }`}
+                  onClick={() => onImageClick(slideSrc, caption)}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Expand image ${i + 1}`}
+                  onKeyDown={e => e.key === "Enter" && onImageClick(slideSrc, caption)}
+                >
+                  <img
+                    src={slideSrc}
+                    alt={caption || section.title || `Image ${i + 1}`}
+                    className={`block ${
+                      isNoGap || section.fullHeight
+                        ? "w-full h-auto"
+                        : "absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+                    }`}
+                    loading="lazy"
+                    draggable={false}
+                  />
+                  <div className={`absolute inset-0 transition-colors duration-300 flex items-center justify-center ${section.transparent ? "" : "bg-black/0 group-hover:bg-black/15"}`}>
+                    <span className={EXPAND_HINT}>Expand</span>
+                  </div>
+                </div>
+                {caption && (
+                  <p className={`${CAPTION} ${isNoGap ? "py-1" : ""}`}>{renderRichText(caption)}</p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        {body && (
+          <p className="max-w-3xl text-foreground/80 text-base md:text-lg leading-relaxed whitespace-pre-line mt-3">
+            {renderRichText(body)}
+          </p>
+        )}
+        {bullets && bullets.length > 0 && <DashList items={bullets} />}
+        <MediaCta href={section.href} linkLabel={section.linkLabel} />
+      </motion.div>
+    );
+  }
 
   if (isSlideshow && slides.length > 1) {
     return (
@@ -1401,16 +1604,18 @@ function ImageSection({
   return (
     <motion.div
       id={`cs-${section.id}`}
-      className="flex flex-col gap-3"
+      className={`flex flex-col ${seamless ? "gap-0" : "gap-3"}`}
       {...floatIn}
     >
       {section.title && (
-        <h2 className={SECTION_TITLE}>
+        <h2 className={`${SECTION_TITLE} ${seamless ? "mb-2" : ""}`}>
           {section.title}
         </h2>
       )}
       <div
-        className={`w-full overflow-hidden group relative flex items-center justify-center ${section.transparent ? "" : "bg-muted"} ${clickable ? "cursor-zoom-in" : ""}`}
+        className={`w-full overflow-hidden group relative ${clickable ? "cursor-zoom-in" : ""} ${section.transparent ? "" : "bg-black"} ${
+          seamless || section.fullHeight ? "" : "aspect-video"
+        }`}
         onClick={() => clickable && onImageClick(section.src!, section.caption)}
         role={clickable ? "button" : undefined}
         tabIndex={clickable ? 0 : undefined}
@@ -1420,9 +1625,13 @@ function ImageSection({
         <SafeImage
           src={section.src}
           alt={section.caption || section.title || ""}
-          className="block max-w-full max-h-[40vh] md:max-h-[55vh] w-auto h-auto object-contain transition-transform duration-500 group-hover:scale-[1.015]"
+          className={`block ${
+            seamless || section.fullHeight
+              ? "w-full h-auto"
+              : "absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+          }`}
           loading="lazy"
-          fallbackAspect="16 / 5"
+          fallbackAspect={section.fullHeight ? "4 / 5" : "16 / 9"}
           onError={() => setErrored(true)}
         />
         {clickable && (
@@ -1432,12 +1641,12 @@ function ImageSection({
         )}
       </div>
       {section.caption && (
-        <p className={CAPTION}>
+        <p className={`${CAPTION} ${seamless ? "pt-1" : ""}`}>
           {renderRichText(section.caption)}
         </p>
       )}
       {body && (
-        <p className="max-w-3xl text-foreground/80 text-base md:text-lg leading-relaxed whitespace-pre-line">
+        <p className="max-w-3xl text-foreground/80 text-base md:text-lg leading-relaxed whitespace-pre-line mt-3">
           {renderRichText(body)}
         </p>
       )}
@@ -1614,7 +1823,7 @@ export default function CaseStudy({ full = false }: { full?: boolean }) {
           <div className="h-14 w-3/4 bg-muted" />
           <div className="h-4 w-full bg-muted" />
           <div className="h-4 w-5/6 bg-muted" />
-          <div className="w-full bg-muted" style={{ aspectRatio: "16/7" }} />
+          <div className="w-full bg-muted" style={{ aspectRatio: "16/9" }} />
         </div>
         <span className="sr-only">Loading case study…</span>
       </div>
@@ -1826,7 +2035,7 @@ export default function CaseStudy({ full = false }: { full?: boolean }) {
         {/* Main content */}
         <div className="min-w-0 flex flex-col gap-14 md:gap-20">
           {hasSections
-            ? groupSectionRows(displaySections).map(row =>
+            ? groupSectionRows(displaySections, project?.imageGap).map(row =>
                 row.shared ? (
                   <div key={row.key} className="grid grid-cols-1 md:grid-cols-6 gap-4 md:gap-6 items-start">
                     {row.sections.map(s => (
@@ -1835,8 +2044,22 @@ export default function CaseStudy({ full = false }: { full?: boolean }) {
                           section={s}
                           expanded={showDetail}
                           onImageClick={(src, cap) => setLightbox({ src, caption: cap })}
+                          projectImageGap={project?.imageGap}
                         />
                       </div>
+                    ))}
+                  </div>
+                ) : row.seamless ? (
+                  <div key={row.key} className="flex flex-col gap-0 w-full overflow-hidden">
+                    {row.sections.map(s => (
+                      <SectionBlock
+                        key={s.id}
+                        section={s}
+                        expanded={showDetail}
+                        onImageClick={(src, cap) => setLightbox({ src, caption: cap })}
+                        seamless={true}
+                        projectImageGap={project?.imageGap}
+                      />
                     ))}
                   </div>
                 ) : (
@@ -1845,6 +2068,7 @@ export default function CaseStudy({ full = false }: { full?: boolean }) {
                     section={row.sections[0]!}
                     expanded={showDetail}
                     onImageClick={(src, cap) => setLightbox({ src, caption: cap })}
+                    projectImageGap={project?.imageGap}
                   />
                 ),
               )

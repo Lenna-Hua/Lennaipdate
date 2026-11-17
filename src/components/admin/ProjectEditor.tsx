@@ -1,8 +1,8 @@
-﻿﻿﻿/**
+﻿﻿/**
  * ProjectEditor — edit project details, sections, cover images, tags, etc.
  * Includes SectionsEditor for managing text/image/problem-solution blocks.
  */
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useState, useRef, type CSSProperties } from "react";
 import { SafeImage } from "@/components/SafeImage";
 import { CoverMedia, isVideo } from "@/components/CoverMedia";
 import { embedProviderLabel, parseVideoEmbed } from "@/lib/video-embed";
@@ -26,6 +26,8 @@ import {
   Plus,
   Smartphone,
   Trash2,
+  Upload,
+  Crop,
 } from "lucide-react";
 import { stripRichText } from "@/lib/rich-text";
 import {
@@ -35,12 +37,15 @@ import {
   TagsInput,
   EditorBox,
   BoxCode,
+  resolveAssetUrl,
 } from "./shared";
 import {
   SectionImageUploader,
   UploadToLibraryDashed,
   PickFromLibraryButton,
+  useAssetUpload,
 } from "./AssetLibrary";
+import { UploadCancelledError } from "./MediaPrepModal";
 import { parseBriefToProject } from "@/lib/case-study-brief";
 import { MockupSectionEditor } from "./MockupSectionEditor";
 import { ProcessStepsEditor } from "./ProcessStepsEditor";
@@ -429,6 +434,120 @@ function MediaLinkFields({
   );
 }
 
+function ImageOrientationAndCrop({
+  src,
+  fullHeight,
+  onUpdateSrc,
+  onToggleFullHeight,
+}: {
+  src: string;
+  fullHeight?: boolean;
+  onUpdateSrc: (url: string) => void;
+  onToggleFullHeight: (fullHeight: boolean) => void;
+}) {
+  const upload = useAssetUpload();
+  const [dim, setDim] = useState<{ w: number; h: number } | null>(null);
+  const [cropping, setCropping] = useState(false);
+
+  useEffect(() => {
+    if (!src) {
+      setDim(null);
+      return;
+    }
+    const img = new Image();
+    img.onload = () => {
+      setDim({ w: img.naturalWidth, h: img.naturalHeight });
+    };
+    img.onerror = () => setDim(null);
+    img.src = resolveAssetUrl(src);
+  }, [src]);
+
+  const handleCrop = async () => {
+    if (!src || !upload) return;
+    setCropping(true);
+    try {
+      const res = await fetch(resolveAssetUrl(src));
+      const blob = await res.blob();
+      const extMatch = /\.([a-z0-9]+)$/i.exec(src);
+      const ext = extMatch ? extMatch[1] : (blob.type.includes("png") ? "png" : "jpg");
+      const file = new File([blob], `crop-${Date.now()}.${ext}`, { type: blob.type || "image/jpeg" });
+      const newUrl = await upload(file, { usage: "section-image" });
+      if (newUrl) {
+        onUpdateSrc(newUrl);
+      }
+    } catch (err) {
+      if (!(err instanceof UploadCancelledError)) {
+        console.error("Failed to crop image:", err);
+      }
+    } finally {
+      setCropping(false);
+    }
+  };
+
+  const isVertical = dim ? dim.h > dim.w : false;
+  const isHorizontal = dim ? dim.w > dim.h : false;
+
+  return (
+    <div className="flex flex-col gap-2 mt-2">
+      <div className="flex items-center gap-2 flex-wrap">
+        {upload && (
+          <button
+            type="button"
+            disabled={cropping}
+            onClick={handleCrop}
+            className="px-2.5 py-1 text-xs border border-[color:var(--adm-line-strong)] text-[color:var(--adm-text)] hover:border-[color:var(--adm-accent)] hover:text-[color:var(--adm-accent)] rounded flex items-center gap-1.5 transition-colors disabled:opacity-50"
+            title="Crop, rotate, or adjust this image"
+          >
+            <Crop className="w-3.5 h-3.5 text-[color:var(--adm-accent)]" />
+            <span>{cropping ? "Opening editor…" : "Crop & Adjust Image"}</span>
+          </button>
+        )}
+        {dim && (
+          <span className="text-[11px] text-[color:var(--adm-faint)] font-mono">
+            {dim.w} × {dim.h} px {isVertical ? "· Vertical (portrait)" : isHorizontal ? "· Horizontal (landscape)" : "· Square (1:1)"}
+          </span>
+        )}
+      </div>
+
+      {isVertical && (
+        <div className="p-3 rounded border border-amber-500/30 bg-amber-500/10 text-xs flex flex-col gap-2">
+          <div className="flex items-center gap-1.5 font-medium text-amber-300">
+            <span className="text-sm">📐</span>
+            <span>Vertical / Portrait Image detected ({dim?.w} × {dim?.h} px)</span>
+          </div>
+          <p className="text-[color:var(--adm-faint)] text-xs leading-relaxed">
+            In standard height mode, vertical images display with dark blank margins on both sides. To avoid this, you can:
+          </p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => onToggleFullHeight(true)}
+              className={`px-2.5 py-1 text-xs rounded border transition-colors ${
+                fullHeight
+                  ? "bg-emerald-600 text-white border-transparent font-medium"
+                  : "bg-[color:var(--adm-surface)] border-[color:var(--adm-line-strong)] text-[color:var(--adm-text)] hover:border-emerald-500"
+              }`}
+            >
+              {fullHeight ? "✓ Option 1: Full Height active (No side blanks)" : "Option 1: Switch to Full Height (No blanks)"}
+            </button>
+            {upload && (
+              <button
+                type="button"
+                disabled={cropping}
+                onClick={handleCrop}
+                className="px-2.5 py-1 text-xs rounded border border-[color:var(--adm-line-strong)] bg-[color:var(--adm-surface)] text-[color:var(--adm-text)] hover:border-[color:var(--adm-accent)] hover:text-[color:var(--adm-accent)] transition-colors flex items-center gap-1.5"
+              >
+                <Crop className="w-3 h-3 text-[color:var(--adm-accent)]" />
+                <span>Option 2: Crop to Horizontal (16:9 / 3:2)</span>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ImageSlideshowEditor({
   section,
   onChange,
@@ -436,8 +555,32 @@ function ImageSlideshowEditor({
   section: Section;
   onChange: (patch: Partial<Section>) => void;
 }) {
+  const upload = useAssetUpload();
+  const [croppingIdx, setCroppingIdx] = useState<number | null>(null);
   const slides = (section.images && section.images.length > 0 ? section.images : (section.src ? [section.src] : []));
   const captions = section.imageCaptions ?? [];
+
+  const handleCropSlide = async (idx: number, url: string) => {
+    if (!url || !upload) return;
+    setCroppingIdx(idx);
+    try {
+      const res = await fetch(resolveAssetUrl(url));
+      const blob = await res.blob();
+      const extMatch = /\.([a-z0-9]+)$/i.exec(url);
+      const ext = extMatch ? extMatch[1] : (blob.type.includes("png") ? "png" : "jpg");
+      const file = new File([blob], `crop-slide-${idx + 1}.${ext}`, { type: blob.type || "image/jpeg" });
+      const newUrl = await upload(file, { usage: "section-image" });
+      if (newUrl) {
+        updateSlideUrl(idx, newUrl);
+      }
+    } catch (err) {
+      if (!(err instanceof UploadCancelledError)) {
+        console.error("Failed to crop slide:", err);
+      }
+    } finally {
+      setCroppingIdx(null);
+    }
+  };
 
   const setSlides = (nextSlides: string[], nextCaptions?: string[]) => {
     onChange({
@@ -554,6 +697,17 @@ function ImageSlideshowEditor({
                 >
                   ↓
                 </button>
+                {upload && imgSrc && (
+                  <button
+                    type="button"
+                    disabled={croppingIdx === i}
+                    onClick={() => handleCropSlide(i, imgSrc)}
+                    className="px-1.5 py-0.5 text-xs text-[color:var(--adm-muted)] hover:text-[color:var(--adm-accent)] disabled:opacity-25"
+                    title="Crop & adjust slide image"
+                  >
+                    {croppingIdx === i ? "…" : "✂"}
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => removeSlide(i)}
@@ -773,13 +927,50 @@ function bulletsToSteps(bullets: string[]): ProcessStep[] {
 }
 
 function SectionsEditor({
+  project,
+  onProjectChange,
   sections,
   onChange,
 }: {
+  project?: Project;
+  onProjectChange?: (patch: Partial<Project>) => void;
   sections: Section[];
   onChange: (s: Section[]) => void;
 }) {
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
+  const upload = useAssetUpload();
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState("");
+  const bulkInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (files.length === 0 || !upload) return;
+    setBulkBusy(true);
+    setBulkProgress(`Uploading 1 of ${files.length}…`);
+    try {
+      const newSections: Section[] = [];
+      for (let i = 0; i < files.length; i++) {
+        setBulkProgress(`Uploading ${i + 1} of ${files.length}…`);
+        const url = await upload(files[i], { usage: "section-image" });
+        newSections.push({
+          id: newSectionId(),
+          type: "image",
+          visibility: "always",
+          src: url,
+          title: "",
+          caption: "",
+        });
+      }
+      onChange([...sections, ...newSections]);
+    } catch (err) {
+      console.error("Bulk upload failed", err);
+    } finally {
+      setBulkBusy(false);
+      setBulkProgress("");
+    }
+  };
 
   const insertSection = (type: SectionType, at: number) => {
     const next = [...sections];
@@ -840,6 +1031,49 @@ function SectionsEditor({
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Case Study Image Spacing Setting */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-lg border border-[color:var(--adm-line)] bg-[color:var(--adm-subtle)]/40">
+        <div className="flex flex-col gap-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold uppercase tracking-wider text-[color:var(--adm-text)]">
+              Image Spacing (Case Study)
+            </span>
+            {project?.imageGap === "no-gap" && (
+              <span className="px-1.5 py-0.5 rounded text-[10px] font-mono uppercase bg-[color:var(--adm-accent)]/15 text-[color:var(--adm-accent)] border border-[color:var(--adm-accent)]/30 font-medium">
+                Seamless
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-[color:var(--adm-faint)] leading-normal">
+            Choose whether stacked images in this case study have a gap between them or touch seamlessly with no gap.
+          </p>
+        </div>
+        <div className="inline-flex p-0.5 rounded-md bg-[color:var(--adm-input)] border border-[color:var(--adm-line-strong)] shrink-0 self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={() => onProjectChange?.({ imageGap: "gap" })}
+            className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+              project?.imageGap !== "no-gap"
+                ? "bg-[color:var(--adm-surface)] text-[color:var(--adm-text)] shadow-sm font-semibold"
+                : "text-[color:var(--adm-muted)] hover:text-[color:var(--adm-text)]"
+            }`}
+          >
+            With gap (Default)
+          </button>
+          <button
+            type="button"
+            onClick={() => onProjectChange?.({ imageGap: "no-gap" })}
+            className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+              project?.imageGap === "no-gap"
+                ? "bg-[color:var(--adm-accent)] text-[color:var(--adm-on-accent)] shadow-sm font-semibold"
+                : "text-[color:var(--adm-muted)] hover:text-[color:var(--adm-text)]"
+            }`}
+          >
+            No gap (Seamless)
+          </button>
+        </div>
+      </div>
+
       <EditorBox
         code="S+"
         title="Add a section"
@@ -847,15 +1081,40 @@ function SectionsEditor({
           detailCount > 0 ? ` ${detailCount} section(s) only show after See more.` : ""
         }`}
         actions={
-          sections.length > 0 ? (
-            <button
-              type="button"
-              onClick={() => setCollapsed(allCollapsed ? new Set() : new Set(sections.map((s) => s.id)))}
-              className="h-7 px-2 rounded-md text-xs text-[color:var(--adm-muted)] hover:bg-[color:var(--adm-subtle)] hover:text-[color:var(--adm-text)]"
-            >
-              {allCollapsed ? "Expand all" : "Collapse all"}
-            </button>
-          ) : undefined
+          <div className="flex items-center gap-2">
+            {upload && (
+              <>
+                <input
+                  ref={bulkInputRef}
+                  type="file"
+                  multiple
+                  accept="image/*,.gif,.png,.jpg,.jpeg,.webp"
+                  className="hidden"
+                  disabled={bulkBusy}
+                  onChange={handleBulkUpload}
+                />
+                <button
+                  type="button"
+                  onClick={() => bulkInputRef.current?.click()}
+                  disabled={bulkBusy}
+                  className="h-7 px-2.5 rounded-md text-xs font-mono border border-[color:var(--adm-line-strong)] text-[color:var(--adm-muted)] hover:text-[color:var(--adm-text)] hover:border-[color:var(--adm-accent)] flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                  title="Select multiple presentation slides or project images to create sections in one go"
+                >
+                  <Upload className="h-3 w-3" />
+                  <span>{bulkBusy ? bulkProgress : "Bulk upload images"}</span>
+                </button>
+              </>
+            )}
+            {sections.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setCollapsed(allCollapsed ? new Set() : new Set(sections.map((s) => s.id)))}
+                className="h-7 px-2 rounded-md text-xs text-[color:var(--adm-muted)] hover:bg-[color:var(--adm-subtle)] hover:text-[color:var(--adm-text)]"
+              >
+                {allCollapsed ? "Expand all" : "Collapse all"}
+              </button>
+            )}
+          </div>
         }
       >
         <AddSectionChips onPick={(t) => insertSection(t, 0)} onPickFlow={() => insertFlowSection(0)} />
@@ -997,10 +1256,63 @@ function SectionsEditor({
               </p>
 
               {sec.slideshow ? (
-                <ImageSlideshowEditor
-                  section={sec}
-                  onChange={(patch) => update(idx, patch)}
-                />
+                <>
+                  <div className="flex items-center gap-2 flex-wrap pt-1">
+                    <span className="text-[color:var(--adm-muted)] text-xs uppercase tracking-widest">Display mode:</span>
+                    <button
+                      type="button"
+                      onClick={() => update(idx, { imageLayout: "slideshow" })}
+                      className={`px-2.5 py-1 text-xs rounded border transition-colors ${
+                        sec.imageLayout !== "stacked"
+                          ? "bg-[color:var(--adm-accent)] text-[color:var(--adm-on-accent)] border-transparent font-medium"
+                          : "border-[color:var(--adm-line-strong)] text-[color:var(--adm-muted)] hover:text-[color:var(--adm-text)]"
+                      }`}
+                    >
+                      Slideshow (Carousel)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => update(idx, { imageLayout: "stacked" })}
+                      className={`px-2.5 py-1 text-xs rounded border transition-colors ${
+                        sec.imageLayout === "stacked"
+                          ? "bg-[color:var(--adm-accent)] text-[color:var(--adm-on-accent)] border-transparent font-medium"
+                          : "border-[color:var(--adm-line-strong)] text-[color:var(--adm-muted)] hover:text-[color:var(--adm-text)]"
+                      }`}
+                    >
+                      Stacked list (Vertical)
+                    </button>
+                    {sec.imageLayout === "stacked" && (
+                      <div className="inline-flex p-0.5 rounded bg-[color:var(--adm-input)] border border-[color:var(--adm-line)] ml-auto">
+                        <button
+                          type="button"
+                          onClick={() => update(idx, { imageGap: "gap" })}
+                          className={`px-2 py-0.5 text-[11px] rounded ${
+                            sec.imageGap !== "no-gap"
+                              ? "bg-[color:var(--adm-surface)] text-[color:var(--adm-text)] font-medium"
+                              : "text-[color:var(--adm-muted)]"
+                          }`}
+                        >
+                          With gap
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => update(idx, { imageGap: "no-gap" })}
+                          className={`px-2 py-0.5 text-[11px] rounded ${
+                            sec.imageGap === "no-gap"
+                              ? "bg-[color:var(--adm-accent)] text-[color:var(--adm-on-accent)] font-medium"
+                              : "text-[color:var(--adm-muted)]"
+                          }`}
+                        >
+                          No gap
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <ImageSlideshowEditor
+                    section={sec}
+                    onChange={(patch) => update(idx, patch)}
+                  />
+                </>
               ) : (
                 <>
                   <TextInput label="Image URL" value={sec.src ?? ""} onChange={(v) => update(idx, { src: v })} />
@@ -1017,16 +1329,64 @@ function SectionsEditor({
                     />
                   </div>
                   {sec.src && (
-                    <div className="mt-1 self-start" style={sec.transparent ? CHECKERBOARD : undefined}>
-                      <SafeImage
+                    <>
+                      <div className="mt-1 self-start" style={sec.transparent ? CHECKERBOARD : undefined}>
+                        <SafeImage
+                          src={sec.src}
+                          alt=""
+                          className={`h-24 ${sec.transparent ? "object-contain" : "object-cover opacity-60"}`}
+                        />
+                      </div>
+                      <ImageOrientationAndCrop
                         src={sec.src}
-                        alt=""
-                        className={`h-24 ${sec.transparent ? "object-contain" : "object-cover opacity-60"}`}
+                        fullHeight={sec.fullHeight}
+                        onUpdateSrc={(url) => update(idx, { src: url })}
+                        onToggleFullHeight={(val) => update(idx, { fullHeight: val })}
                       />
-                    </div>
+                    </>
                   )}
                 </>
               )}
+
+              <div className="flex flex-col gap-2 p-3 rounded border border-[color:var(--adm-line)] bg-[color:var(--adm-subtle)]/40">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-mono uppercase tracking-wider text-[color:var(--adm-accent)] font-semibold">
+                    Image Display Height
+                  </span>
+                  {sec.fullHeight && (
+                    <span className="text-[10px] text-emerald-400 font-mono font-medium">Full Height (No blanks)</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 flex-wrap pt-0.5">
+                  <button
+                    type="button"
+                    onClick={() => update(idx, { fullHeight: false })}
+                    className={`px-3 py-1.5 text-xs rounded border transition-colors ${
+                      !sec.fullHeight
+                        ? "bg-[color:var(--adm-accent)] text-[color:var(--adm-on-accent)] border-transparent font-medium shadow-sm"
+                        : "border-[color:var(--adm-line-strong)] text-[color:var(--adm-muted)] hover:text-[color:var(--adm-text)]"
+                    }`}
+                  >
+                    Standard Height (~55vh cap)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => update(idx, { fullHeight: true })}
+                    className={`px-3 py-1.5 text-xs rounded border transition-colors ${
+                      sec.fullHeight
+                        ? "bg-[color:var(--adm-accent)] text-[color:var(--adm-on-accent)] border-transparent font-medium shadow-sm"
+                        : "border-[color:var(--adm-line-strong)] text-[color:var(--adm-muted)] hover:text-[color:var(--adm-text)]"
+                    }`}
+                  >
+                    Full Height (No blanks · Natural tall image)
+                  </button>
+                </div>
+                <p className="text-[color:var(--adm-faint)] text-xs leading-relaxed">
+                  {sec.fullHeight
+                    ? "✓ Full height enabled: The image fills 100% of the column width and scales to its natural tall height. No empty dark blank margins on either side."
+                    : "Standard height: Image height is constrained to ~55vh. Great for wide landscape images; vertical images will show side blank margins unless cropped to horizontal."}
+                </p>
+              </div>
 
               <TextInput label="Caption (optional)" value={sec.caption ?? ""} onChange={(v) => update(idx, { caption: v })} />
               <TextareaInput
@@ -1049,6 +1409,20 @@ function SectionsEditor({
               <p className="text-[color:var(--adm-faint)] text-xs -mt-1">
                 For PNG, WebP or GIF files with see-through areas: removes the card behind the image.
               </p>
+              <div className="pt-2 border-t border-[color:var(--adm-line)] flex flex-col gap-2">
+                <CheckboxInput
+                  label="No gap with next image (seamless transition)"
+                  checked={project?.imageGap === "no-gap" ? sec.noGap !== false : !!sec.noGap}
+                  onChange={(checked) => {
+                    update(idx, { noGap: checked });
+                  }}
+                />
+                <p className="text-[color:var(--adm-faint)] text-xs -mt-1">
+                  {project?.imageGap === "no-gap"
+                    ? "Case study image spacing is set to No gap. Uncheck if you want spacing below this image."
+                    : "Removes spacing below this image so it connects seamlessly to the next image."}
+                </p>
+              </div>
             </>
           )}
 
@@ -1847,13 +2221,12 @@ export function ProjectsEditor({
                   )}
                 </div>
                 {project.heroImage && (
-                  <div className="rounded overflow-hidden border border-[color:var(--adm-line-strong)]" style={{ maxHeight: "130px" }}>
+                  <div className="rounded overflow-hidden border border-[color:var(--adm-line-strong)]" style={{ maxHeight: "130px", aspectRatio: "16 / 9" }}>
                     <CoverMedia
                       src={project.heroImage}
                       alt="hero preview"
                       mimeHint={project.heroImageMime}
-                      className="w-full object-cover"
-                      style={{ maxHeight: "130px" }}
+                      className="w-full h-full object-cover"
                     />
                   </div>
                 )}
@@ -1966,9 +2339,43 @@ export function ProjectsEditor({
 
               <EditorBox
                 code="D10"
-                title="Case study body (Overview · Problem · Solution · Impact)"
+                title="Case study body & image spacing"
                 hint="These blocks render above your custom sections on the case study page. Empty fields are hidden."
               >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg border border-[color:var(--adm-line)] bg-[color:var(--adm-subtle)]/40 mb-3">
+                  <div className="flex flex-col gap-0.5 min-w-0">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-[color:var(--adm-text)]">
+                      Case Study Image Spacing
+                    </span>
+                    <span className="text-[11px] text-[color:var(--adm-faint)]">
+                      Spacing between stacked images: With gap (default) or No gap (seamless Behance-style slices).
+                    </span>
+                  </div>
+                  <div className="inline-flex p-0.5 rounded-md bg-[color:var(--adm-input)] border border-[color:var(--adm-line-strong)] shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => updateProject(selectedIdx, { imageGap: "gap" })}
+                      className={`px-2.5 py-1 text-xs rounded font-medium transition-colors ${
+                        project.imageGap !== "no-gap"
+                          ? "bg-[color:var(--adm-surface)] text-[color:var(--adm-text)] shadow-sm font-semibold"
+                          : "text-[color:var(--adm-muted)] hover:text-[color:var(--adm-text)]"
+                      }`}
+                    >
+                      With gap (Default)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updateProject(selectedIdx, { imageGap: "no-gap" })}
+                      className={`px-2.5 py-1 text-xs rounded font-medium transition-colors ${
+                        project.imageGap === "no-gap"
+                          ? "bg-[color:var(--adm-accent)] text-[color:var(--adm-on-accent)] shadow-sm font-semibold"
+                          : "text-[color:var(--adm-muted)] hover:text-[color:var(--adm-text)]"
+                      }`}
+                    >
+                      No gap (Seamless)
+                    </button>
+                  </div>
+                </div>
                 <TextareaInput
                   label="Overview"
                   value={project.description}
@@ -2024,6 +2431,8 @@ export function ProjectsEditor({
 
           {subTab === "sections" && (
             <SectionsEditor
+              project={project}
+              onProjectChange={(patch) => updateProject(selectedIdx, patch)}
               sections={project.sections ?? []}
               onChange={(s) => updateProject(selectedIdx, { sections: s })}
             />

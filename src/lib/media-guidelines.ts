@@ -55,7 +55,7 @@ export const MEDIA_GUIDELINES: Record<MediaUsage, MediaGuideline> = {
     aspect: [4, 5],
     image: { width: 1600, height: 2000, targetBytes: 700 * KB, format: PHOTO },
     video: { width: 1080, height: 1350, targetBytes: 6 * MB, maxSeconds: 10, format: MP4 },
-    note: "Work cards are 4:5. The case study hero crops the same image to 16:7, so keep the subject centered.",
+    note: "Work cards are 4:5. The case study hero crops the same image to 16:9, so keep the subject centered.",
   },
   "hover-video": {
     label: "Card hover video",
@@ -66,7 +66,7 @@ export const MEDIA_GUIDELINES: Record<MediaUsage, MediaGuideline> = {
   "section-image": {
     label: "Case study image",
     image: { width: 2400, height: 1600, targetBytes: 1 * MB, format: PHOTO },
-    note: "Fills the content column; 2400 px wide stays sharp on retina screens. Keep GIFs under 4 MB or use a looping MP4.",
+    note: "Fills the content column; 2400 px wide stays sharp on retina screens. GIFs/clips allowed up to 15 MB, or use a looping MP4.",
   },
   "section-video": {
     label: "Case study video",

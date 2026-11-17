@@ -90,7 +90,7 @@ const EDITABLE = /^image\/(jpeg|png|webp|bmp|avif)$/;
 const NO_ADJUST: Adjust = { brightness: 100, contrast: 100, saturation: 100 };
 const MIN_CROP = 0.03;
 const EXT: Record<string, string> = { "image/jpeg": "jpg", "image/webp": "webp", "image/png": "png" };
-const ASPECT_PRESETS: [number, number][] = [[1, 1], [4, 5], [3, 4], [4, 3], [3, 2], [16, 9], [9, 16], [16, 7]];
+const ASPECT_PRESETS: [number, number][] = [[1, 1], [4, 5], [3, 4], [4, 3], [3, 2], [16, 10], [16, 9], [9, 16], [21, 9], [16, 7]];
 
 const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
 
@@ -586,14 +586,95 @@ function ImageEditor({
             Drag the box to move it, drag a corner to resize, or drag anywhere outside it to draw a new crop.
           </p>
 
+          {H > W && (
+            <div className="flex items-start gap-2 p-2.5 rounded bg-amber-500/10 border border-amber-500/25 text-xs text-amber-200/90 leading-relaxed">
+              <span className="text-sm shrink-0">📐</span>
+              <div>
+                <strong className="text-amber-100 font-medium">Vertical image detected ({W} × {H} px)</strong>
+                <p className="text-[11px] text-amber-200/80 mt-0.5">
+                  In case studies, vertical images leave blank side margins in standard height mode.
+                  Recommend cropping to <strong>Horizontal (16:9 or 3:2)</strong> to fill width, or keep original and select <strong>Full height</strong> in section settings.
+                </p>
+              </div>
+            </div>
+          )}
+
           <Group title="Crop shape">
-            <div className="flex flex-wrap gap-1.5">
-              {aspectOptions.map((k) => (
-                <button key={k} type="button" className={chip(aspectKey === k)} onClick={() => setAspectKey(k)}>
-                  {k === "free" ? "Free" : k === "original" ? "Original" : k}
-                  {k === siteAspect ? " · site" : ""}
-                </button>
-              ))}
+            <div className="flex flex-col gap-2.5">
+              {/* Horizontal / Landscape */}
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] uppercase tracking-wider text-[color:var(--adm-muted)] font-semibold flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+                  Horizontal (Fills width · No side blanks)
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { key: "16:9", label: "16:9 (Landscape · Best)" },
+                    { key: "16:10", label: "16:10" },
+                    { key: "3:2", label: "3:2" },
+                    { key: "4:3", label: "4:3" },
+                    { key: "21:9", label: "21:9 (Ultrawide)" },
+                  ].map(({ key, label }) => (
+                    <button
+                      key={key}
+                      type="button"
+                      className={chip(aspectKey === key)}
+                      onClick={() => setAspectKey(key)}
+                    >
+                      {label}
+                      {key === siteAspect ? " · site" : ""}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Vertical / Portrait */}
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] uppercase tracking-wider text-[color:var(--adm-muted)] font-semibold flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-sky-400 inline-block" />
+                  Vertical / Portrait
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { key: "4:5", label: "4:5 (Portrait)" },
+                    { key: "3:4", label: "3:4" },
+                    { key: "9:16", label: "9:16 (Tall / Story)" },
+                  ].map(({ key, label }) => (
+                    <button
+                      key={key}
+                      type="button"
+                      className={chip(aspectKey === key)}
+                      onClick={() => setAspectKey(key)}
+                    >
+                      {label}
+                      {key === siteAspect ? " · site" : ""}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Square & Freeform */}
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] uppercase tracking-wider text-[color:var(--adm-muted)] font-semibold">
+                  Square & Freeform
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  <button type="button" className={chip(aspectKey === "1:1")} onClick={() => setAspectKey("1:1")}>
+                    1:1 (Square)
+                  </button>
+                  <button type="button" className={chip(aspectKey === "free")} onClick={() => setAspectKey("free")}>
+                    Free
+                  </button>
+                  <button type="button" className={chip(aspectKey === "original")} onClick={() => setAspectKey("original")}>
+                    Original
+                  </button>
+                  {siteAspect && !["16:9", "16:10", "3:2", "4:3", "21:9", "4:5", "3:4", "9:16", "1:1", "free", "original"].includes(siteAspect) && (
+                    <button type="button" className={chip(aspectKey === siteAspect)} onClick={() => setAspectKey(siteAspect)}>
+                      {siteAspect} · site
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           </Group>
 
