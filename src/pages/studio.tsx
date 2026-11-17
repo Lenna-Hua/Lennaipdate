@@ -26,6 +26,7 @@ export default function StudioPage() {
         .map((g) => ({
           id: g.id,
           src: g.coverImage,
+          mime: (g as { coverMime?: string }).coverMime,
           title: g.title,
           meta: joinMeta(g.role, g.year),
           description: g.description,
@@ -36,7 +37,7 @@ export default function StudioPage() {
   );
 
   const tiles = useMemo(
-    (): MasonryItem[] => artworks.map(({ id, src, title, meta }) => ({ id, src, title, meta })),
+    (): MasonryItem[] => artworks.map(({ id, src, title, meta, mime }) => ({ id, src, title, meta, mime })),
     [artworks],
   );
 

@@ -4,6 +4,7 @@
  */
 import { useState } from "react";
 import { SafeImage } from "@/components/SafeImage";
+import { CoverMedia } from "@/components/CoverMedia";
 import { AdminSortableList } from "@/pages/admin-sortable";
 import type { GalleryItem } from "./types";
 import { galleryImageSrc, withGalleryImageSrc } from "@/lib/gallery-image";
@@ -345,38 +346,40 @@ export function GalleryEditor({
             </span>
           </div>
 
-          {/* Cover image */}
+          {/* Cover image / video */}
           <div className="flex flex-col gap-2">
             <label className="text-[color:var(--adm-muted)] text-xs uppercase tracking-widest">
-              Cover Image
+              Cover Image / Video
             </label>
             <input
               type="text"
               value={item.coverImage}
-              onChange={(e) => update(selectedIdx, { coverImage: e.target.value })}
-              placeholder="Paste image URL"
+              onChange={(e) => update(selectedIdx, { coverImage: e.target.value, coverMime: undefined })}
+              placeholder="Paste image or video URL (jpg, png, mp4, webm)"
               className="bg-transparent border-b border-[color:var(--adm-line-strong)] text-[color:var(--adm-text)] py-2 text-sm focus:outline-none focus:border-[color:var(--adm-accent)] transition-colors"
             />
             <div className="flex items-center gap-2 flex-wrap">
               <UploadToLibraryDashed
-                label="↑ Upload cover image"
+                label="↑ Upload cover: image / mp4 / webm"
                 usage="artwork-cover"
-                accept="image/*"
-                onUploaded={(url) => update(selectedIdx, { coverImage: url })}
+                accept="image/*,video/mp4,video/webm,.gif,.mp4,.webm"
+                onUploaded={(url, meta) => update(selectedIdx, { coverImage: url, coverMime: meta?.mime || undefined })}
               />
               <PickFromLibraryButton
-                type="image"
-                onPick={(url) => update(selectedIdx, { coverImage: url })}
+                type="all"
+                label="From library (image/video)"
+                onPick={(url, meta) => update(selectedIdx, { coverImage: url, coverMime: meta?.mime || undefined })}
               />
             </div>
             {item.coverImage && (
               <div
-                className="rounded overflow-hidden border border-[color:var(--adm-line-strong)]"
+                className="rounded overflow-hidden border border-[color:var(--adm-line-strong)] mt-1"
                 style={{ maxHeight: "150px" }}
               >
-                <SafeImage
+                <CoverMedia
                   src={item.coverImage}
                   alt="cover preview"
+                  mimeHint={item.coverMime}
                   className="w-full object-cover"
                   style={{ maxHeight: "150px" }}
                 />

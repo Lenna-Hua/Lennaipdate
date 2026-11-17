@@ -131,13 +131,16 @@ export type Project = {
   /** Video covers only: still frame for the lock screen and before the video loads. */
   coverPoster?: string;
   /**
-   * Optional separate hero image shown at the top of the case study page.
+   * Optional separate hero image or video shown at the top of the case study page.
    * When set, the case study hero uses this instead of coverImage.
    * Cards on Work/Home still use coverImage.
    */
   heroImage?: string;
   /** MIME type for heroImage u{2014} lets /api/assets URLs without extension render as video. */
   heroImageMime?: string;
+  /** Video hero only: still frame shown before the hero video loads. */
+  heroPoster?: string;
+  heroImagePoster?: string;
   /**
    * Video covers only, on Work/Home cards. "loop" (default) plays while on screen;
    * "hover" waits on the first frame until the card is hovered.
@@ -243,6 +246,8 @@ export type GalleryItem = {
   description?: string;
   tags?: string[];
   coverImage: string;
+  /** MIME from library upload/pick — lets /api/assets video URLs render as video in artwork showcase. */
+  coverMime?: string;
   images?: GalleryImageEntry[];
   /**
    * Default width for additional images that do not set their own columns.
@@ -324,6 +329,8 @@ export type Homepage = {
     heroMediaAlt?: string;
     /** MIME from library upload/pick — helps render /api/assets URLs without extensions. */
     heroMediaMime?: string;
+    /** Still frame poster for hero video media before playback begins. */
+    heroMediaPoster?: string;
     primaryCtaLabel: string;
     primaryCtaHref: string;
     secondaryCtaLabel: string;

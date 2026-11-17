@@ -55,6 +55,12 @@ function findAllInlineMedia(data: ContentData): { section: string; itemLabel: st
     if (typeof proj.coverImage === "string" && proj.coverImage.startsWith("data:")) {
       found.push({ section: "projects", itemLabel: label, field: "coverImage" });
     }
+    if (typeof proj.heroImage === "string" && proj.heroImage.startsWith("data:")) {
+      found.push({ section: "projects", itemLabel: label, field: "heroImage" });
+    }
+    if (typeof proj.heroPoster === "string" && proj.heroPoster.startsWith("data:")) {
+      found.push({ section: "projects", itemLabel: label, field: "heroPoster" });
+    }
     if (typeof proj.logo === "string" && proj.logo.startsWith("data:")) {
       found.push({ section: "projects", itemLabel: label, field: "logo" });
     }
@@ -100,6 +106,14 @@ function findAllInlineMedia(data: ContentData): { section: string; itemLabel: st
       section: "homepage",
       itemLabel: "Home page",
       field: "heroMedia",
+    });
+  }
+  const heroMediaPoster = (data.homepage?.home as { heroMediaPoster?: string })?.heroMediaPoster;
+  if (typeof heroMediaPoster === "string" && heroMediaPoster.startsWith("data:")) {
+    found.push({
+      section: "homepage",
+      itemLabel: "Home page",
+      field: "heroMediaPoster",
     });
   }
 

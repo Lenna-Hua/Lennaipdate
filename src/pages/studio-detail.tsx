@@ -5,6 +5,8 @@ import gallerySeed from "@/data/gallery.json";
 import projectsSeed from "@/data/projects.json";
 import { useContent } from "@/lib/use-content";
 import { SafeImage } from "@/components/SafeImage";
+import { CoverMedia, isVideo } from "@/components/CoverMedia";
+import { parseVideoEmbed } from "@/lib/video-embed";
 import { MediaLightbox, type LightboxItem } from "@/components/MediaLightbox";
 import { Eyebrow, SPLIT_COLUMNS, TextLink } from "@/components/layout/SplitShowcase";
 import {
@@ -24,6 +26,7 @@ type GalleryItem = {
   description?: string;
   tags?: string[];
   coverImage: string;
+  coverMime?: string;
   images?: GalleryImageEntry[];
   imageColumns?: 1 | 2 | 3;
   order?: number;
@@ -66,7 +69,9 @@ export default function StudioDetail() {
   const lightboxItems = useMemo((): LightboxItem[] => {
     if (!item) return [];
     const out: LightboxItem[] = [];
-    if (item.coverImage && !coverErrored) out.push({ id: COVER_ID, src: item.coverImage, title: item.title });
+    if (item.coverImage && !coverErrored) {
+      out.push({ id: COVER_ID, src: item.coverImage, mime: item.coverMime, title: item.title });
+    }
     (item.images ?? []).forEach((entry, i) => {
       const src = galleryImageSrc(entry);
       if (src && !erroredImages[i]) out.push({ id: imageId(i), src, title: item.title, meta: pad2(i + 1) });
@@ -162,25 +167,45 @@ export default function StudioDetail() {
         </motion.div>
       </section>
 
-      {/* Hero image */}
-      <motion.button
-        type="button"
-        disabled={coverErrored}
-        onClick={() => setOpenId(COVER_ID)}
-        aria-label={`Expand image: ${item.title}`}
-        className="group block w-full overflow-hidden bg-muted enabled:cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-4 focus-visible:ring-offset-background"
+      {/* Hero media / image */}
+      <motion.div
+        className="group relative w-full overflow-hidden bg-muted"
         initial={{ opacity: 0, scale: 1.02 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.2, duration: 1, ease: EASE }}
       >
-        <SafeImage
-          src={item.coverImage}
-          alt={item.title}
-          className="w-full h-auto object-cover transition-transform duration-700 group-hover:scale-[1.015]"
-          fallbackAspect="16 / 5"
-          onError={() => setCoverErrored(true)}
-        />
-      </motion.button>
+        {isVideo(item.coverImage, item.coverMime) || parseVideoEmbed(item.coverImage) ? (
+          <div className="w-full aspect-[16/9] overflow-hidden">
+            <CoverMedia
+              src={item.coverImage}
+              alt={item.title}
+              mimeHint={item.coverMime}
+              className="w-full h-full object-cover"
+              playback="loop"
+              active={true}
+              onError={() => setCoverErrored(true)}
+            />
+          </div>
+        ) : (
+          <SafeImage
+            src={item.coverImage}
+            alt={item.title}
+            className="w-full h-auto object-cover transition-transform duration-700 group-hover:scale-[1.015]"
+            fallbackAspect="16 / 5"
+            onError={() => setCoverErrored(true)}
+          />
+        )}
+        {!coverErrored && (
+          <button
+            type="button"
+            onClick={() => setOpenId(COVER_ID)}
+            aria-label={`Expand media: ${item.title}`}
+            className="absolute inset-0 bg-black/0 hover:bg-black/20 focus-visible:bg-black/20 transition-colors duration-300 flex items-center justify-center cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+          >
+            <span className="sr-only">Expand</span>
+          </button>
+        )}
+      </motion.div>
 
       {/* Additional images — width comes from admin (1 = full, 2 = half, 3 = third) */}
       {item.images && item.images.length > 0 && (

@@ -348,6 +348,7 @@ interface CoverMediaProps {
   active?: boolean;
   /** Video covers: never play (show the poster / first frame). */
   paused?: boolean;
+  onError?: () => void;
 }
 
 export function CoverMedia({
@@ -361,6 +362,7 @@ export function CoverMedia({
   playback,
   active,
   paused = false,
+  onError,
 }: CoverMediaProps) {
   const embed = parseVideoEmbed(src);
   if (embed) {
@@ -388,8 +390,9 @@ export function CoverMedia({
         playback={playback}
         active={active}
         allowPlay={!paused}
+        onError={onError}
       />
     );
   }
-  return <SafeImage src={src} alt={alt} className={className} style={style} loading={loading} />;
+  return <SafeImage src={src} alt={alt} className={className} style={style} loading={loading} onError={onError} />;
 }

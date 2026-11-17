@@ -30,6 +30,7 @@ export function HomepageEditor({
   const heroMedia = data.home.heroMedia?.trim() ?? "";
   const heroMediaAlt = data.home.heroMediaAlt ?? "";
   const heroMediaMime = data.home.heroMediaMime ?? "";
+  const heroMediaPoster = data.home.heroMediaPoster ?? "";
 
   const setHeroMedia = (url: string, mime?: string) => {
     updateHome({
@@ -39,7 +40,7 @@ export function HomepageEditor({
   };
 
   const clearHeroMedia = () => {
-    updateHome({ heroMedia: "", heroMediaAlt: "", heroMediaMime: "" });
+    updateHome({ heroMedia: "", heroMediaAlt: "", heroMediaMime: "", heroMediaPoster: "" });
   };
 
   return (
@@ -164,6 +165,41 @@ export function HomepageEditor({
               onChange={(v) => updateHome({ heroMediaAlt: v })}
             />
           )}
+          {heroMedia && (
+            <div className="flex flex-col gap-2">
+              <span className="text-[color:var(--adm-muted)] text-xs uppercase tracking-widest">
+                Poster image (optional for video)
+              </span>
+              <input
+                type="text"
+                value={heroMediaPoster}
+                onChange={(e) => updateHome({ heroMediaPoster: e.target.value })}
+                placeholder="Still frame shown before the video loads"
+                className="bg-transparent border-b border-[color:var(--adm-line-strong)] text-[color:var(--adm-text)] py-2 text-sm focus:outline-none focus:border-[color:var(--adm-accent)] transition-colors"
+              />
+              <div className="flex items-center gap-2 flex-wrap">
+                <UploadToLibraryDashed
+                  label="↑ Upload poster"
+                  usage="hero"
+                  accept="image/*"
+                  onUploaded={(url) => updateHome({ heroMediaPoster: url })}
+                />
+                <PickFromLibraryButton
+                  type="image"
+                  onPick={(url) => updateHome({ heroMediaPoster: url })}
+                />
+                {heroMediaPoster && (
+                  <button
+                    type="button"
+                    onClick={() => updateHome({ heroMediaPoster: "" })}
+                    className="text-xs text-[color:var(--adm-muted)] hover:text-[color:var(--adm-danger,#f00)] underline"
+                  >
+                    Clear poster
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
           {heroMedia ? (
             <div
               className="rounded overflow-hidden border border-[color:var(--adm-line-strong)] mt-1"
@@ -173,6 +209,7 @@ export function HomepageEditor({
                 src={heroMedia}
                 alt={heroMediaAlt || "Hero media preview"}
                 mimeHint={heroMediaMime}
+                poster={heroMediaPoster}
                 className="w-full h-full object-cover bg-[color:var(--adm-input)]"
                 loading="eager"
               />

@@ -96,9 +96,15 @@ export default function Home() {
   const heroItem = useMemo(
     (): LightboxItem | null =>
       heroMedia
-        ? { id: HERO_MEDIA_ID, src: heroMedia, mime: hp.heroMediaMime, title: hp.heroMediaAlt?.trim() || "Showreel" }
+        ? {
+            id: HERO_MEDIA_ID,
+            src: heroMedia,
+            mime: hp.heroMediaMime,
+            poster: (hp as { heroMediaPoster?: string }).heroMediaPoster,
+            title: hp.heroMediaAlt?.trim() || "Showreel",
+          }
         : null,
-    [heroMedia, hp.heroMediaMime, hp.heroMediaAlt],
+    [heroMedia, hp.heroMediaMime, hp.heroMediaAlt, (hp as { heroMediaPoster?: string }).heroMediaPoster],
   );
 
   const lightboxItems = useMemo(
@@ -107,7 +113,14 @@ export default function Home() {
   );
 
   const gridItems = useMemo((): MasonryItem[] => {
-    const toTile = ({ id, src, title, meta, mime }: LightboxItem): MasonryItem => ({ id, src, title, meta, mime });
+    const toTile = ({ id, src, title, meta, mime, poster }: LightboxItem): MasonryItem => ({
+      id,
+      src,
+      title,
+      meta,
+      mime,
+      poster,
+    });
     const hero = heroItem ? [{ ...toTile(heroItem), playback: "loop" as const }] : [];
     return [...hero, ...featuredWork];
   }, [heroItem, featuredWork]);

@@ -256,6 +256,8 @@ function parseJsonProject(raw: string): ParseResult {
   if (typeof obj.coverImage === "string") patch.coverImage = obj.coverImage;
   if (typeof obj.heroImage === "string") patch.heroImage = obj.heroImage;
   if (typeof obj.heroImageMime === "string") patch.heroImageMime = obj.heroImageMime;
+  if (typeof obj.heroPoster === "string") patch.heroPoster = obj.heroPoster;
+  if (typeof obj.heroImagePoster === "string") patch.heroPoster = obj.heroImagePoster;
   if (typeof obj.logo === "string") patch.logo = obj.logo;
   if (obj.cardLayout === "vertical" || obj.cardLayout === "horizontal") {
     patch.cardLayout = obj.cardLayout;
@@ -2182,55 +2184,123 @@ export function ProjectsEditor({
                 )}
               </EditorBox>
 
-              <EditorBox
-                code="D5b"
-                title="Case study hero image (optional)"
-                hint="Shown as the full-width hero at the top of the case study page. Leave empty to use the cover image above. Cards on Work/Home always use the cover image."
-              >
-                <input
-                  type="text"
-                  value={project.heroImage ?? ""}
-                  onChange={(e) =>
-                    updateProject(selectedIdx, { heroImage: e.target.value || undefined, heroImageMime: undefined })
-                  }
-                  placeholder="Paste URL (jpg, png, mp4, webm) — leave empty to reuse cover image"
-                  className="bg-[color:var(--adm-input)] border border-[color:var(--adm-line-strong)] rounded-md text-[color:var(--adm-text)] px-3 py-2 text-sm focus:outline-none focus:border-[color:var(--adm-accent)] transition-colors placeholder:text-[color:var(--adm-placeholder)]"
-                />
-                <div className="flex items-center gap-2 flex-wrap">
-                  <UploadToLibraryDashed
-                    label="↑ Upload hero image"
-                    usage="project-cover"
-                    accept="image/*,video/mp4,video/webm,.gif,.mp4,.webm"
-                    onUploaded={(url, meta) =>
-                      updateProject(selectedIdx, { heroImage: url, heroImageMime: meta?.mime || undefined })
-                    }
-                  />
-                  <PickFromLibraryButton
-                    onPick={(url, meta) =>
-                      updateProject(selectedIdx, { heroImage: url, heroImageMime: meta?.mime || undefined })
-                    }
-                  />
-                  {project.heroImage && (
-                    <button
-                      type="button"
-                      onClick={() => updateProject(selectedIdx, { heroImage: undefined, heroImageMime: undefined })}
-                      className="text-xs text-[color:var(--adm-muted)] hover:text-[color:var(--adm-danger,#f00)] underline"
-                    >
-                      Clear hero image
-                    </button>
-                  )}
-                </div>
-                {project.heroImage && (
-                  <div className="rounded overflow-hidden border border-[color:var(--adm-line-strong)]" style={{ maxHeight: "130px", aspectRatio: "16 / 9" }}>
-                    <CoverMedia
-                      src={project.heroImage}
-                      alt="hero preview"
-                      mimeHint={project.heroImageMime}
-                      className="w-full h-full object-cover"
+              {(() => {
+                const heroSrc = project.heroImage ?? "";
+                const heroEmbed = heroSrc ? parseVideoEmbed(heroSrc) : null;
+                const isHeroVideo = Boolean(heroSrc && (isVideo(heroSrc, project.heroImageMime) || heroEmbed));
+
+                return (
+                  <EditorBox
+                    code="D5b"
+                    title="Case study hero image / video (optional)"
+                    hint="Shown as the full-width 16:9 hero at the top of the case study page (supports image, MP4/WebM video, or YouTube/Vimeo embed). Leave empty to use the cover image/video above. Cards on Work/Home always use the cover media."
+                  >
+                    <input
+                      type="text"
+                      value={project.heroImage ?? ""}
+                      onChange={(e) =>
+                        updateProject(selectedIdx, { heroImage: e.target.value || undefined, heroImageMime: undefined })
+                      }
+                      placeholder="Paste URL (jpg, png, mp4, webm) or YouTube / Vimeo link — leave empty to reuse cover"
+                      className="bg-[color:var(--adm-input)] border border-[color:var(--adm-line-strong)] rounded-md text-[color:var(--adm-text)] px-3 py-2 text-sm focus:outline-none focus:border-[color:var(--adm-accent)] transition-colors placeholder:text-[color:var(--adm-placeholder)]"
                     />
-                  </div>
-                )}
-              </EditorBox>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <UploadToLibraryDashed
+                        label="↑ Upload hero: image / mp4 / webm"
+                        usage="hero"
+                        accept="image/*,video/mp4,video/webm,.gif,.mp4,.webm"
+                        onUploaded={(url, meta) =>
+                          updateProject(selectedIdx, { heroImage: url, heroImageMime: meta?.mime || undefined })
+                        }
+                      />
+                      <PickFromLibraryButton
+                        label="From library (image/video)"
+                        onPick={(url, meta) =>
+                          updateProject(selectedIdx, { heroImage: url, heroImageMime: meta?.mime || undefined })
+                        }
+                      />
+                      {project.heroImage && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updateProject(selectedIdx, {
+                              heroImage: undefined,
+                              heroImageMime: undefined,
+                              heroPoster: undefined,
+                              heroImagePoster: undefined,
+                            })
+                          }
+                          className="text-xs text-[color:var(--adm-muted)] hover:text-[color:var(--adm-danger,#f00)] underline"
+                        >
+                          Clear hero media
+                        </button>
+                      )}
+                    </div>
+                    {project.heroImage && (
+                      <div
+                        className="rounded overflow-hidden border border-[color:var(--adm-line-strong)]"
+                        style={{ maxHeight: "150px", aspectRatio: "16 / 9" }}
+                      >
+                        <CoverMedia
+                          src={project.heroImage}
+                          alt="hero preview"
+                          mimeHint={project.heroImageMime}
+                          poster={project.heroPoster ?? project.heroImagePoster}
+                          className="w-full h-full object-cover"
+                          style={heroEmbed ? { height: "150px" } : { maxHeight: "150px" }}
+                        />
+                      </div>
+                    )}
+                    {heroEmbed && (
+                      <p className="text-[color:var(--adm-faint)] text-xs leading-relaxed">
+                        {heroEmbed.provider === "instagram"
+                          ? "Instagram link: Instagram can't autoplay inside a hero header. Add a poster image."
+                          : heroEmbed.provider === "youtube"
+                            ? "YouTube link: plays muted and looping in the case study hero header. Visitors can unmute or expand to full player."
+                            : "Vimeo link: plays muted and looping in the case study hero header. Add a poster so the hero isn't blank while Vimeo loads."}
+                      </p>
+                    )}
+                    {isHeroVideo && (
+                      <div className="flex flex-col gap-2 pt-2 border-t border-[color:var(--adm-line)]">
+                        <span className="text-[color:var(--adm-muted)] text-xs uppercase tracking-widest">
+                          Hero poster image (optional)
+                        </span>
+                        <input
+                          type="text"
+                          value={project.heroPoster ?? project.heroImagePoster ?? ""}
+                          onChange={(e) => updateProject(selectedIdx, { heroPoster: e.target.value || undefined })}
+                          placeholder="Still frame shown before the hero video loads"
+                          className="bg-[color:var(--adm-input)] border border-[color:var(--adm-line-strong)] rounded-md text-[color:var(--adm-text)] px-3 py-2 text-sm focus:outline-none focus:border-[color:var(--adm-accent)] transition-colors placeholder:text-[color:var(--adm-placeholder)]"
+                        />
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <UploadToLibraryDashed
+                            label="↑ Upload poster"
+                            usage="hero"
+                            accept="image/*"
+                            onUploaded={(url) => updateProject(selectedIdx, { heroPoster: url })}
+                          />
+                          <PickFromLibraryButton
+                            type="image"
+                            onPick={(url) => updateProject(selectedIdx, { heroPoster: url })}
+                          />
+                          {(project.heroPoster || project.heroImagePoster) && (
+                            <button
+                              type="button"
+                              onClick={() => updateProject(selectedIdx, { heroPoster: undefined, heroImagePoster: undefined })}
+                              className="text-xs text-[color:var(--adm-muted)] hover:text-[color:var(--adm-danger,#f00)] underline"
+                            >
+                              Clear poster
+                            </button>
+                          )}
+                        </div>
+                        <p className="text-[color:var(--adm-faint)] text-xs leading-relaxed">
+                          Recommended 16:9 still frame. When empty, falls back to the cover poster or the first frame of the video.
+                        </p>
+                      </div>
+                    )}
+                  </EditorBox>
+                );
+              })()}
 
               <EditorBox code="D6" title="Card layout (Work / Home grid)">
                 <div className="flex gap-2 flex-wrap">

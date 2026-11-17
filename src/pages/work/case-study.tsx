@@ -156,6 +156,8 @@ interface Project {
   coverPoster?: string;
   heroImage?: string;
   heroImageMime?: string;
+  heroPoster?: string;
+  heroImagePoster?: string;
   hoverVideo?: string;
   liveUrl?: string;
   year: string;
@@ -291,6 +293,7 @@ type LightboxProps = {
   src: string;
   caption?: string;
   mime?: string;
+  poster?: string;
   onClose: () => void;
 };
 
@@ -306,7 +309,7 @@ function Lightbox(props: LightboxProps) {
   return createPortal(<LightboxContent {...props} />, document.body);
 }
 
-function LightboxContent({ src, caption, mime, onClose }: LightboxProps) {
+function LightboxContent({ src, caption, mime, poster, onClose }: LightboxProps) {
   const embed = parseVideoEmbed(src);
   const video = Boolean(embed) || isVideo(src, mime);
   const [zoom, setZoom] = useState(1);
@@ -389,6 +392,7 @@ function LightboxContent({ src, caption, mime, onClose }: LightboxProps) {
         ) : (
           <motion.video
             src={src}
+            poster={poster}
             controls
             autoPlay
             loop
@@ -655,6 +659,9 @@ function CaseStudyCover({ project, onExpand }: { project: Project; onExpand: () 
   // Use heroImage (case study page only) when set; fall back to coverImage (card thumbnail)
   const heroSrc = project.heroImage?.trim() || project.coverImage;
   const heroMime = project.heroImage?.trim() ? project.heroImageMime : project.coverMime;
+  const heroPoster =
+    (project.heroPoster?.trim() || (project as { heroImagePoster?: string }).heroImagePoster?.trim()) ||
+    project.coverPoster;
   const embed = parseVideoEmbed(heroSrc);
   const video = !embed && isVideo(heroSrc, heroMime);
   const backgroundEmbed = embed && canPlayInBackground(embed) ? embed : null;
@@ -701,7 +708,7 @@ function CaseStudyCover({ project, onExpand }: { project: Project; onExpand: () 
       {embed ? (
         <EmbedCover
           embed={embed}
-          poster={project.coverPoster}
+          poster={heroPoster}
           label={project.title}
           muted={muted}
           className="w-full h-full"
@@ -711,7 +718,7 @@ function CaseStudyCover({ project, onExpand }: { project: Project; onExpand: () 
         <CoverVideo
           ref={videoRef}
           src={heroSrc}
-          poster={project.coverPoster}
+          poster={heroPoster}
           label={project.title}
           onError={() => setErrored(true)}
           className="w-full h-full object-cover"
@@ -1309,8 +1316,8 @@ function ImageSlideshow({
   const transition = {
     x: { type: "spring" as const, stiffness: 380, damping: 36, mass: 0.8 },
     scale: { type: "spring" as const, stiffness: 380, damping: 36, mass: 0.8 },
-    opacity: { duration: 0.2, ease: "easeOut" },
-    filter: { duration: 0.25, ease: "easeOut" },
+    opacity: { duration: 0.2, ease: [0, 0, 0.2, 1] as const },
+    filter: { duration: 0.25, ease: [0, 0, 0.2, 1] as const },
   };
 
   return (
@@ -1774,7 +1781,7 @@ export default function CaseStudy({ full = false }: { full?: boolean }) {
   const prevProject = currentIdx > 0 ? visibleProjects[currentIdx - 1] : null;
   const nextProject = currentIdx < visibleProjects.length - 1 ? visibleProjects[currentIdx + 1] : null;
   const hasSections = Boolean(project?.sections?.length);
-  const [lightbox, setLightbox] = useState<{ src: string; caption?: string; mime?: string } | null>(null);
+  const [lightbox, setLightbox] = useState<{ src: string; caption?: string; mime?: string; poster?: string } | null>(null);
   const showDetail = full;
   const { sections: displaySections, hasExpandable: hasDetailSections } = resolveDisplaySections(
     project,
@@ -1853,6 +1860,7 @@ export default function CaseStudy({ full = false }: { full?: boolean }) {
             src={lightbox.src}
             caption={lightbox.caption}
             mime={lightbox.mime}
+            poster={lightbox.poster}
             onClose={() => setLightbox(null)}
           />
         )}
@@ -1994,7 +2002,10 @@ export default function CaseStudy({ full = false }: { full?: boolean }) {
           onExpand={() => {
             const src = project.heroImage?.trim() || project.coverImage;
             const mime = project.heroImage?.trim() ? project.heroImageMime : project.coverMime;
-            setLightbox({ src, caption: project.title, mime });
+            const poster =
+              (project.heroPoster?.trim() || (project as { heroImagePoster?: string }).heroImagePoster?.trim()) ||
+              project.coverPoster;
+            setLightbox({ src, caption: project.title, mime, poster });
           }}
         />
       )}
