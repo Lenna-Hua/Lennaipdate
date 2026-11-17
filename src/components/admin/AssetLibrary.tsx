@@ -19,6 +19,7 @@ import {
 } from "@/lib/asset-limits";
 import { guidelineSummary, type MediaUsage } from "@/lib/media-guidelines";
 import { UploadCancelledError, MediaPrepModal } from "./MediaPrepModal";
+import { detectFileTransparency } from "@/lib/image-transparency";
 
 // ── Constants ──────────────────────────────────────────────────────────
 
@@ -305,7 +306,7 @@ export function SectionImageUploader({
   label = "↑ Upload to library",
   usage,
 }: {
-  onPicked: (url: string) => void;
+  onPicked: (url: string, isTransparent?: boolean) => void;
   accept?: string;
   label?: string;
   usage?: MediaUsage;
@@ -336,8 +337,9 @@ export function SectionImageUploader({
             setBusy(true);
             setErr("");
             try {
+              const isTrans = await detectFileTransparency(f);
               const url = await upload(f, { usage });
-              onPicked(url);
+              onPicked(url, isTrans);
             } catch (e2) {
               if (!(e2 instanceof UploadCancelledError)) {
                 setErr(e2 instanceof Error ? e2.message : "Upload failed.");

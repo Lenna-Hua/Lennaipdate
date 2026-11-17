@@ -8,8 +8,9 @@ import contactSeed from "@/data/contact.json";
 import { useContent } from "@/lib/use-content";
 import { BRAND_EASE } from "@/lib/brand";
 import { useFloatIn } from "@/lib/motion";
-import { AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, Lock, Maximize2, Pause, Play, Volume2, VolumeX } from "lucide-react";
+import { AlertCircle, Check, CheckCircle2, ChevronLeft, ChevronRight, Lock, Maximize2, Pause, Play, Volume2, VolumeX } from "lucide-react";
 import { SafeImage } from "@/components/SafeImage";
+import { useIsImageTransparent } from "@/lib/image-transparency";
 import { CoverVideo, EmbedCover, isVideo } from "@/components/CoverMedia";
 import {
   canPlayInBackground,
@@ -574,62 +575,263 @@ function ProjectNavCard({
   );
 }
 
-function ProblemCard({ text }: { text: React.ReactNode }) {
+function parseLeadAndBody(
+  text: React.ReactNode,
+  fallbackTitle: string
+): { title: string; body: React.ReactNode } {
+  if (typeof text !== "string") {
+    return { title: fallbackTitle, body: text };
+  }
+  const trimmed = text.trim();
+  const boldMatch = trimmed.match(/^\*\*([^*]+)\*\*:\s*([\s\S]+)$/);
+  if (boldMatch) {
+    return { title: boldMatch[1].trim(), body: boldMatch[2].trim() };
+  }
+  const colonMatch = trimmed.match(/^([^:\n]{3,40}):\s+([\s\S]+)$/);
+  if (colonMatch && !colonMatch[1].includes(".")) {
+    return { title: colonMatch[1].trim(), body: colonMatch[2].trim() };
+  }
+  return { title: fallbackTitle, body: text };
+}
+
+function ProblemCard({
+  text,
+  title: customTitle,
+  cardRef,
+}: {
+  text: React.ReactNode;
+  title?: string;
+  cardRef?: React.Ref<HTMLDivElement>;
+}) {
+  const { title: parsedTitle, body } = parseLeadAndBody(text, "The Challenge");
+  const displayTitle = customTitle || parsedTitle;
+
   return (
-    <div className="flex flex-col justify-between h-full bg-gradient-to-b from-[#E8715A]/[0.06] via-card to-card dark:from-[#E8715A]/[0.10] dark:via-card dark:to-card border border-border border-t-4 border-t-[#E8715A] p-6 sm:p-7 md:p-8 shadow-sm transition-all duration-300">
-      <div className="flex flex-col">
-        <div className="flex items-center justify-between gap-3 pb-4 mb-5 border-b border-border/80">
-          <div className="flex items-center gap-2.5">
-            <span className="w-6 h-6 flex items-center justify-center bg-[#E8715A]/15 text-[#C45A44] dark:text-[#E8715A] shrink-0">
-              <AlertCircle className="w-3.5 h-3.5" aria-hidden="true" />
-            </span>
-            <span className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-[#C45A44] dark:text-[#E8715A]">
-              The Problem
-            </span>
+    <div className="flex flex-col w-full">
+      {/* Top Pill — Sharp design */}
+      <div className="inline-flex items-center justify-between gap-5 px-4 py-2 border border-border bg-muted/70 dark:bg-muted/40 self-start mb-3 shadow-xs rounded-none">
+        <span className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-foreground">
+          Problem
+        </span>
+        <span
+          className="w-5 h-5 rounded-none flex items-center justify-center bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/40 text-[11px] font-bold font-mono"
+          aria-hidden="true"
+        >
+          !
+        </span>
+      </div>
+
+      {/* Main Sharp Card */}
+      <div
+        ref={cardRef}
+        className="relative flex flex-col justify-between h-full bg-card border border-border border-t-2 border-t-[#E8715A] p-6 sm:p-7 md:p-8 shadow-sm rounded-none transition-all duration-300"
+      >
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-3 pb-3 border-b border-border/70">
+            <h4 className="font-display font-bold text-lg sm:text-xl text-foreground tracking-tight">
+              {displayTitle}
+            </h4>
+            <AdjustmentFrame
+              dashedColor="border-[#E8715A]/60 dark:border-[#E8715A]/80"
+              handleColor="bg-[#E8715A]"
+              handleBorderColor="border-card"
+              className="px-2.5 py-0.5 bg-background/80"
+            >
+              <span className="text-[10px] font-mono uppercase tracking-[0.18em] font-semibold text-[#C45A44] dark:text-[#E8715A]">
+                Challenge
+              </span>
+            </AdjustmentFrame>
           </div>
-          <AdjustmentFrame
-            dashedColor="border-[#E8715A]/60 dark:border-[#E8715A]/80"
-            handleColor="bg-[#E8715A]"
-            handleBorderColor="border-card"
-            className="px-2.5 py-0.5 bg-background/80"
-          >
-            <span className="text-[10px] font-mono uppercase tracking-[0.18em] font-semibold text-[#C45A44] dark:text-[#E8715A]">
-              Challenge
-            </span>
-          </AdjustmentFrame>
+          <div className="text-foreground/80 text-sm md:text-base leading-relaxed mt-1">
+            <ClampedText lines={7}>{typeof body === "string" ? renderRichText(body) : body}</ClampedText>
+          </div>
         </div>
-        <ClampedText lines={6}>{text}</ClampedText>
       </div>
     </div>
   );
 }
 
-function SolutionCard({ text }: { text: React.ReactNode }) {
+function SolutionCard({
+  text,
+  title: customTitle,
+  cardRef,
+}: {
+  text: React.ReactNode;
+  title?: string;
+  cardRef?: React.Ref<HTMLDivElement>;
+}) {
+  const { title: parsedTitle, body } = parseLeadAndBody(text, "The Solution");
+  const displayTitle = customTitle || parsedTitle;
+
   return (
-    <div className="flex flex-col justify-between h-full bg-gradient-to-b from-primary/[0.06] via-card to-card dark:from-primary/[0.12] dark:via-card dark:to-card border border-border border-t-4 border-t-primary p-6 sm:p-7 md:p-8 shadow-sm transition-all duration-300">
-      <div className="flex flex-col">
-        <div className="flex items-center justify-between gap-3 pb-4 mb-5 border-b border-border/80">
-          <div className="flex items-center gap-2.5">
-            <span className="w-6 h-6 flex items-center justify-center bg-primary/15 text-primary shrink-0">
-              <CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" />
-            </span>
-            <span className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-primary">
-              The Solution
-            </span>
+    <div className="flex flex-col w-full">
+      {/* Main Sharp Card */}
+      <div
+        ref={cardRef}
+        className="relative flex flex-col justify-between h-full bg-card border border-border border-b-2 border-b-primary p-6 sm:p-7 md:p-8 shadow-sm rounded-none transition-all duration-300"
+      >
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-3 pb-3 border-b border-border/70">
+            <h4 className="font-display font-bold text-lg sm:text-xl text-foreground tracking-tight">
+              {displayTitle}
+            </h4>
+            <AdjustmentFrame
+              dashedColor="border-primary/60 dark:border-primary/80"
+              handleColor="bg-primary"
+              handleBorderColor="border-card"
+              className="px-2.5 py-0.5 bg-background/80"
+            >
+              <span className="text-[10px] font-mono uppercase tracking-[0.18em] font-semibold text-primary">
+                Approach
+              </span>
+            </AdjustmentFrame>
           </div>
-          <AdjustmentFrame
-            dashedColor="border-primary/60 dark:border-primary/80"
-            handleColor="bg-primary"
-            handleBorderColor="border-card"
-            className="px-2.5 py-0.5 bg-background/80"
-          >
-            <span className="text-[10px] font-mono uppercase tracking-[0.18em] font-semibold text-primary">
-              Approach
-            </span>
-          </AdjustmentFrame>
+          <div className="text-foreground/80 text-sm md:text-base leading-relaxed mt-1">
+            <ClampedText lines={7}>{typeof body === "string" ? renderRichText(body) : body}</ClampedText>
+          </div>
         </div>
-        <ClampedText lines={6}>{text}</ClampedText>
       </div>
+
+      {/* Bottom Pill — Sharp design */}
+      <div className="inline-flex items-center justify-between gap-5 px-4 py-2 border border-primary/30 bg-primary/[0.08] dark:bg-primary/[0.14] self-start mt-3 shadow-xs rounded-none">
+        <span className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-primary">
+          Solution
+        </span>
+        <span
+          className="w-5 h-5 rounded-none flex items-center justify-center bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/40 text-xs font-bold font-mono"
+          aria-hidden="true"
+        >
+          <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function ProblemSolutionSection({
+  title,
+  badge,
+  problem,
+  solution,
+}: {
+  title?: string;
+  badge?: string;
+  problem?: React.ReactNode;
+  solution?: React.ReactNode;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const probRef = useRef<HTMLDivElement>(null);
+  const solRef = useRef<HTMLDivElement>(null);
+  const [coords, setCoords] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
+
+  useEffect(() => {
+    if (!problem || !solution) return;
+    const measure = () => {
+      if (!containerRef.current || !probRef.current || !solRef.current) return;
+      const c = containerRef.current.getBoundingClientRect();
+      const p = probRef.current.getBoundingClientRect();
+      const s = solRef.current.getBoundingClientRect();
+      setCoords({
+        x1: p.right - c.left,
+        y1: p.top + p.height / 2 - c.top,
+        x2: s.left - c.left,
+        y2: s.top + s.height / 2 - c.top,
+      });
+    };
+
+    measure();
+    const ro = new ResizeObserver(measure);
+    if (containerRef.current) ro.observe(containerRef.current);
+    if (probRef.current) ro.observe(probRef.current);
+    if (solRef.current) ro.observe(solRef.current);
+    window.addEventListener("resize", measure);
+
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [problem, solution]);
+
+  if (!problem && !solution) return null;
+
+  const both = Boolean(problem && solution);
+
+  return (
+    <div className="flex flex-col gap-6">
+      {/* Section Header */}
+      {title && (
+        <div className="flex items-baseline justify-between border-b border-border pb-3">
+          <h2 className="font-display font-black uppercase tracking-tight text-2xl sm:text-3xl text-foreground">
+            {title}
+          </h2>
+          {badge && (
+            <span className="font-mono text-[10px] sm:text-xs uppercase tracking-[0.2em] px-2.5 py-1 bg-muted border border-border text-muted-foreground rounded-none">
+              {badge}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Cards Layout */}
+      {!both ? (
+        <div className="grid grid-cols-1 max-w-2xl">
+          {problem && <ProblemCard text={problem} />}
+          {solution && <SolutionCard text={solution} />}
+        </div>
+      ) : (
+        <div ref={containerRef} className="relative w-full">
+          {/* Desktop SVG Circuit Connector */}
+          {coords && (
+            <svg
+              className="hidden md:block absolute inset-0 w-full h-full pointer-events-none z-10"
+              style={{ overflow: "visible" }}
+            >
+              <path
+                d={`M ${coords.x1} ${coords.y1} L ${coords.x1 + (coords.x2 - coords.x1) * 0.35} ${coords.y1} L ${coords.x1 + (coords.x2 - coords.x1) * 0.65} ${coords.y2} L ${coords.x2} ${coords.y2}`}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                className="text-foreground/40 dark:text-foreground/50"
+              />
+              <rect
+                x={coords.x1 - 3}
+                y={coords.y1 - 3}
+                width="6"
+                height="6"
+                fill="currentColor"
+                className="text-foreground"
+              />
+              <rect
+                x={coords.x2 - 3}
+                y={coords.y2 - 3}
+                width="6"
+                height="6"
+                fill="currentColor"
+                className="text-foreground"
+              />
+            </svg>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16 lg:gap-20 items-start">
+            {/* Left: Problem */}
+            <div className="w-full">
+              <ProblemCard text={problem} cardRef={probRef} />
+            </div>
+
+            {/* Mobile Vertical Connector */}
+            <div className="flex md:hidden flex-col items-center justify-center -my-2 gap-1 py-1">
+              <div className="w-1.5 h-1.5 bg-foreground" />
+              <div className="w-0.5 h-8 bg-foreground/40" />
+              <div className="w-1.5 h-1.5 bg-foreground" />
+            </div>
+
+            {/* Right: Solution (Stepped down) */}
+            <div className="w-full md:mt-16 lg:mt-20">
+              <SolutionCard text={solution} cardRef={solRef} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -659,6 +861,7 @@ function CaseStudyCover({ project, onExpand }: { project: Project; onExpand: () 
   // Use heroImage (case study page only) when set; fall back to coverImage (card thumbnail)
   const heroSrc = project.heroImage?.trim() || project.coverImage;
   const heroMime = project.heroImage?.trim() ? project.heroImageMime : project.coverMime;
+  const isHeroTransparent = useIsImageTransparent(heroSrc);
   const heroPoster =
     (project.heroPoster?.trim() || (project as { heroImagePoster?: string }).heroImagePoster?.trim()) ||
     project.coverPoster;
@@ -699,7 +902,7 @@ function CaseStudyCover({ project, onExpand }: { project: Project; onExpand: () 
 
   return (
     <motion.div
-      className="w-full overflow-hidden group relative bg-muted"
+      className={`w-full overflow-hidden group relative ${isHeroTransparent ? "bg-transparent" : "bg-muted"}`}
       initial={{ opacity: 0, scale: 1.02 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ delay: 0.2, duration: 1, ease: BRAND_EASE }}
@@ -1267,6 +1470,7 @@ function ImageSlideshow({
   const currentSrc = slides[activeIdx] ?? slides[0];
   const currentCaption =
     section.imageCaptions?.[activeIdx]?.trim() || section.caption?.trim() || "";
+  const isSlideTransparent = useIsImageTransparent(currentSrc, section.transparent);
 
   // Load dimensions for all slides (for ratio mismatch detection)
   const [allDims, setAllDims] = useState<(({ w: number; h: number }) | null)[]>(() => slides.map(() => null));
@@ -1323,10 +1527,10 @@ function ImageSlideshow({
   return (
     <div className="flex flex-col gap-3">
       <div
-        className={`w-full overflow-hidden group relative cursor-pointer select-none border border-border/60 ${
-          section.transparent ? "" : "bg-black"
+        className={`w-full overflow-hidden group relative cursor-pointer select-none ${
+          isSlideTransparent ? "bg-transparent" : "border border-border/60 bg-black"
         }`}
-        style={isFullHeight ? undefined : { aspectRatio: "16 / 9" }}
+        style={isFullHeight || isSlideTransparent ? undefined : { aspectRatio: "16 / 9" }}
         onClick={nextSlide}
         role="region"
         aria-roledescription="carousel"
@@ -1426,8 +1630,8 @@ function ImageSlideshow({
                 src={currentSrc}
                 alt={currentCaption || `Slide ${activeIdx + 1}`}
                 className={`block ${
-                  isFullHeight
-                    ? "w-full h-auto"
+                  isFullHeight || isSlideTransparent
+                    ? "w-full h-auto max-h-[75vh] object-contain"
                     : "absolute inset-0 w-full h-full object-cover"
                 }`}
                 draggable={false}
@@ -1475,6 +1679,7 @@ function ImageSection({
   const slides = rawSlides.map((s) => s.trim()).filter(Boolean);
   const isStacked = section.imageLayout === "stacked" || (slides.length > 1 && section.slideshow === false);
   const isSlideshow = !isVideo && !isStacked && (!!section.slideshow || slides.length > 1);
+  const isSectionTransparent = useIsImageTransparent(section.src || slides[0], section.transparent);
 
   if (isStacked && slides.length > 1) {
     const isNoGap = section.imageGap === "no-gap" || seamless || projectImageGap === "no-gap";
@@ -1495,9 +1700,9 @@ function ImageSection({
             return (
               <div key={i} className={`flex flex-col ${isNoGap ? "gap-0" : "gap-1.5"} w-full`}>
                 <div
-                  className={`w-full overflow-hidden group relative cursor-zoom-in ${section.transparent ? "" : "bg-black"} ${
-                    isNoGap || section.fullHeight ? "" : "aspect-video"
-                  }`}
+                  className={`w-full overflow-hidden group relative cursor-zoom-in ${
+                    isSectionTransparent ? "bg-transparent" : "bg-black"
+                  } ${isNoGap || section.fullHeight || isSectionTransparent ? "" : "aspect-video"}`}
                   onClick={() => onImageClick(slideSrc, caption)}
                   role="button"
                   tabIndex={0}
@@ -1508,14 +1713,14 @@ function ImageSection({
                     src={slideSrc}
                     alt={caption || section.title || `Image ${i + 1}`}
                     className={`block ${
-                      isNoGap || section.fullHeight
-                        ? "w-full h-auto"
+                      isNoGap || section.fullHeight || isSectionTransparent
+                        ? "w-full h-auto max-h-[75vh] object-contain"
                         : "absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
                     }`}
                     loading="lazy"
                     draggable={false}
                   />
-                  <div className={`absolute inset-0 transition-colors duration-300 flex items-center justify-center ${section.transparent ? "" : "bg-black/0 group-hover:bg-black/15"}`}>
+                  <div className={`absolute inset-0 transition-colors duration-300 flex items-center justify-center ${isSectionTransparent ? "bg-black/0 group-hover:bg-black/10" : "bg-black/0 group-hover:bg-black/15"}`}>
                     <span className={EXPAND_HINT}>Expand</span>
                   </div>
                 </div>
@@ -1588,7 +1793,7 @@ function ImageSection({
             />
           </div>
         ) : (
-          <div className={`w-full overflow-hidden ${section.transparent ? "" : "bg-muted"}`}>
+          <div className={`w-full overflow-hidden ${isSectionTransparent ? "bg-transparent" : ""}`}>
             <SectionVideo src={section.src!} loop={!!section.loop} label={section.caption || section.title} />
           </div>
         )}
@@ -1620,9 +1825,9 @@ function ImageSection({
         </h2>
       )}
       <div
-        className={`w-full overflow-hidden group relative ${clickable ? "cursor-zoom-in" : ""} ${section.transparent ? "" : "bg-black"} ${
-          seamless || section.fullHeight ? "" : "aspect-video"
-        }`}
+        className={`w-full overflow-hidden group relative ${clickable ? "cursor-zoom-in" : ""} ${
+          isSectionTransparent ? "bg-transparent" : "bg-black"
+        } ${seamless || section.fullHeight || isSectionTransparent ? "" : "aspect-video"}`}
         onClick={() => clickable && onImageClick(section.src!, section.caption)}
         role={clickable ? "button" : undefined}
         tabIndex={clickable ? 0 : undefined}
@@ -1633,8 +1838,8 @@ function ImageSection({
           src={section.src}
           alt={section.caption || section.title || ""}
           className={`block ${
-            seamless || section.fullHeight
-              ? "w-full h-auto"
+            seamless || section.fullHeight || isSectionTransparent
+              ? "w-full h-auto max-h-[75vh] object-contain"
               : "absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
           }`}
           loading="lazy"
@@ -1642,7 +1847,7 @@ function ImageSection({
           onError={() => setErrored(true)}
         />
         {clickable && (
-          <div className={`absolute inset-0 transition-colors duration-300 flex items-center justify-center ${section.transparent ? "" : "bg-black/0 group-hover:bg-black/15"}`}>
+          <div className={`absolute inset-0 transition-colors duration-300 flex items-center justify-center ${isSectionTransparent ? "bg-black/0 group-hover:bg-black/10" : "bg-black/0 group-hover:bg-black/15"}`}>
             <span className={EXPAND_HINT}>Expand</span>
           </div>
         )}
@@ -1684,15 +1889,12 @@ function SectionBlockText({
         className="flex flex-col gap-6"
         {...floatIn}
       >
-        {title && (
-          <div className="flex flex-col gap-3 border-t border-border pt-4">
-            <h2 className={SECTION_TITLE}>{title}</h2>
-          </div>
-        )}
-        <div className={`grid gap-6 md:gap-8 items-stretch ${problem && solution ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"}`}>
-          {problem && <ProblemCard text={problem} />}
-          {solution && <SolutionCard text={solution} />}
-        </div>
+        <ProblemSolutionSection
+          title={title || "Problem & Solution"}
+          badge={title ? "Section" : undefined}
+          problem={problem}
+          solution={solution}
+        />
       </motion.div>
     );
   }
@@ -1747,11 +1949,15 @@ function FallbackSections({ project }: { project: Project }) {
       )}
       {(project.challenge || project.solution) && (
         <motion.div
-          className={`grid gap-6 md:gap-8 items-stretch ${project.challenge && project.solution ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"}`}
+          className="flex flex-col gap-6"
           {...floatIn}
         >
-          {project.challenge && <ProblemCard text={project.challenge} />}
-          {project.solution && <SolutionCard text={project.solution} />}
+          <ProblemSolutionSection
+            title="Problem & Solution"
+            badge="Overview"
+            problem={project.challenge}
+            solution={project.solution}
+          />
         </motion.div>
       )}
       {project.impact && (

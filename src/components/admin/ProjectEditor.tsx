@@ -46,6 +46,7 @@ import {
   useAssetUpload,
 } from "./AssetLibrary";
 import { UploadCancelledError } from "./MediaPrepModal";
+import { detectImageTransparency, detectUrlTransparency } from "@/lib/image-transparency";
 import { parseBriefToProject } from "@/lib/case-study-brief";
 import { MockupSectionEditor } from "./MockupSectionEditor";
 import { ProcessStepsEditor } from "./ProcessStepsEditor";
@@ -262,6 +263,7 @@ function parseJsonProject(raw: string): ParseResult {
   if (obj.cardLayout === "vertical" || obj.cardLayout === "horizontal") {
     patch.cardLayout = obj.cardLayout;
   }
+  if (typeof obj.showCardDetails === "boolean") patch.showCardDetails = obj.showCardDetails;
   if (typeof obj.year === "string") patch.year = obj.year;
   if (typeof obj.period === "string") patch.period = obj.period;
   if (typeof obj.featured === "boolean") patch.featured = obj.featured;
@@ -441,11 +443,13 @@ function ImageOrientationAndCrop({
   fullHeight,
   onUpdateSrc,
   onToggleFullHeight,
+  onAutoDetectTransparent,
 }: {
   src: string;
   fullHeight?: boolean;
   onUpdateSrc: (url: string) => void;
   onToggleFullHeight: (fullHeight: boolean) => void;
+  onAutoDetectTransparent?: (isTrans: boolean) => void;
 }) {
   const upload = useAssetUpload();
   const [dim, setDim] = useState<{ w: number; h: number } | null>(null);
@@ -457,12 +461,16 @@ function ImageOrientationAndCrop({
       return;
     }
     const img = new Image();
+    img.crossOrigin = "anonymous";
     img.onload = () => {
       setDim({ w: img.naturalWidth, h: img.naturalHeight });
+      if (detectImageTransparency(img)) {
+        onAutoDetectTransparent?.(true);
+      }
     };
     img.onerror = () => setDim(null);
     img.src = resolveAssetUrl(src);
-  }, [src]);
+  }, [src, onAutoDetectTransparent]);
 
   const handleCrop = async () => {
     if (!src || !upload) return;
@@ -1323,11 +1331,14 @@ function SectionsEditor({
                       accept="image/*,.gif,.png,.jpg,.jpeg,.webp"
                       label="↑ Upload image"
                       usage="section-image"
-                      onPicked={(url) => update(idx, { src: url })}
+                      onPicked={(url, isTrans) => update(idx, { src: url, ...(isTrans ? { transparent: true } : {}) })}
                     />
                     <PickFromLibraryButton
                       type="image"
-                      onPick={(url) => update(idx, { src: url })}
+                      onPick={async (url) => {
+                        const isTrans = await detectUrlTransparency(url);
+                        update(idx, { src: url, ...(isTrans ? { transparent: true } : {}) });
+                      }}
                     />
                   </div>
                   {sec.src && (
@@ -1344,6 +1355,7 @@ function SectionsEditor({
                         fullHeight={sec.fullHeight}
                         onUpdateSrc={(url) => update(idx, { src: url })}
                         onToggleFullHeight={(val) => update(idx, { fullHeight: val })}
+                        onAutoDetectTransparent={(isTrans) => !sec.transparent && update(idx, { transparent: isTrans })}
                       />
                     </>
                   )}
@@ -2334,6 +2346,53 @@ export function ProjectsEditor({
                 <p className="text-[color:var(--adm-faint)] text-xs leading-relaxed">
                   Vertical = one 4:5 card. Horizontal = the width of two cards plus the gap between them, same height.
                 </p>
+              </EditorBox>
+
+              <EditorBox
+                code="D6b"
+                title="Information below project card (Subtitle, Description, Users, Methods)"
+                hint="Control whether information is displayed underneath this project card on the Work & Home pages."
+              >
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-[color:var(--adm-text)] font-medium">
+                      Information Visibility for this Card
+                    </span>
+                    <span className="text-[10px] font-mono text-[color:var(--adm-faint)]">
+                      {project.showCardDetails === undefined
+                        ? "Following site default"
+                        : project.showCardDetails
+                          ? "Always Showing"
+                          : "Not Showing"}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { value: undefined, label: "Default (Global)" },
+                      { value: true, label: "Show (Turned On)" },
+                      { value: false, label: "Not Showing (Turned Off)" },
+                    ].map((opt) => {
+                      const active = project.showCardDetails === opt.value;
+                      return (
+                        <button
+                          key={String(opt.value)}
+                          type="button"
+                          onClick={() => updateProject(selectedIdx, { showCardDetails: opt.value })}
+                          className={`py-2 px-3 rounded border text-xs text-center transition-colors ${
+                            active
+                              ? "border-[color:var(--adm-accent)] bg-[color:var(--adm-accent)]/10 text-[color:var(--adm-text)] font-semibold"
+                              : "border-[color:var(--adm-line-strong)] text-[color:var(--adm-muted)] hover:border-[color:var(--adm-accent)]"
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[color:var(--adm-faint)] text-xs leading-relaxed">
+                    Set whether this card displays its subtitle, description, users, and methods on the grid. Visitors and you can also toggle details live anytime using the toggle on the card itself or toolbar.
+                  </p>
+                </div>
               </EditorBox>
 
               <EditorBox
