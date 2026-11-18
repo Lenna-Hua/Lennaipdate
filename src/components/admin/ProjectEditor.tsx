@@ -2057,7 +2057,11 @@ export function ProjectsEditor({
               <EditorBox
                 code="D10"
                 title="Case study body (Overview · Problem · Solution · Impact)"
-                hint="Each block has its own On/Off control. Off hides that block on the case study page without deleting the text. Empty fields stay hidden."
+                hint={
+                  (project.sections?.length ?? 0) > 0
+                    ? "This project has custom sections, so these blocks stay Off unless you turn one On. On places that block above your custom sections."
+                    : "Each block has its own On/Off control. Empty fields stay hidden. Add custom sections later and these stay Off until you turn one On."
+                }
               >
                 <TextareaInput
                   label="Overview"
@@ -2067,7 +2071,11 @@ export function ProjectsEditor({
                   rows={4}
                   action={
                     <BodyBlockToggle
-                      enabled={project.showOverview !== false}
+                      enabled={
+                        (project.sections?.length ?? 0) > 0
+                          ? project.showOverview === true
+                          : project.showOverview !== false
+                      }
                       onChange={(v) => updateProject(selectedIdx, { showOverview: v })}
                     />
                   }
@@ -2080,7 +2088,11 @@ export function ProjectsEditor({
                   rows={3}
                   action={
                     <BodyBlockToggle
-                      enabled={project.showProblem !== false}
+                      enabled={
+                        (project.sections?.length ?? 0) > 0
+                          ? project.showProblem === true
+                          : project.showProblem !== false
+                      }
                       onChange={(v) => updateProject(selectedIdx, { showProblem: v })}
                     />
                   }
@@ -2093,7 +2105,11 @@ export function ProjectsEditor({
                   rows={3}
                   action={
                     <BodyBlockToggle
-                      enabled={project.showSolution !== false}
+                      enabled={
+                        (project.sections?.length ?? 0) > 0
+                          ? project.showSolution === true
+                          : project.showSolution !== false
+                      }
                       onChange={(v) => updateProject(selectedIdx, { showSolution: v })}
                     />
                   }
@@ -2106,7 +2122,11 @@ export function ProjectsEditor({
                   rows={3}
                   action={
                     <BodyBlockToggle
-                      enabled={project.showImpact !== false}
+                      enabled={
+                        (project.sections?.length ?? 0) > 0
+                          ? project.showImpact === true
+                          : project.showImpact !== false
+                      }
                       onChange={(v) => updateProject(selectedIdx, { showImpact: v })}
                     />
                   }

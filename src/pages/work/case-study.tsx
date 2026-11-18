@@ -1632,13 +1632,40 @@ function SectionBlockText({
   );
 }
 
-function FallbackSections({ project }: { project: Project }) {
+/**
+ * D10 body blocks.
+ * - No custom sections: show any filled block unless its toggle is Off (legacy fallback).
+ * - Has custom sections: hide unless that block's toggle is explicitly On
+ *   (avoids leftover Overview/Impact text jumping above "The Problem", etc.).
+ */
+function isBodyBlockOn(
+  flag: boolean | undefined,
+  hasCustomSections: boolean,
+): boolean {
+  if (flag === false) return false;
+  if (flag === true) return true;
+  return !hasCustomSections;
+}
+
+function FallbackSections({
+  project,
+  hasCustomSections,
+}: {
+  project: Project;
+  hasCustomSections: boolean;
+}) {
   const floatIn = useFloatIn();
-  const showOverview = project.showOverview !== false && Boolean(project.description);
-  const problemText = project.showProblem !== false ? project.challenge : "";
-  const solutionText = project.showSolution !== false ? project.solution : "";
+  const showOverview =
+    isBodyBlockOn(project.showOverview, hasCustomSections) && Boolean(project.description);
+  const problemText = isBodyBlockOn(project.showProblem, hasCustomSections)
+    ? project.challenge
+    : "";
+  const solutionText = isBodyBlockOn(project.showSolution, hasCustomSections)
+    ? project.solution
+    : "";
   const showProblemSolution = Boolean(problemText?.trim() || solutionText?.trim());
-  const showImpact = project.showImpact !== false && Boolean(project.impact);
+  const showImpact =
+    isBodyBlockOn(project.showImpact, hasCustomSections) && Boolean(project.impact);
 
   return (
     <>
@@ -1946,8 +1973,8 @@ export default function CaseStudy({ full = false }: { full?: boolean }) {
 
         {/* Main content */}
         <div className="min-w-0 flex flex-col gap-14 md:gap-20">
-          {/* D10 body blocks (Overview / Problem / Solution / Impact) sit above custom sections. */}
-          <FallbackSections project={project} />
+          {/* D10 body blocks only appear above custom sections when that block is turned On. */}
+          <FallbackSections project={project} hasCustomSections={hasSections} />
           {hasSections &&
             groupSectionRows(displaySections).map(row =>
               row.shared ? (

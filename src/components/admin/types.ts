@@ -116,7 +116,8 @@ export type Project = {
   impact: string;
   /**
    * Per-block visibility for Case study body (D10).
-   * `undefined` / `true` = show when the field has content; `false` = hide even with content.
+   * With custom sections: only `true` shows the block above those sections.
+   * With no custom sections: `undefined` / `true` show when the field has content; `false` hides.
    */
   showOverview?: boolean;
   showProblem?: boolean;
