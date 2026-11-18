@@ -569,6 +569,7 @@ export function TextareaInput({
   hint,
   placeholder,
   toolbar = true,
+  action,
 }: {
   label: string;
   value: string;
@@ -577,12 +578,17 @@ export function TextareaInput({
   hint?: string;
   placeholder?: string;
   toolbar?: boolean;
+  /** Optional control rendered beside the label (e.g. per-field show/hide). */
+  action?: ReactNode;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-[color:var(--adm-text)] text-[13px] font-medium">{label}</label>
+      <div className="flex items-center justify-between gap-3">
+        <label className="text-[color:var(--adm-text)] text-[13px] font-medium">{label}</label>
+        {action}
+      </div>
       {hint && (
         <p className="text-[color:var(--adm-faint)] text-xs leading-relaxed -mt-0.5 mb-0.5">{hint}</p>
       )}

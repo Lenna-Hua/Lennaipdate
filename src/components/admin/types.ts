@@ -114,6 +114,14 @@ export type Project = {
   solution: string;
   /** "Impact" block on the case study page. */
   impact: string;
+  /**
+   * Per-block visibility for Case study body (D10).
+   * `undefined` / `true` = show when the field has content; `false` = hide even with content.
+   */
+  showOverview?: boolean;
+  showProblem?: boolean;
+  showSolution?: boolean;
+  showImpact?: boolean;
   /** Image or video (mp4/webm). Used on Work/Home grid cards. */
   coverImage: string;
   /** MIME from library upload/pick — lets /api/assets URLs without an extension render as video. */

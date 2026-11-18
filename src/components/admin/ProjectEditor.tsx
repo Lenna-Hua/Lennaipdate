@@ -248,6 +248,10 @@ function parseJsonProject(raw: string): ParseResult {
   if (typeof obj.challenge === "string") patch.challenge = obj.challenge;
   if (typeof obj.solution === "string") patch.solution = obj.solution;
   if (typeof obj.impact === "string") patch.impact = obj.impact;
+  if (typeof obj.showOverview === "boolean") patch.showOverview = obj.showOverview;
+  if (typeof obj.showProblem === "boolean") patch.showProblem = obj.showProblem;
+  if (typeof obj.showSolution === "boolean") patch.showSolution = obj.showSolution;
+  if (typeof obj.showImpact === "boolean") patch.showImpact = obj.showImpact;
   if (typeof obj.coverImage === "string") patch.coverImage = obj.coverImage;
   if (typeof obj.heroImage === "string") patch.heroImage = obj.heroImage;
   if (typeof obj.heroImageMime === "string") patch.heroImageMime = obj.heroImageMime;
@@ -350,6 +354,38 @@ function VisibilityToggle({
           }`}
         >
           {opt === "always" ? "Skim (default)" : "See more only"}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Compact on/off control for a single Case study body block (Overview / Problem / …). */
+function BodyBlockToggle({
+  enabled,
+  onChange,
+}: {
+  enabled: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <div className="flex items-center gap-1" role="group" aria-label="Section visibility">
+      {([
+        { value: true, label: "On" },
+        { value: false, label: "Off" },
+      ] as const).map((opt) => (
+        <button
+          key={opt.label}
+          type="button"
+          aria-pressed={enabled === opt.value}
+          onClick={() => onChange(opt.value)}
+          className={`text-[10px] uppercase tracking-widest px-2 py-0.5 border transition-colors ${
+            enabled === opt.value
+              ? "bg-[color:var(--adm-accent)] text-[color:var(--adm-on-accent)] border-[color:var(--adm-accent)]"
+              : "text-[color:var(--adm-muted)] border-[color:var(--adm-line-strong)] hover:border-[color:var(--adm-accent)]"
+          }`}
+        >
+          {opt.label}
         </button>
       ))}
     </div>
@@ -1417,6 +1453,10 @@ export function ProjectsEditor({
       challenge: "",
       solution: "",
       impact: "",
+      showOverview: true,
+      showProblem: true,
+      showSolution: true,
+      showImpact: true,
       coverImage: "",
       year: String(new Date().getFullYear()),
       featured: false,
@@ -2017,7 +2057,7 @@ export function ProjectsEditor({
               <EditorBox
                 code="D10"
                 title="Case study body (Overview · Problem · Solution · Impact)"
-                hint="These blocks render above your custom sections on the case study page. Empty fields are hidden."
+                hint="Each block has its own On/Off control. Off hides that block on the case study page without deleting the text. Empty fields stay hidden."
               >
                 <TextareaInput
                   label="Overview"
@@ -2025,6 +2065,12 @@ export function ProjectsEditor({
                   onChange={(v) => updateProject(selectedIdx, { description: v })}
                   hint="Main project summary: the Overview section under the cover."
                   rows={4}
+                  action={
+                    <BodyBlockToggle
+                      enabled={project.showOverview !== false}
+                      onChange={(v) => updateProject(selectedIdx, { showOverview: v })}
+                    />
+                  }
                 />
                 <TextareaInput
                   label="Problem"
@@ -2032,6 +2078,12 @@ export function ProjectsEditor({
                   onChange={(v) => updateProject(selectedIdx, { challenge: v })}
                   hint="Left card under Overview: the challenge you tackled."
                   rows={3}
+                  action={
+                    <BodyBlockToggle
+                      enabled={project.showProblem !== false}
+                      onChange={(v) => updateProject(selectedIdx, { showProblem: v })}
+                    />
+                  }
                 />
                 <TextareaInput
                   label="Solution"
@@ -2039,6 +2091,12 @@ export function ProjectsEditor({
                   onChange={(v) => updateProject(selectedIdx, { solution: v })}
                   hint="Right card under Overview: your approach."
                   rows={3}
+                  action={
+                    <BodyBlockToggle
+                      enabled={project.showSolution !== false}
+                      onChange={(v) => updateProject(selectedIdx, { showSolution: v })}
+                    />
+                  }
                 />
                 <TextareaInput
                   label="Impact"
@@ -2046,6 +2104,12 @@ export function ProjectsEditor({
                   onChange={(v) => updateProject(selectedIdx, { impact: v })}
                   hint="Results / outcomes block below Problem & Solution."
                   rows={3}
+                  action={
+                    <BodyBlockToggle
+                      enabled={project.showImpact !== false}
+                      onChange={(v) => updateProject(selectedIdx, { showImpact: v })}
+                    />
+                  }
                 />
               </EditorBox>
 

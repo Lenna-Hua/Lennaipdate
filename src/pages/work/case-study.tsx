@@ -145,6 +145,11 @@ interface Project {
   challenge: string;
   solution: string;
   impact: string;
+  /** Per-block Case study body visibility. Undefined/true = show; false = hide. */
+  showOverview?: boolean;
+  showProblem?: boolean;
+  showSolution?: boolean;
+  showImpact?: boolean;
   coverImage: string;
   coverMime?: string;
   coverPoster?: string;
@@ -1239,9 +1244,56 @@ function ImageSlideshow({
   onImageClick: (src: string, caption?: string) => void;
 }) {
   const [activeIdx, setActiveIdx] = useState(0);
+  // Portrait stage only when at least one slide is vertical; otherwise fit landscape
+  // so horizontal-only reels don't sit in a tall empty frame.
+  const [stage, setStage] = useState<{ mode: "portrait" | "landscape"; aspect: string }>({
+    mode: "landscape",
+    aspect: "16 / 9",
+  });
   const currentSrc = slides[activeIdx] ?? slides[0];
   const currentCaption =
     section.imageCaptions?.[activeIdx]?.trim() || section.caption?.trim() || "";
+  const slideKey = slides.join("\0");
+
+  useEffect(() => {
+    let alive = true;
+    const sources = slideKey.split("\0").filter(Boolean);
+    Promise.all(
+      sources.map(
+        (src) =>
+          new Promise<{ w: number; h: number } | null>((resolve) => {
+            const img = new Image();
+            img.onload = () =>
+              resolve({
+                w: img.naturalWidth || 0,
+                h: img.naturalHeight || 0,
+              });
+            img.onerror = () => resolve(null);
+            img.src = src;
+          }),
+      ),
+    ).then((dims) => {
+      if (!alive) return;
+      const valid = dims.filter((d): d is { w: number; h: number } => !!d && d.w > 0 && d.h > 0);
+      if (!valid.length) {
+        setStage({ mode: "landscape", aspect: "16 / 9" });
+        return;
+      }
+      if (valid.some((d) => d.h > d.w)) {
+        setStage({ mode: "portrait", aspect: "9 / 16" });
+        return;
+      }
+      // Tallest landscape ratio keeps the stage stable across slides without letterboxing.
+      let best = valid[0];
+      for (const d of valid) {
+        if (d.h / d.w > best.h / best.w) best = d;
+      }
+      setStage({ mode: "landscape", aspect: `${best.w} / ${best.h}` });
+    });
+    return () => {
+      alive = false;
+    };
+  }, [slideKey]);
 
   const nextSlide = () => setActiveIdx((prev) => (prev + 1) % slides.length);
   const prevSlide = () => setActiveIdx((prev) => (prev - 1 + slides.length) % slides.length);
@@ -1332,8 +1384,15 @@ function ImageSlideshow({
           </div>
         </div>
 
-        {/* Fixed stage height so caption/dots don’t jump; images fade + drift on change */}
-        <div className="relative w-full h-[50vh] md:h-[65vh] min-h-[220px]">
+        {/* Stage: portrait reel keeps tall frame; landscape-only reel matches slide aspect */}
+        <div
+          className={
+            stage.mode === "portrait"
+              ? "relative w-full h-[50vh] md:h-[65vh] min-h-[220px]"
+              : "relative w-full min-h-[160px]"
+          }
+          style={stage.mode === "landscape" ? { aspectRatio: stage.aspect } : undefined}
+        >
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={activeIdx}
@@ -1341,14 +1400,16 @@ function ImageSlideshow({
               animate={{ opacity: 1, x: 0, scale: 1 }}
               exit={{ opacity: 0, x: -20, scale: 0.985 }}
               transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-              className="absolute inset-0 flex items-center justify-center p-3"
+              className={`absolute inset-0 flex items-center justify-center ${
+                stage.mode === "portrait" ? "p-3" : "p-0"
+              }`}
             >
               <SafeImage
                 src={currentSrc}
                 alt={currentCaption || `Slide ${activeIdx + 1}`}
                 className="block max-w-full max-h-full w-auto h-auto object-contain transition-transform duration-500 group-hover:scale-[1.01]"
                 loading="eager"
-                fallbackAspect="9 / 16"
+                fallbackAspect={stage.aspect}
               />
             </motion.div>
           </AnimatePresence>
@@ -1573,9 +1634,15 @@ function SectionBlockText({
 
 function FallbackSections({ project }: { project: Project }) {
   const floatIn = useFloatIn();
+  const showOverview = project.showOverview !== false && Boolean(project.description);
+  const problemText = project.showProblem !== false ? project.challenge : "";
+  const solutionText = project.showSolution !== false ? project.solution : "";
+  const showProblemSolution = Boolean(problemText?.trim() || solutionText?.trim());
+  const showImpact = project.showImpact !== false && Boolean(project.impact);
+
   return (
     <>
-      {project.description && (
+      {showOverview && (
         <motion.div
           className="flex flex-col gap-5"
           {...floatIn}
@@ -1587,12 +1654,12 @@ function FallbackSections({ project }: { project: Project }) {
           {project.bullets && project.bullets.length > 0 && <DashList items={project.bullets} />}
         </motion.div>
       )}
-      {(project.challenge || project.solution) && (
+      {showProblemSolution && (
         <motion.div className="flex flex-col" {...floatIn}>
-          <ProblemSolutionPair problem={project.challenge} solution={project.solution} />
+          <ProblemSolutionPair problem={problemText} solution={solutionText} />
         </motion.div>
       )}
-      {project.impact && (
+      {showImpact && (
         <motion.div
           className="flex flex-col gap-4 border-t border-border pt-4"
           {...floatIn}
@@ -1879,30 +1946,31 @@ export default function CaseStudy({ full = false }: { full?: boolean }) {
 
         {/* Main content */}
         <div className="min-w-0 flex flex-col gap-14 md:gap-20">
-          {hasSections
-            ? groupSectionRows(displaySections).map(row =>
-                row.shared ? (
-                  <div key={row.key} className="grid grid-cols-1 md:grid-cols-6 gap-4 md:gap-6 items-start">
-                    {row.sections.map(s => (
-                      <div key={s.id} className={sharesRow(s) ? SHARED_ROW_SPAN[s.columns] : undefined}>
-                        <SectionBlock
-                          section={s}
-                          expanded={showDetail}
-                          onImageClick={(src, cap) => setLightbox({ src, caption: cap })}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <SectionBlock
-                    key={row.key}
-                    section={row.sections[0]!}
-                    expanded={showDetail}
-                    onImageClick={(src, cap) => setLightbox({ src, caption: cap })}
-                  />
-                ),
-              )
-            : <FallbackSections project={project} />}
+          {/* D10 body blocks (Overview / Problem / Solution / Impact) sit above custom sections. */}
+          <FallbackSections project={project} />
+          {hasSections &&
+            groupSectionRows(displaySections).map(row =>
+              row.shared ? (
+                <div key={row.key} className="grid grid-cols-1 md:grid-cols-6 gap-4 md:gap-6 items-start">
+                  {row.sections.map(s => (
+                    <div key={s.id} className={sharesRow(s) ? SHARED_ROW_SPAN[s.columns] : undefined}>
+                      <SectionBlock
+                        section={s}
+                        expanded={showDetail}
+                        onImageClick={(src, cap) => setLightbox({ src, caption: cap })}
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <SectionBlock
+                  key={row.key}
+                  section={row.sections[0]!}
+                  expanded={showDetail}
+                  onImageClick={(src, cap) => setLightbox({ src, caption: cap })}
+                />
+              ),
+            )}
 
           {hasDetailSections && (
             <motion.div
