@@ -43,6 +43,8 @@ export type PinterestCardProject = {
   cardLayout?: CardLayout;
   /** Password-protected case study — shows a lock badge. */
   protected?: boolean;
+  /** Per-card override for details under the card; undefined = use showDetails prop. */
+  showCardDetails?: boolean;
 };
 
 /**
@@ -149,8 +151,18 @@ export const PinterestCard = memo(function PinterestCard({
   useEffect(() => () => clearHoverTimer(), [clearHoverTimer]);
 
   const horizontal = project.cardLayout === "horizontal";
-  const isBelow = showDetails && detailsPlacement === "below";
-  const isOverlay = showDetails && detailsPlacement === "overlay";
+  /** Extra info (subtitle / description / metadata). Per-card override wins over the page toggle. */
+  const detailsVisible = project.showCardDetails ?? showDetails;
+  /**
+   * Below-card chrome (title row): stay below when placement is below and either the
+   * page wants details or this card explicitly turns them on. Global "hide" still
+   * moves the title into the image overlay (live Work toolbar behavior).
+   */
+  const useBelowLayout =
+    detailsPlacement === "below" &&
+    (showDetails || project.showCardDetails === true);
+  const isBelow = useBelowLayout;
+  const isOverlay = detailsVisible && detailsPlacement === "overlay";
   const effectiveDescription = project.cardDescription || project.description || "";
 
   // The inner media box containing image, video, overlays, and badges
@@ -382,6 +394,8 @@ export const PinterestCard = memo(function PinterestCard({
               ) : null}
             </div>
 
+            {detailsVisible ? (
+              <>
             {/* Subtitle */}
             {showSubtitle && project.subtitle ? (
               <p className="text-xs sm:text-[13px] font-sans font-medium text-foreground/80 leading-snug line-clamp-2">
@@ -441,6 +455,8 @@ export const PinterestCard = memo(function PinterestCard({
                   : null}
               </div>
             )}
+              </>
+            ) : null}
           </div>
         )}
       </a>

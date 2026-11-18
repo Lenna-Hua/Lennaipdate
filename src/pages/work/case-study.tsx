@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿import { useParams, Link } from "wouter";
+import { useParams, Link } from "wouter";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
@@ -6,9 +6,9 @@ import projectsSeed from "@/data/projects.json";
 import identitySeed from "@/data/identity.json";
 import contactSeed from "@/data/contact.json";
 import { useContent } from "@/lib/use-content";
-import { BRAND_EASE } from "@/lib/brand";
+import { BRAND, BRAND_EASE } from "@/lib/brand";
 import { useFloatIn } from "@/lib/motion";
-import { AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, Lock, Maximize2, Pause, Play, Volume2, VolumeX } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Lock, Maximize2, Pause, Play, Volume2, VolumeX } from "lucide-react";
 import { SafeImage } from "@/components/SafeImage";
 import { CoverVideo, EmbedCover, isVideo } from "@/components/CoverMedia";
 import {
@@ -564,51 +564,129 @@ function ProjectNavCard({
   );
 }
 
-function ProblemCard({ text }: { text: React.ReactNode }) {
+/** Split first short line / sentence into a headline for the staggered pair cards. */
+function splitHeadlineBody(text: string): { headline: string | null; body: string } {
+  const trimmed = text.trim();
+  if (!trimmed) return { headline: null, body: "" };
+
+  const nl = trimmed.indexOf("\n");
+  if (nl > 0 && nl <= 72) {
+    const headline = trimmed.slice(0, nl).trim();
+    const body = trimmed.slice(nl + 1).trim();
+    if (headline && body) return { headline, body };
+  }
+
+  const match = trimmed.match(/^([^.!?\n]{8,70})[.!?](?:\s+|$)([\s\S]*)$/);
+  if (match?.[2]?.trim()) {
+    return { headline: match[1].trim(), body: match[2].trim() };
+  }
+
+  if (trimmed.length <= 96) return { headline: trimmed, body: "" };
+  return { headline: null, body: trimmed };
+}
+
+function ProblemSolutionBody({ text }: { text: string }) {
+  const { headline, body } = splitHeadlineBody(text);
   return (
-    <div className="flex flex-col justify-between h-full bg-gradient-to-b from-[#E8715A]/[0.06] via-card to-card dark:from-[#E8715A]/[0.10] dark:via-card dark:to-card border border-border border-t-4 border-t-[#E8715A] p-6 sm:p-7 md:p-8 shadow-sm transition-all duration-300">
-      <div className="flex flex-col">
-        <div className="flex items-center justify-between gap-3 pb-4 mb-5 border-b border-border/80">
-          <div className="flex items-center gap-2.5">
-            <span className="w-6 h-6 flex items-center justify-center bg-[#E8715A]/15 text-[#C45A44] dark:text-[#E8715A] shrink-0">
-              <AlertCircle className="w-3.5 h-3.5" aria-hidden="true" />
-            </span>
-            <span className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-[#C45A44] dark:text-[#E8715A]">
-              The Problem
-            </span>
-          </div>
-          <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-muted-foreground/80 px-2 py-0.5 border border-border/70 bg-background/60">
-            Challenge
-          </span>
-        </div>
-        <ClampedText lines={6}>{text}</ClampedText>
+    <div className="flex flex-col gap-2.5">
+      {headline && (
+        <p className="text-foreground font-semibold text-lg md:text-xl leading-snug tracking-tight">
+          {renderRichText(headline)}
+        </p>
+      )}
+      {body ? <ClampedText lines={5}>{body}</ClampedText> : null}
+    </div>
+  );
+}
+
+function ProblemBlock({ text }: { text: string }) {
+  return (
+    <div className="flex flex-col gap-3 max-w-xl">
+      <div className="inline-flex w-max items-center gap-3 bg-muted text-foreground px-4 py-2.5 border border-border/70">
+        <span className="font-mono text-xs font-bold uppercase tracking-[0.18em]">Problem</span>
+        <span className="font-bold text-sm leading-none" style={{ color: BRAND.coral }} aria-hidden>
+          !
+        </span>
+      </div>
+      <div className="bg-muted/80 dark:bg-card border border-border px-5 py-5 sm:px-6 sm:py-6">
+        <ProblemSolutionBody text={text} />
       </div>
     </div>
   );
 }
 
-function SolutionCard({ text }: { text: React.ReactNode }) {
+function SolutionBlock({ text }: { text: string }) {
   return (
-    <div className="flex flex-col justify-between h-full bg-gradient-to-b from-primary/[0.06] via-card to-card dark:from-primary/[0.12] dark:via-card dark:to-card border border-border border-t-4 border-t-primary p-6 sm:p-7 md:p-8 shadow-sm transition-all duration-300">
-      <div className="flex flex-col">
-        <div className="flex items-center justify-between gap-3 pb-4 mb-5 border-b border-border/80">
-          <div className="flex items-center gap-2.5">
-            <span className="w-6 h-6 flex items-center justify-center bg-primary/15 text-primary shrink-0">
-              <CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" />
-            </span>
-            <span className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-primary">
-              The Solution
-            </span>
-          </div>
-          <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-primary/80 px-2 py-0.5 border border-primary/25 bg-primary/10">
-            Approach
-          </span>
-        </div>
-        <ClampedText lines={6}>{text}</ClampedText>
+    <div className="flex flex-col gap-3 max-w-xl md:ml-auto">
+      <div className="bg-muted/80 dark:bg-card border border-border px-5 py-5 sm:px-6 sm:py-6">
+        <ProblemSolutionBody text={text} />
+      </div>
+      <div
+        className="inline-flex w-max items-center gap-3 text-white px-4 py-2.5 md:self-end"
+        style={{ backgroundColor: BRAND.blue }}
+      >
+        <span className="font-mono text-xs font-bold uppercase tracking-[0.18em]">Solution</span>
+        <Check className="w-3.5 h-3.5 shrink-0" strokeWidth={3} style={{ color: BRAND.teal }} aria-hidden />
       </div>
     </div>
   );
 }
+
+/** Staggered Problem → Solution pair with connecting elbow (reference layout, brand tokens, sharp corners). */
+function ProblemSolutionPair({
+  problem,
+  solution,
+}: {
+  problem?: string | null;
+  solution?: string | null;
+}) {
+  const hasProblem = !!problem?.trim();
+  const hasSolution = !!solution?.trim();
+  if (!hasProblem && !hasSolution) return null;
+
+  if (hasProblem && !hasSolution) return <ProblemBlock text={problem!} />;
+  if (!hasProblem && hasSolution) return <SolutionBlock text={solution!} />;
+
+  return (
+    <div className="relative grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-x-12 md:gap-y-0 md:items-start py-2 md:py-6">
+      <div className="relative z-10 md:col-start-1 md:row-start-1 md:max-w-[92%]">
+        <ProblemBlock text={problem!} />
+      </div>
+
+      {/* Desktop elbow connector — fixed aspect so the kink stays readable */}
+      <svg
+        className="pointer-events-none absolute left-[42%] top-[18%] z-0 hidden h-[58%] w-[22%] md:block text-foreground/40 dark:text-foreground/50"
+        viewBox="0 0 80 160"
+        preserveAspectRatio="none"
+        aria-hidden
+      >
+        <polyline
+          points="4,8 40,8 40,152 76,152"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.25"
+          vectorEffect="non-scaling-stroke"
+        />
+        <circle cx="4" cy="8" r="3" fill="currentColor" />
+        <circle cx="76" cy="152" r="3" fill="currentColor" />
+      </svg>
+
+      {/* Mobile vertical connector */}
+      <div className="md:hidden flex justify-center -my-2" aria-hidden>
+        <div className="flex flex-col items-center text-foreground/35">
+          <span className="w-1.5 h-1.5 bg-current" />
+          <span className="w-px h-6 bg-current" />
+          <span className="w-1.5 h-1.5 bg-current" />
+        </div>
+      </div>
+
+      <div className="relative z-10 md:col-start-2 md:row-start-1 md:pt-24 lg:pt-32 md:pl-2 md:max-w-[92%] md:justify-self-end">
+        <SolutionBlock text={solution!} />
+      </div>
+    </div>
+  );
+}
+
 
 function DashList({ items }: { items: string[] }) {
   return (
@@ -1171,9 +1249,7 @@ function ImageSlideshow({
   return (
     <div className="flex flex-col gap-3">
       <div
-        className={`w-full overflow-hidden group relative flex items-center justify-center cursor-pointer select-none border border-border/60 ${
-          section.transparent ? "" : "bg-muted/70"
-        }`}
+        className="w-full max-w-full mx-auto overflow-hidden group relative flex items-center justify-center cursor-pointer select-none border border-border/60 bg-transparent"
         onClick={nextSlide}
         role="region"
         aria-roledescription="carousel"
@@ -1256,23 +1332,23 @@ function ImageSlideshow({
           </div>
         </div>
 
-        {/* Slide Image with AnimatePresence */}
-        <div className="w-full flex items-center justify-center min-h-[260px] md:min-h-[380px] p-2">
-          <AnimatePresence mode="wait">
+        {/* Fixed stage height so caption/dots don’t jump; images fade + drift on change */}
+        <div className="relative w-full h-[50vh] md:h-[65vh] min-h-[220px]">
+          <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={activeIdx}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="w-full flex items-center justify-center"
+              initial={{ opacity: 0, x: 28, scale: 0.985 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              exit={{ opacity: 0, x: -20, scale: 0.985 }}
+              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+              className="absolute inset-0 flex items-center justify-center p-3"
             >
               <SafeImage
                 src={currentSrc}
                 alt={currentCaption || `Slide ${activeIdx + 1}`}
-                className="block max-w-full max-h-[50vh] md:max-h-[65vh] w-auto h-auto object-contain transition-transform duration-500 group-hover:scale-[1.01]"
-                loading="lazy"
-                fallbackAspect="16 / 9"
+                className="block max-w-full max-h-full w-auto h-auto object-contain transition-transform duration-500 group-hover:scale-[1.01]"
+                loading="eager"
+                fallbackAspect="9 / 16"
               />
             </motion.div>
           </AnimatePresence>
@@ -1363,7 +1439,7 @@ function ImageSection({
             />
           </div>
         ) : (
-          <div className={`w-full overflow-hidden ${section.transparent ? "" : "bg-muted"}`}>
+          <div className="w-fit max-w-full mx-auto overflow-hidden bg-transparent">
             <SectionVideo src={section.src!} loop={!!section.loop} label={section.caption || section.title} />
           </div>
         )}
@@ -1395,7 +1471,7 @@ function ImageSection({
         </h2>
       )}
       <div
-        className={`w-full overflow-hidden group relative flex items-center justify-center ${section.transparent ? "" : "bg-muted"} ${clickable ? "cursor-zoom-in" : ""}`}
+        className={`w-fit max-w-full mx-auto overflow-hidden group relative flex items-center justify-center bg-transparent ${clickable ? "cursor-zoom-in" : ""}`}
         onClick={() => clickable && onImageClick(section.src!, section.caption)}
         role={clickable ? "button" : undefined}
         tabIndex={clickable ? 0 : undefined}
@@ -1411,7 +1487,7 @@ function ImageSection({
           onError={() => setErrored(true)}
         />
         {clickable && (
-          <div className={`absolute inset-0 transition-colors duration-300 flex items-center justify-center ${section.transparent ? "" : "bg-black/0 group-hover:bg-black/15"}`}>
+          <div className="absolute inset-0 transition-colors duration-300 flex items-center justify-center bg-black/0 group-hover:bg-black/15">
             <span className={EXPAND_HINT}>Expand</span>
           </div>
         )}
@@ -1458,10 +1534,7 @@ function SectionBlockText({
             <h2 className={SECTION_TITLE}>{title}</h2>
           </div>
         )}
-        <div className={`grid gap-6 md:gap-8 items-stretch ${problem && solution ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"}`}>
-          {problem && <ProblemCard text={problem} />}
-          {solution && <SolutionCard text={solution} />}
-        </div>
+        <ProblemSolutionPair problem={problem} solution={solution} />
       </motion.div>
     );
   }
@@ -1515,12 +1588,8 @@ function FallbackSections({ project }: { project: Project }) {
         </motion.div>
       )}
       {(project.challenge || project.solution) && (
-        <motion.div
-          className={`grid gap-6 md:gap-8 items-stretch ${project.challenge && project.solution ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"}`}
-          {...floatIn}
-        >
-          {project.challenge && <ProblemCard text={project.challenge} />}
-          {project.solution && <SolutionCard text={project.solution} />}
+        <motion.div className="flex flex-col" {...floatIn}>
+          <ProblemSolutionPair problem={project.challenge} solution={project.solution} />
         </motion.div>
       )}
       {project.impact && (

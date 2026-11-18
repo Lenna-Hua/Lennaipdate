@@ -9,6 +9,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
@@ -17,6 +18,7 @@ import {
   formatAspect,
   formatSize,
   guidelineFor,
+  recommendedCropsFor,
   type MediaCheck,
   type MediaUsage,
 } from "@/lib/media-guidelines";
@@ -91,8 +93,18 @@ const NO_ADJUST: Adjust = { brightness: 100, contrast: 100, saturation: 100 };
 const MIN_CROP = 0.03;
 const EXT: Record<string, string> = { "image/jpeg": "jpg", "image/webp": "webp", "image/png": "png" };
 const ASPECT_PRESETS: [number, number][] = [[1, 1], [4, 5], [3, 4], [4, 3], [3, 2], [16, 9], [9, 16], [16, 7]];
+/** Checkerboard so transparent pixels stay visible in the editor (no grey fill). */
+const EDITOR_CHECKER: CSSProperties = {
+  backgroundColor: "#FFFFFF",
+  backgroundImage: "conic-gradient(#E4E2DC 25%, transparent 0 50%, #E4E2DC 0 75%, transparent 0)",
+  backgroundSize: "16px 16px",
+};
 
 const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
+
+function aspectKeyOf(pair: [number, number]): string {
+  return `${pair[0]}:${pair[1]}`;
+}
 
 function fitAspect(na: number | null): Rect {
   if (!na) return { x: 0, y: 0, w: 1, h: 1 };
@@ -371,9 +383,12 @@ function ImageEditor({
     out.height = oh;
     const ctx = out.getContext("2d")!;
     ctx.imageSmoothingQuality = "high";
+    // JPEG has no alpha: white underlay only for that format. PNG/WebP keep transparency.
     if (format === "image/jpeg") {
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, ow, oh);
+    } else {
+      ctx.clearRect(0, 0, ow, oh);
     }
     const filter = filterCss(adj);
     const nativeFilter = filter !== "none" && typeof (ctx as { filter?: unknown }).filter === "string";
@@ -514,11 +529,17 @@ function ImageEditor({
     }
   };
 
+  const recCrops = useMemo(() => recommendedCropsFor(usage), [usage]);
+  const horizontalKey = recCrops.horizontal ? aspectKeyOf(recCrops.horizontal) : null;
+  const verticalKey = recCrops.vertical ? aspectKeyOf(recCrops.vertical) : null;
+
   const aspectOptions = useMemo(() => {
     const keys = ASPECT_PRESETS.map(([a, b]) => `${a}:${b}`);
-    if (siteAspect && !keys.includes(siteAspect)) keys.unshift(siteAspect);
+    for (const extra of [siteAspect, horizontalKey, verticalKey]) {
+      if (extra && !keys.includes(extra)) keys.unshift(extra);
+    }
     return ["free", "original", ...keys];
-  }, [siteAspect]);
+  }, [siteAspect, horizontalKey, verticalKey]);
 
   const sizeOptions = useMemo(
     () => [0, recLong, 3840, 2560, 1920, 1600, 1200, 800, 512].filter((n, i, a) => a.indexOf(n) === i),
@@ -536,11 +557,11 @@ function ImageEditor({
     <>
       <div className="flex-1 min-h-0 grid lg:grid-cols-[minmax(0,1fr)_340px] overflow-y-auto lg:overflow-hidden">
         <div className="flex flex-col gap-3 p-4 min-h-0 lg:overflow-y-auto">
-          <div className="flex items-center justify-center rounded-lg bg-[color:var(--adm-input)] p-3 min-h-[240px]">
+          <div className="flex items-center justify-center rounded-lg p-3 min-h-[240px]" style={EDITOR_CHECKER}>
             <div
               ref={stageRef}
               className="relative select-none touch-none overflow-hidden cursor-crosshair"
-              style={{ width: `min(100%, calc(56vh * ${W / H}))`, aspectRatio: `${W} / ${H}` }}
+              style={{ width: `min(100%, calc(56vh * ${W / H}))`, aspectRatio: `${W} / ${H}`, ...EDITOR_CHECKER }}
               onPointerDown={onPointerDown}
               onPointerMove={onPointerMove}
               onPointerUp={endDrag}
@@ -587,6 +608,35 @@ function ImageEditor({
           </p>
 
           <Group title="Crop shape">
+            {(horizontalKey || verticalKey) && (
+              <div className="flex flex-col gap-1.5">
+                <p className="text-[11px] text-[color:var(--adm-muted)]">
+                  Recommended for {guide.label}
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {horizontalKey && (
+                    <button
+                      type="button"
+                      className={chip(aspectKey === horizontalKey)}
+                      onClick={() => setAspectKey(horizontalKey)}
+                    >
+                      Horizontal · {horizontalKey}
+                      {horizontalKey === siteAspect ? " · site" : ""}
+                    </button>
+                  )}
+                  {verticalKey && (
+                    <button
+                      type="button"
+                      className={chip(aspectKey === verticalKey)}
+                      onClick={() => setAspectKey(verticalKey)}
+                    >
+                      Vertical · {verticalKey}
+                      {verticalKey === siteAspect ? " · site" : ""}
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
             <div className="flex flex-wrap gap-1.5">
               {aspectOptions.map((k) => (
                 <button key={k} type="button" className={chip(aspectKey === k)} onClick={() => setAspectKey(k)}>
@@ -642,11 +692,16 @@ function ImageEditor({
                 onChange={(e) => setFormat(e.target.value as OutFormat)}
                 className="bg-[color:var(--adm-surface)] border border-[color:var(--adm-line-strong)] text-[color:var(--adm-text)] px-2 py-1 text-xs"
               >
-                <option value="image/jpeg">JPG: photos, smallest</option>
+                <option value="image/jpeg">JPG: photos, smallest (no transparency)</option>
                 <option value="image/webp">WebP: small, keeps transparency</option>
-                <option value="image/png">PNG: lossless, large</option>
+                <option value="image/png">PNG: lossless, keeps transparency</option>
               </select>
             </label>
+            {format === "image/jpeg" && (
+              <p className="text-[11px] text-[color:var(--adm-faint)] leading-snug">
+                JPG fills see-through pixels with white. Use WebP or PNG to keep a transparent background.
+              </p>
+            )}
             {format !== "image/png" && (
               <Slider label="Quality" value={quality} min={40} max={100} reset={85} suffix="" onChange={setQuality} />
             )}
@@ -777,7 +832,10 @@ function InfoOnly({
     <>
       <div className="flex-1 min-h-0 grid lg:grid-cols-[minmax(0,1fr)_340px] overflow-y-auto lg:overflow-hidden">
         <div className="flex flex-col gap-3 p-4 min-h-0 lg:overflow-y-auto">
-          <div className="flex items-center justify-center rounded-lg bg-[color:var(--adm-input)] p-3 min-h-[240px]">
+          <div
+            className="flex items-center justify-center rounded-lg p-3 min-h-[240px]"
+            style={isVideo ? { backgroundColor: "var(--adm-input)" } : EDITOR_CHECKER}
+          >
             {isVideo ? (
               <video src={loaded.url} controls muted playsInline className="max-w-full max-h-[56vh]" />
             ) : loaded.img ? (
@@ -849,11 +907,19 @@ function InfoOnly({
 function Recommendation({ usage, kind }: { usage?: MediaUsage; kind: "image" | "video" }) {
   const g = guidelineFor(usage);
   const spec = kind === "video" ? g.video : g.image;
+  const crops = recommendedCropsFor(usage);
+  const cropHint = [
+    crops.horizontal ? `Horizontal ${crops.horizontal[0]}:${crops.horizontal[1]}` : null,
+    crops.vertical ? `Vertical ${crops.vertical[0]}:${crops.vertical[1]}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
   return (
     <Group title={`Recommended · ${g.label}`}>
       {spec ? (
         <>
           <InfoRow label="Dimensions" value={`${spec.width} × ${spec.height} px${g.aspect ? ` (${g.aspect[0]}:${g.aspect[1]})` : ""}`} />
+          {cropHint && <InfoRow label="Crop" value={cropHint} />}
           <InfoRow label="File size" value={`under ${formatSize(spec.targetBytes)}`} />
           {"maxSeconds" in spec && <InfoRow label="Length" value={`${spec.maxSeconds}s or less`} />}
           <InfoRow label="Format" value={spec.format} />

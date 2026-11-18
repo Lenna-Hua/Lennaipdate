@@ -1,4 +1,4 @@
-﻿﻿﻿/**
+﻿/**
  * ProjectEditor — edit project details, sections, cover images, tags, etc.
  * Includes SectionsEditor for managing text/image/problem-solution blocks.
  */
@@ -255,6 +255,7 @@ function parseJsonProject(raw: string): ParseResult {
   if (obj.cardLayout === "vertical" || obj.cardLayout === "horizontal") {
     patch.cardLayout = obj.cardLayout;
   }
+  if (typeof obj.showCardDetails === "boolean") patch.showCardDetails = obj.showCardDetails;
   if (typeof obj.year === "string") patch.year = obj.year;
   if (typeof obj.period === "string") patch.period = obj.period;
   if (typeof obj.featured === "boolean") patch.featured = obj.featured;
@@ -1047,7 +1048,7 @@ function SectionsEditor({
                 onChange={(v) => update(idx, { transparent: v })}
               />
               <p className="text-[color:var(--adm-faint)] text-xs -mt-1">
-                For PNG, WebP or GIF files with see-through areas: removes the card behind the image.
+                Case study images never get a grey pad. Tick this for PNG/WebP/GIF with see-through areas so admin previews use a checkerboard instead of a solid tile.
               </p>
             </>
           )}
@@ -1891,6 +1892,55 @@ export function ProjectsEditor({
                 <p className="text-[color:var(--adm-faint)] text-xs leading-relaxed">
                   Vertical = one 4:5 card. Horizontal = the width of two cards plus the gap between them, same height.
                 </p>
+              </EditorBox>
+
+              <EditorBox
+                code="D6b"
+                title="Information below project card (Subtitle, Description, Users, Methods)"
+                hint="Show / hide the text under this card on Home & Work. Does not change the case study detail page (Overview · Problem · Solution · Impact stay there)."
+              >
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-[color:var(--adm-text)] font-medium">
+                      Information visibility for this card
+                    </span>
+                    <span className="text-[10px] font-mono text-[color:var(--adm-faint)] shrink-0">
+                      {project.showCardDetails === undefined
+                        ? "Following site default"
+                        : project.showCardDetails
+                          ? "✓ Showing"
+                          : "✕ Not Showing"}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(
+                      [
+                        { value: undefined as boolean | undefined, label: "Default (Global)" },
+                        { value: true, label: "Show (Turned On)" },
+                        { value: false, label: "Not Showing (Turned Off)" },
+                      ] as const
+                    ).map((opt) => {
+                      const active = project.showCardDetails === opt.value;
+                      return (
+                        <button
+                          key={String(opt.value)}
+                          type="button"
+                          onClick={() => updateProject(selectedIdx, { showCardDetails: opt.value })}
+                          className={`py-2 px-3 rounded border text-xs text-center transition-colors ${
+                            active
+                              ? "border-[color:var(--adm-accent)] bg-[color:var(--adm-accent)]/10 text-[color:var(--adm-text)] font-semibold"
+                              : "border-[color:var(--adm-line-strong)] text-[color:var(--adm-muted)] hover:border-[color:var(--adm-accent)]"
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[color:var(--adm-faint)] text-xs leading-relaxed">
+                    Default follows Homepage → Selected Work / Appearance → Work cards. Overview · Problem · Solution · Impact on the case study page are separate and always use those fields when filled.
+                  </p>
+                </div>
               </EditorBox>
 
               <EditorBox

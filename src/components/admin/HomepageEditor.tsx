@@ -126,7 +126,7 @@ export function HomepageEditor({
         <div className="border border-[color:var(--adm-line)] p-4 flex flex-col gap-3">
           <span className="text-[color:var(--adm-accent)] text-sm uppercase tracking-widest">Hero media (optional)</span>
           <p className="text-[color:var(--adm-muted)] text-xs">
-            Image or video shown below the intro. Leave empty to keep the current text-only hero on the live site.
+            Image or video shown as the first Selected Work tile (lightbox title: Showreel). Crop to Horizontal 16:9 or Vertical 9:16 in the editor so it matches the card ratio. Transparent WebP/PNG keep a clear background — no grey pad.
           </p>
           <input
             type="text"
@@ -166,14 +166,21 @@ export function HomepageEditor({
           )}
           {heroMedia ? (
             <div
-              className="rounded overflow-hidden border border-[color:var(--adm-line-strong)] mt-1"
-              style={{ maxWidth: "480px", aspectRatio: "16 / 9" }}
+              className="rounded overflow-hidden border border-[color:var(--adm-line-strong)] mt-1 bg-transparent"
+              style={{
+                maxWidth: "480px",
+                aspectRatio: "16 / 9",
+                backgroundColor: "#FFFFFF",
+                backgroundImage:
+                  "conic-gradient(#E4E2DC 25%, transparent 0 50%, #E4E2DC 0 75%, transparent 0)",
+                backgroundSize: "16px 16px",
+              }}
             >
               <CoverMedia
                 src={heroMedia}
                 alt={heroMediaAlt || "Hero media preview"}
                 mimeHint={heroMediaMime}
-                className="w-full h-full object-cover bg-[color:var(--adm-input)]"
+                className="w-full h-full object-cover bg-transparent"
                 loading="eager"
               />
             </div>

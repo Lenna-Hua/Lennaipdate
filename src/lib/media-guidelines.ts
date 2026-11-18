@@ -22,6 +22,14 @@ export type MediaGuideline = {
   label: string;
   /** Shape the site crops this media to; used as the default crop in the editor. */
   aspect?: [number, number];
+  /**
+   * Quick-pick crops in the image editor.
+   * `horizontal` / `vertical` surface as labeled chips even when `aspect` is unset.
+   */
+  recommendedCrops?: {
+    horizontal?: [number, number];
+    vertical?: [number, number];
+  };
   image?: ImageSpec;
   video?: VideoSpec;
   note?: string;
@@ -40,19 +48,22 @@ const MP4 = "MP4 (H.264), muted";
 export const MEDIA_GUIDELINES: Record<MediaUsage, MediaGuideline> = {
   general: {
     label: "Library upload",
+    recommendedCrops: { horizontal: [16, 9], vertical: [4, 5] },
     image: { width: 2400, height: 1600, targetBytes: 800 * KB, format: `${PHOTO} (PNG for transparency)` },
     video: { width: 1920, height: 1080, targetBytes: 15 * MB, maxSeconds: 60, format: MP4 },
   },
   hero: {
-    label: "Homepage hero",
+    label: "Homepage showreel",
     aspect: [16, 9],
-    image: { width: 2400, height: 1350, targetBytes: 800 * KB, format: PHOTO },
+    recommendedCrops: { horizontal: [16, 9], vertical: [9, 16] },
+    image: { width: 2400, height: 1350, targetBytes: 800 * KB, format: `${PHOTO} or WebP` },
     video: { width: 1920, height: 1080, targetBytes: 8 * MB, maxSeconds: 15, format: MP4 },
-    note: "Shown full width at 16:9.",
+    note: "Selected Work cards crop to the homepage aspect (often 4:3 or 16:9). Crop horizontal for landscape showreels, vertical for portrait.",
   },
   "project-cover": {
     label: "Project cover",
     aspect: [4, 5],
+    recommendedCrops: { horizontal: [16, 7], vertical: [4, 5] },
     image: { width: 1600, height: 2000, targetBytes: 700 * KB, format: PHOTO },
     video: { width: 1080, height: 1350, targetBytes: 6 * MB, maxSeconds: 10, format: MP4 },
     note: "Work cards are 4:5. The case study hero crops the same image to 16:7, so keep the subject centered.",
@@ -60,27 +71,32 @@ export const MEDIA_GUIDELINES: Record<MediaUsage, MediaGuideline> = {
   "hover-video": {
     label: "Card hover video",
     aspect: [4, 5],
+    recommendedCrops: { vertical: [4, 5] },
     video: { width: 1080, height: 1350, targetBytes: 4 * MB, maxSeconds: 6, format: MP4 },
     note: "Plays muted on long hover: short loops load fastest.",
   },
   "section-image": {
     label: "Case study image",
-    image: { width: 2400, height: 1600, targetBytes: 1 * MB, format: PHOTO },
-    note: "Fills the content column; 2400 px wide stays sharp on retina screens. Keep GIFs under 4 MB or use a looping MP4.",
+    recommendedCrops: { horizontal: [16, 9], vertical: [4, 5] },
+    image: { width: 2400, height: 1600, targetBytes: 1 * MB, format: `${PHOTO} (WebP/PNG keep transparency)` },
+    note: "Crop to horizontal or vertical so the frame matches the graphic. Transparent PNGs/WebP keep a clear background on the site — no grey pad.",
   },
   "section-video": {
     label: "Case study video",
     aspect: [16, 9],
+    recommendedCrops: { horizontal: [16, 9], vertical: [9, 16] },
     video: { width: 1920, height: 1080, targetBytes: 20 * MB, maxSeconds: 60, format: MP4 },
     note: "Loops that play like GIFs should stay under ~15 s and ~6 MB.",
   },
   "artwork-cover": {
     label: "Artwork cover",
+    recommendedCrops: { horizontal: [3, 2], vertical: [4, 5] },
     image: { width: 2000, height: 2500, targetBytes: 800 * KB, format: PHOTO },
     note: "Portrait or landscape both work: the slideshow picks the card shape from the image.",
   },
   artwork: {
     label: "Artwork image",
+    recommendedCrops: { horizontal: [16, 9], vertical: [4, 5] },
     image: { width: 2400, height: 2400, targetBytes: 1 * MB, format: PHOTO },
     note: "Long edge around 2400 px.",
   },
@@ -92,19 +108,36 @@ export const MEDIA_GUIDELINES: Record<MediaUsage, MediaGuideline> = {
   portrait: {
     label: "About portrait",
     aspect: [3, 4],
+    recommendedCrops: { vertical: [3, 4], horizontal: [4, 3] },
     image: { width: 1200, height: 1600, targetBytes: 400 * KB, format: PHOTO },
   },
   photo: {
     label: "Community photo",
     aspect: [4, 3],
+    recommendedCrops: { horizontal: [4, 3], vertical: [3, 4] },
     image: { width: 1600, height: 1200, targetBytes: 500 * KB, format: PHOTO },
   },
   "mockup-screen": {
     label: "Mockup screenshot",
+    recommendedCrops: { vertical: [9, 19], horizontal: [16, 10] },
     image: { width: 1179, height: 2556, targetBytes: 1.5 * MB, format: "PNG or WebP" },
     note: "Native screenshots without a device frame: phone ≈ 1179×2556, tablet ≈ 2048×2732, desktop ≈ 2880×1800.",
   },
 };
+
+/** Horizontal + vertical quick crops for the image editor. */
+export function recommendedCropsFor(usage: MediaUsage | undefined): {
+  horizontal?: [number, number];
+  vertical?: [number, number];
+} {
+  const g = guidelineFor(usage);
+  if (g.recommendedCrops) return g.recommendedCrops;
+  if (g.aspect) {
+    const [a, b] = g.aspect;
+    return a >= b ? { horizontal: g.aspect } : { vertical: g.aspect };
+  }
+  return { horizontal: [16, 9], vertical: [4, 5] };
+}
 
 export function guidelineFor(usage: MediaUsage | undefined): MediaGuideline {
   return MEDIA_GUIDELINES[usage ?? "general"];

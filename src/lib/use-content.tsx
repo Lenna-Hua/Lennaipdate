@@ -190,12 +190,18 @@ export function ContentProvider({ children }: { children: ReactNode }) {
     const hydrate = async () => {
       const r = await fetch("/api/content?meta=1");
       if (!r.ok) return;
+      const ctype = r.headers.get("content-type") || "";
+      if (!ctype.includes("application/json")) return;
       const payload = (await r.json()) as {
         data?: Record<string, unknown>;
         meta?: Record<string, { updatedAt?: string | null }>;
       };
-      const data = payload.data;
-      if (cancelled || !data || typeof data !== "object") return;
+      // Support both `{ data }` (meta=1) and a bare content map.
+      const data =
+        payload.data && typeof payload.data === "object"
+          ? payload.data
+          : (payload as unknown as Record<string, unknown>);
+      if (cancelled || !data || typeof data !== "object" || !("projects" in data)) return;
       setContent(buildContentMap(data));
     };
     // Fetch live content once on mount. If it fails (network, cold-start

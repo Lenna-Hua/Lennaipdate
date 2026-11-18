@@ -1,5 +1,5 @@
 {
-  "intro": "A living scrapbook of art direction, illustration, photography, motion, and editorial work. Full productions sit above, with smaller pieces in the gallery below.",
+  "intro": "A living scrapbook of art direction, illustration, photography, motion, and editorial work — full productions above, smaller pieces in the slideshow below.",
   "logos": [
     {
       "id": "1789806951737",
@@ -34,7 +34,7 @@
   ],
   "eyebrow": "Studio · Archive",
   "heading": "Studio",
-  "bigBlurb": "Full directorial and production projects. Click any tile to read the full project page.",
+  "bigBlurb": "Full directorial and production projects  click any tile to read the full project page.",
   "showGrid": true,
   "showPlay": true,
   "playBlurb": "",
@@ -43,13 +43,13 @@
   "bigHeading": "Big Projects",
   "playEyebrow": "Interactive",
   "playHeading": "Play",
-  "artworksBlurb": "Smaller pieces, studies, and standalone artworks. Click any piece to view it larger.",
+  "artworksBlurb": "Smaller pieces, studies, and standalone artworks. Scroll horizontally or click a card to view details.",
   "artworksEyebrow": "02 · Studies",
   "artworksHeading": "Artworks",
-  "artworksCtaLabel": "All images",
   "logoMarqueeAuto": true,
   "showLogoMarquee": true,
   "artworksCardSize": "lg",
+  "artworksCtaLabel": "All images",
   "logoMarqueeLabel": "Marks & projects",
   "logoMarqueeSpeed": 32,
   "artworksDefaultStyle": "slideshow"

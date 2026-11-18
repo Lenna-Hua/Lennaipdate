@@ -87,6 +87,7 @@ export default function Home() {
         role: p.type,
         year: p.year,
         protected: (p as { protected?: boolean }).protected,
+        showCardDetails: (p as { showCardDetails?: boolean }).showCardDetails,
         meta: joinMeta(p.type, p.year),
         href: `/work/${p.slug}`,
       }));

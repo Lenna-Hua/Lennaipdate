@@ -129,6 +129,7 @@ function workToCard(p: Project): PinterestCardProject {
     liveUrl: (p as { liveUrl?: string }).liveUrl,
     cardLayout: (p as { cardLayout?: ProjectType["cardLayout"] }).cardLayout,
     protected: (p as { protected?: boolean }).protected,
+    showCardDetails: (p as { showCardDetails?: boolean }).showCardDetails,
   };
 }
 

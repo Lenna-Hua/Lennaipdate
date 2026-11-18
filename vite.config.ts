@@ -33,6 +33,71 @@ function caseStudySeedRedaction(): Plugin {
       }
     },
     configureServer(server) {
+      // Vite would otherwise serve api/*.ts as transformed modules (HTTP 200 + JS),
+      // which breaks fetch("/api/content") and leaves the SPA on stale seeds.
+      server.middlewares.use(async (req, res, next) => {
+        const rawUrl = req.url ?? "";
+        const pathname = rawUrl.split("?")[0] ?? "";
+        if (pathname !== "/api/content" && pathname !== "/api/content/") return next();
+        if (req.method && req.method !== "GET" && req.method !== "HEAD") return next();
+
+        // Prefer local seeds when VITE_USE_LOCAL_CONTENT=1 so slideshow/content
+        // demos aren’t overwritten by production until Save to site.
+        const useLocalContent = process.env.VITE_USE_LOCAL_CONTENT === "1";
+        if (!useLocalContent) {
+          try {
+            const liveUrl =
+              process.env.VITE_LIVE_CONTENT_URL ||
+              "https://www.lennahua.ca/api/content?meta=1";
+            const upstream = await fetch(liveUrl);
+            if (upstream.ok) {
+              const text = await upstream.text();
+              res.statusCode = 200;
+              res.setHeader("Content-Type", "application/json; charset=utf-8");
+              res.setHeader("Cache-Control", "no-store");
+              res.end(text);
+              return;
+            }
+          } catch {
+            // Fall through to local seeds.
+          }
+        }
+
+        try {
+          const dataDir = path.resolve(import.meta.dirname, "src", "data");
+          const sections = [
+            "projects",
+            "about",
+            "experience",
+            "education",
+            "gallery",
+            "identity",
+            "contact",
+            "files",
+            "homepage",
+            "studio",
+            "appearance",
+          ] as const;
+          const data: Record<string, unknown> = {};
+          for (const key of sections) {
+            data[key] = JSON.parse(
+              readFileSync(path.join(dataDir, `${key}.json`), "utf8"),
+            );
+          }
+          const includeMeta = new URL(rawUrl, "http://localhost").searchParams.get("meta") === "1";
+          const body = includeMeta ? { data, meta: {} } : data;
+          res.statusCode = 200;
+          res.setHeader("Content-Type", "application/json; charset=utf-8");
+          res.setHeader("Cache-Control", "no-store");
+          res.end(JSON.stringify(body));
+        } catch (err) {
+          console.error("[vite] /api/content seed fallback failed", err);
+          res.statusCode = 500;
+          res.setHeader("Content-Type", "application/json");
+          res.end(JSON.stringify({ error: "Failed to load content" }));
+        }
+      });
+
       server.middlewares.use("/api/admin/login", (req, res, next) => {
         if (req.method !== "POST") return next();
         let body = "";

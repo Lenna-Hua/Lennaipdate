@@ -30,34 +30,6 @@
     "imageColumns": 1
   },
   {
-    "id": "g8",
-    "kind": "small",
-    "role": "Video Production",
-    "slug": "graffiti-production",
-    "tags": [
-      "Video",
-      "Documentary",
-      "Direction"
-    ],
-    "year": "2022",
-    "order": 5,
-    "title": "Graffiti Production",
-    "images": [
-      "/api/assets/mtf30591-ewydia.png",
-      "/api/assets/mtf3070d-dnusxf.png",
-      "/api/assets/mtf308rr-iw5inl.png",
-      "/api/assets/mtf30ag2-l464g7.png",
-      "/api/assets/mtf30c2q-bwt5xk.png",
-      "/api/assets/mtf30dr7-xq0edh.png"
-    ],
-    "linkUrl": "https://www.behance.net/gallery/190330741/Tieu-Music-Video",
-    "featured": true,
-    "linkLabel": "Let's see ",
-    "coverImage": "/api/assets/mtf303f7-xw4awe.png",
-    "description": "Production and direction for a short documentary capturing a graffiti piece from blank wall to finished work.",
-    "imageColumns": 1
-  },
-  {
     "id": "g9",
     "kind": "small",
     "role": "Animation",
@@ -68,7 +40,7 @@
     ],
     "year": "2023",
     "order": 6,
-    "title": "Rat Wedding: Short Movie",
+    "title": "Rat Wedding - Short Movie ",
     "images": [
       "/api/assets/ms9yxe73-27xql8.png",
       "/api/assets/ms9yxd9s-ddeeky.png",
@@ -81,9 +53,10 @@
       "/api/assets/ms9yxl2p-72yson.png"
     ],
     "linkUrl": "https://www.behance.net/gallery/221772067/Wedding-Rats-Animation",
+    "archived": true,
     "linkLabel": "https://vimeo.com/875454327?fl=ip&fe=ec",
     "coverImage": "/api/assets/ms9yxo5w-ior8q7.png",
-    "description": "A short animated piece, character design, frame timing, and a deliberately scrappy hand drawn finish.",
+    "description": "A short animated piece, character design, frame timing, and a deliberately scrappy hand-drawn finish.",
     "imageColumns": 1
   },
   {
@@ -121,7 +94,7 @@
     "title": "Editorial Layout Study",
     "images": [],
     "coverImage": "/api/assets/ms9zd54o-k0ke27.png",
-    "description": "Editorial layout study: typography meets photography, exploring how negative space changes the pacing of a spread.",
+    "description": "Editorial layout study — typography meets photography, exploring how negative space changes the pacing of a spread.",
     "orientation": "landscape"
   },
   {
@@ -201,6 +174,7 @@
     "order": 6,
     "title": "Short Animation Illustration",
     "images": [],
+    "archived": true,
     "coverImage": "/api/assets/ms9yxl2p-72yson.png",
     "description": "A frame from a short motion piece held still to study lighting, palette, and silhouette away from the moving image.",
     "orientation": "landscape"
@@ -223,5 +197,34 @@
     "coverImage": "/api/assets/mu85bdq8-c4nn46.jpg",
     "description": "",
     "orientation": "landscape"
+  },
+  {
+    "id": "g8",
+    "kind": "small",
+    "role": "Video Production",
+    "slug": "graffiti-production",
+    "tags": [
+      "Video",
+      "Documentary",
+      "Direction"
+    ],
+    "year": "2022",
+    "order": 5,
+    "title": "Graffiti Production",
+    "images": [
+      "/api/assets/mtf30591-ewydia.png",
+      "/api/assets/mtf3070d-dnusxf.png",
+      "/api/assets/mtf308rr-iw5inl.png",
+      "/api/assets/mtf30ag2-l464g7.png",
+      "/api/assets/mtf30c2q-bwt5xk.png",
+      "/api/assets/mtf30dr7-xq0edh.png"
+    ],
+    "linkUrl": "https://www.behance.net/gallery/190330741/Tieu-Music-Video",
+    "archived": true,
+    "featured": false,
+    "linkLabel": "Let's see ",
+    "coverImage": "/api/assets/mtf303f7-xw4awe.png",
+    "description": "Production and direction for a short documentary capturing a graffiti piece from blank wall to finished work.",
+    "imageColumns": 1
   }
 ]

@@ -1,4 +1,4 @@
-﻿﻿﻿/** Shared types for the admin panel components. */
+﻿/** Shared types for the admin panel components. */
 
 import type { GalleryImageColumns, GalleryImageEntry } from "@/lib/gallery-image";
 import type { MockupDevice, MockupLayout, ScreenMeta } from "@/lib/device-mockup";
@@ -144,6 +144,11 @@ export type Project = {
   logo?: string;
   /** Card shape on Work/Home grids. Defaults to "vertical". */
   cardLayout?: CardLayout;
+  /**
+   * Per-card override for subtitle / description / metadata under Work & Home cards.
+   * `undefined` = follow Homepage / Appearance global setting. Does not affect the case study page.
+   */
+  showCardDetails?: boolean;
   year: string;
   period?: string;
   featured: boolean;

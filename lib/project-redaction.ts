@@ -23,6 +23,7 @@ const PUBLIC_PROJECT_FIELDS = [
   "hoverVideo",
   "logo",
   "cardLayout",
+  "showCardDetails",
   "year",
   "period",
   "featured",

@@ -26,6 +26,8 @@ export type MasonryItem = {
   users?: string;
   methods?: string;
   tags?: string[];
+  /** Per-card override; undefined = use the grid-level showCardDetails prop. */
+  showCardDetails?: boolean;
 };
 
 export type MasonrySize = "md" | "lg" | "xl";
@@ -361,7 +363,7 @@ function Tile({
         ) : null}
       </div>
 
-      {showCardDetails && (
+      {(item.showCardDetails ?? showCardDetails) && (
         <div className="mt-2 flex flex-col gap-1.5 min-w-0">
           {showSubtitle && item.subtitle ? (
             <p className="text-xs sm:text-[13px] font-sans font-medium text-foreground/85 leading-snug line-clamp-2">

@@ -1,6 +1,6 @@
 {
   "home": {
-    "heroIntro": "I turn messy journeys into clear flows, usable IA, and evidence based improvements from moderated tests to synthesis and recommendations.",
+    "heroIntro": "I turn messy journeys into clear flows, usable IA, and evidence-based improvements from moderated tests to synthesis and recommendations.",
     "heroEyebrow": "✦ Crafting digital goods since 2019",
     "aboutEyebrow": "About",
     "aboutHeading": "Approach",
@@ -10,25 +10,7 @@
     "secondaryCtaHref": "/about",
     "secondaryCtaLabel": "About Me",
     "selectedWorkHeading": "Selected Work",
-    "selectedWorkLinkLabel": "See more work →",
-    "selectedWorkCardSize": "md",
-    "selectedWorkCardAspect": "4/3",
-    "selectedWorkCardRoleTag": "hidden",
-    "selectedWorkTitleDisplay": "always",
-    "selectedWorkTitleFont": "display",
-    "selectedWorkTitleSize": "md",
-    "selectedWorkTitleWeight": "bold",
-    "selectedWorkTitleCase": "uppercase",
-    "selectedWorkCardDetailsMode": "show",
-    "selectedWorkShowSubtitle": true,
-    "selectedWorkShowDescription": true,
-    "selectedWorkShowMetadataStrip": true,
-    "showStudioBand": true,
-    "studioHeading": "From the Studio",
-    "studioLinkLabel": "Visit Studio →",
-    "heroMedia": "",
-    "heroMediaAlt": "",
-    "heroMediaMime": ""
+    "selectedWorkLinkLabel": "View All →"
   },
   "entry": {
     "artCard": {
