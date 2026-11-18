@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { motion, useReducedMotion, type PanInfo } from "framer-motion";
 import { ArrowDown, ArrowLeft, ArrowRight } from "lucide-react";
-import { useTheme } from "@/context/ThemeContext";
 import { BRAND_EASE } from "@/lib/brand";
 import { renderRichText, stripRichText } from "@/lib/rich-text";
 
@@ -72,7 +71,10 @@ const GAP = 12;
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
-function resolveStepColors(step: ProcessStep, index: number, isDark: boolean) {
+/** Pastel step fills stay identical in light + dark so the palette reads the same. */
+const STEP_INK = "#1D1A17";
+
+function resolveStepColors(step: ProcessStep, index: number) {
   const raw = step.color?.trim();
   const baseHex =
     raw && /^#[0-9a-fA-F]{3,8}$/.test(raw)
@@ -80,15 +82,9 @@ function resolveStepColors(step: ProcessStep, index: number, isDark: boolean) {
       : DEFAULT_STEP_COLORS[index % DEFAULT_STEP_COLORS.length]!;
   return {
     baseHex,
-    bg: isDark
-      ? `color-mix(in srgb, ${baseHex} 26%, hsl(var(--card)))`
-      : baseHex,
-    accent: isDark
-      ? `color-mix(in srgb, ${baseHex} 75%, #ffffff)`
-      : `color-mix(in srgb, ${baseHex} 55%, #1D1A17)`,
-    border: isDark
-      ? `color-mix(in srgb, ${baseHex} 38%, hsl(var(--border)))`
-      : `color-mix(in srgb, ${baseHex} 70%, #1D1A17)`,
+    bg: baseHex,
+    accent: `color-mix(in srgb, ${baseHex} 55%, ${STEP_INK})`,
+    ink: STEP_INK,
   };
 }
 
@@ -115,7 +111,7 @@ export function parseStepsFromBullets(bullets: string[]): ProcessStep[] {
 /** Hand-drawn spiral circle around the step number. */
 function StepBadge({ n }: { n: number }) {
   return (
-    <span className="relative inline-flex h-8 w-8 shrink-0 items-center justify-center text-foreground">
+    <span className="relative inline-flex h-8 w-8 shrink-0 items-center justify-center">
       <svg viewBox="0 0 48 48" aria-hidden="true" className="absolute inset-0 h-full w-full">
         <path
           d="M28.5 7.2C19.2 4.8 9.2 9.8 6.8 19.2c-2.5 9.6 3.5 19.6 13.4 21.8 9.8 2.2 19.8-3.6 21.6-13.4 1.6-8.8-3.8-17.2-12.6-19.1-5.8-1.2-12 .8-15.4 5.2"
@@ -204,8 +200,6 @@ export function UserFlowDiagram({
 }: Omit<Props, "layout">) {
   const items = steps.filter((s) => s.title?.trim() || s.body?.trim());
   const [active, setActive] = useState<number | null>(null);
-  const { theme } = useTheme();
-  const isDark = theme === "dark";
 
   if (items.length === 0) return null;
 
@@ -215,7 +209,7 @@ export function UserFlowDiagram({
 
       <ol className="flex flex-col md:flex-row md:flex-wrap items-stretch gap-y-4">
         {items.map((step, i) => {
-          const colors = resolveStepColors(step, i, isDark);
+          const colors = resolveStepColors(step, i);
           const isLast = i === items.length - 1;
           const isSelected = active === i;
 
@@ -229,35 +223,35 @@ export function UserFlowDiagram({
                 className="group relative flex-1 h-full flex flex-col justify-between rounded-none border p-4 transition-transform duration-200 cursor-pointer"
                 style={{
                   background: colors.bg,
-                  borderColor: isSelected ? "hsl(var(--foreground))" : "hsl(var(--border))",
-                  borderTopWidth: "3px",
-                  borderTopColor: colors.border,
+                  borderColor: isSelected ? colors.ink : "hsl(var(--border))",
+                  color: colors.ink,
                   transform: isSelected ? "translateY(-2px)" : undefined,
                 }}
               >
                 <div className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between gap-2 border-b border-foreground/10 pb-2">
-                    <span className="inline-flex items-center gap-1.5 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-foreground">
+                  <div className="flex items-center justify-between gap-2 border-b border-black/10 pb-2">
+                    <span className="inline-flex items-center gap-1.5 font-mono text-[11px] font-bold uppercase tracking-[0.18em]">
                       <span
-                        className="inline-flex h-5 w-5 items-center justify-center bg-foreground text-background text-[10px] font-mono font-bold tabular-nums"
+                        className="inline-flex h-5 w-5 items-center justify-center text-[10px] font-mono font-bold tabular-nums"
+                        style={{ background: colors.ink, color: "#fff" }}
                       >
                         {pad2(i + 1)}
                       </span>
                       <span>Step {pad2(i + 1)}</span>
                     </span>
-                    <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-foreground/55">
+                    <span className="font-mono text-[10px] uppercase tracking-[0.16em] opacity-55">
                       {i === 0 ? "Start" : isLast ? "End" : "Flow"}
                     </span>
                   </div>
 
                   {step.title && (
-                    <h3 className="font-sans font-bold tracking-tight leading-snug text-sm md:text-[15px] text-foreground">
+                    <h3 className="font-sans font-bold tracking-tight leading-snug text-sm md:text-[15px]">
                       {renderRichText(step.title)}
                     </h3>
                   )}
 
                   {step.body && (
-                    <p className="text-xs leading-relaxed text-foreground/75 whitespace-pre-line">
+                    <p className="text-xs leading-relaxed opacity-75 whitespace-pre-line">
                       {renderRichText(step.body)}
                     </p>
                   )}
@@ -311,8 +305,6 @@ export function ProcessStack({
   const [width, setWidth] = useState(0);
   const trackRef = useRef<HTMLDivElement>(null);
   const reduceMotion = useReducedMotion();
-  const { theme } = useTheme();
-  const isDark = theme === "dark";
 
   useLayoutEffect(() => {
     if (layout === "flow") return;
@@ -429,7 +421,7 @@ export function ProcessStack({
       >
         {width > 0 &&
           items.map((step, i) => {
-            const colors = resolveStepColors(step, i, isDark);
+            const colors = resolveStepColors(step, i);
             const isActive = i === active;
             const overlapped = i > 0 && i <= active;
             return (
@@ -446,7 +438,8 @@ export function ProcessStack({
                   width: cardW,
                   zIndex: i + 1,
                   background: colors.bg,
-                  borderColor: isDark ? "hsl(var(--border))" : "rgba(25, 22, 18, 0.14)",
+                  borderColor: "rgba(25, 22, 18, 0.14)",
+                  color: colors.ink,
                   boxShadow: overlapped
                     ? "-10px 0 22px -14px rgba(0, 0, 0, 0.28)"
                     : undefined,
@@ -457,12 +450,12 @@ export function ProcessStack({
               >
                 <StepBadge n={i + 1} />
                 {step.title && (
-                  <h3 className="font-sans font-bold tracking-tight leading-snug text-sm md:text-base text-foreground mt-0.5">
+                  <h3 className="font-sans font-bold tracking-tight leading-snug text-sm md:text-base mt-0.5">
                     {renderRichText(step.title)}
                   </h3>
                 )}
                 {step.body && (
-                  <p className="text-xs md:text-[13px] leading-relaxed text-foreground/80 whitespace-pre-line max-w-[32ch]">
+                  <p className="text-xs md:text-[13px] leading-relaxed opacity-80 whitespace-pre-line max-w-[32ch]">
                     {renderRichText(step.body)}
                   </p>
                 )}
