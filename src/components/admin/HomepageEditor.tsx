@@ -30,6 +30,9 @@ export function HomepageEditor({
   const heroMedia = data.home.heroMedia?.trim() ?? "";
   const heroMediaAlt = data.home.heroMediaAlt ?? "";
   const heroMediaMime = data.home.heroMediaMime ?? "";
+  const showreelSrc = data.home.showreelSrc?.trim() ?? "";
+  const showreelMime = data.home.showreelMime ?? "";
+  const showreelPoster = data.home.showreelPoster?.trim() ?? "";
 
   const setHeroMedia = (url: string, mime?: string) => {
     updateHome({
@@ -40,6 +43,18 @@ export function HomepageEditor({
 
   const clearHeroMedia = () => {
     updateHome({ heroMedia: "", heroMediaAlt: "", heroMediaMime: "" });
+  };
+
+  const setShowreelSrc = (url: string, mime?: string) => {
+    updateHome({
+      showreelSrc: url,
+      ...(mime ? { showreelMime: mime } : !url ? { showreelMime: "" } : {}),
+      ...(url && data.home.showShowreel !== true ? { showShowreel: true } : {}),
+    });
+  };
+
+  const clearShowreel = () => {
+    updateHome({ showreelSrc: "", showreelMime: "", showreelPoster: "", showreelAlt: data.home.showreelAlt ?? "" });
   };
 
   return (
@@ -108,7 +123,7 @@ export function HomepageEditor({
       <section className="flex flex-col gap-5">
         <h2 className="font-serif text-2xl text-[color:var(--adm-text)]">Home Page</h2>
         <p className="text-[color:var(--adm-muted)] text-sm">
-          Order on the page: Hero → Selected Work → From the Studio → About. Your name and bio are edited under Identity & Contact and About.
+          Order on the page: Hero → Selected Work → Showreel → Approach. Your name and bio are edited under Identity & Contact and About.
         </p>
 
         <TextInput
@@ -241,7 +256,7 @@ export function HomepageEditor({
                     type="button"
                     onClick={() => updateHome({ selectedWorkCardSize: opt.value as "md" | "lg" | "xl" })}
                     className={`text-left p-2.5 rounded border transition-colors ${
-                      (data.home.selectedWorkCardSize ?? "md") === opt.value
+                      (data.home.selectedWorkCardSize ?? "lg") === opt.value
                         ? "border-[color:var(--adm-accent)] bg-[color:var(--adm-accent)]/10 text-[color:var(--adm-text)]"
                         : "border-[color:var(--adm-line-strong)] text-[color:var(--adm-muted)] hover:border-[color:var(--adm-accent)]"
                     }`}
@@ -258,13 +273,14 @@ export function HomepageEditor({
               <div className="flex flex-col gap-1.5">
                 <label className="text-[color:var(--adm-text)] text-xs font-medium">Card Image Aspect Ratio</label>
                 <select
-                  value={data.home.selectedWorkCardAspect ?? "4/5"}
-                  onChange={(e) => updateHome({ selectedWorkCardAspect: e.target.value as "4/5" | "4/3" | "16/10" | "1/1" | "auto" })}
+                  value={data.home.selectedWorkCardAspect ?? "16/9"}
+                  onChange={(e) => updateHome({ selectedWorkCardAspect: e.target.value as "16/9" | "4/5" | "4/3" | "16/10" | "1/1" | "auto" })}
                   className="bg-[color:var(--adm-input)] border border-[color:var(--adm-line-strong)] rounded-md text-[color:var(--adm-text)] px-3 py-2 text-xs focus:outline-none focus:border-[color:var(--adm-accent)]"
                 >
-                  <option value="4/5">4:5 (Matches Work page)</option>
-                  <option value="4/3">4:3 (Classic Editorial)</option>
+                  <option value="16/9">16:9 (Widescreen)</option>
                   <option value="16/10">16:10 (Cinematic / Wide)</option>
+                  <option value="4/3">4:3 (Classic Editorial)</option>
+                  <option value="4/5">4:5 (Portrait / Work page)</option>
                   <option value="1/1">1:1 (Square)</option>
                   <option value="auto">Auto (Natural image proportion)</option>
                 </select>
@@ -470,7 +486,130 @@ export function HomepageEditor({
           </div>
         </div>
 
-<div className="border border-[color:var(--adm-line)] p-4 flex flex-col gap-3">
+        <div className="border border-[color:var(--adm-line)] p-4 flex flex-col gap-3">
+          <span className="text-[color:var(--adm-accent)] text-sm uppercase tracking-widest">Showreel band</span>
+          <p className="text-[color:var(--adm-muted)] text-xs">
+            Full-width video section under Selected Work and before Approach. Turn it off anytime without deleting the file.
+          </p>
+          <CheckboxInput
+            label="Show Showreel on Home"
+            checked={data.home.showShowreel === true}
+            onChange={(v) => updateHome({ showShowreel: v })}
+          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <TextInput
+              label="Eyebrow"
+              value={data.home.showreelEyebrow ?? "Reel"}
+              onChange={(v) => updateHome({ showreelEyebrow: v })}
+            />
+            <TextInput
+              label="Heading"
+              value={data.home.showreelHeading ?? "Showreel 2026"}
+              onChange={(v) => updateHome({ showreelHeading: v })}
+            />
+          </div>
+          <TextareaInput
+            label="Short description (optional)"
+            value={data.home.showreelDescription ?? ""}
+            onChange={(v) => updateHome({ showreelDescription: v })}
+            rows={2}
+          />
+          <input
+            type="text"
+            value={showreelSrc}
+            onChange={(e) => setShowreelSrc(e.target.value)}
+            placeholder="Paste MP4/WebM URL, or YouTube / Vimeo link"
+            className="bg-transparent border-b border-[color:var(--adm-line-strong)] text-[color:var(--adm-text)] py-2 text-sm focus:outline-none focus:border-[color:var(--adm-accent)] transition-colors"
+          />
+          <div className="flex items-center gap-2 flex-wrap">
+            <UploadToLibraryDashed
+              label="↑ Upload showreel"
+              usage="showreel"
+              accept="video/mp4,video/webm,.mp4,.webm"
+              onUploaded={(url, meta) => setShowreelSrc(url, meta?.mime)}
+            />
+            <PickFromLibraryButton
+              type="video"
+              label="From library"
+              onPick={(url, meta) => setShowreelSrc(url, meta?.mime)}
+            />
+            {showreelSrc && (
+              <button
+                type="button"
+                onClick={clearShowreel}
+                className="text-sm text-[color:var(--adm-faint)] hover:text-red-400 transition-colors"
+              >
+                Clear video
+              </button>
+            )}
+          </div>
+          {showreelSrc && (
+            <>
+              <TextInput
+                label="Alt / accessibility label"
+                value={data.home.showreelAlt ?? ""}
+                onChange={(v) => updateHome({ showreelAlt: v })}
+              />
+              <div className="flex flex-col gap-2">
+                <span className="text-[color:var(--adm-text)] text-xs">Poster still (optional, uploaded videos)</span>
+                <input
+                  type="text"
+                  value={showreelPoster}
+                  onChange={(e) => updateHome({ showreelPoster: e.target.value })}
+                  placeholder="Still frame shown before play"
+                  className="bg-transparent border-b border-[color:var(--adm-line-strong)] text-[color:var(--adm-text)] py-2 text-sm focus:outline-none focus:border-[color:var(--adm-accent)] transition-colors"
+                />
+                <div className="flex items-center gap-2 flex-wrap">
+                  <UploadToLibraryDashed
+                    label="↑ Upload poster"
+                    usage="showreel"
+                    accept="image/*"
+                    onUploaded={(url) => updateHome({ showreelPoster: url })}
+                  />
+                  <PickFromLibraryButton
+                    type="image"
+                    label="From library"
+                    onPick={(url) => updateHome({ showreelPoster: url })}
+                  />
+                  {showreelPoster && (
+                    <button
+                      type="button"
+                      onClick={() => updateHome({ showreelPoster: "" })}
+                      className="text-sm text-[color:var(--adm-faint)] hover:text-red-400 transition-colors"
+                    >
+                      Clear poster
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div
+                className="rounded overflow-hidden border border-[color:var(--adm-line-strong)] mt-1 bg-black"
+                style={{ maxWidth: "480px", aspectRatio: "16 / 9" }}
+              >
+                <CoverMedia
+                  src={showreelSrc}
+                  alt={data.home.showreelAlt || "Showreel preview"}
+                  mimeHint={showreelMime}
+                  poster={showreelPoster || undefined}
+                  className="w-full h-full object-contain bg-black"
+                  loading="eager"
+                />
+              </div>
+            </>
+          )}
+          {!showreelSrc && (
+            <p className="text-[color:var(--adm-faint)] text-xs">
+              No showreel set yet. Upload an MP4/WebM or paste a YouTube / Vimeo link, then turn the band on.
+            </p>
+          )}
+          {data.home.showShowreel === true && !showreelSrc && (
+            <p className="text-[color:var(--adm-accent)] text-xs">
+              Band is on, but nothing will show until a video is set.
+            </p>
+          )}
+        </div>
+
+        <div className="border border-[color:var(--adm-line)] p-4 flex flex-col gap-3">
           <span className="text-[color:var(--adm-accent)] text-sm uppercase tracking-widest">From the Studio band</span>
           <CheckboxInput
             label="Show the artworks slideshow on Home"
@@ -495,7 +634,7 @@ export function HomepageEditor({
         </div>
 
         <div className="border border-[color:var(--adm-line)] p-4 flex flex-col gap-3">
-          <span className="text-[color:var(--adm-accent)] text-sm uppercase tracking-widest">About band (bottom of Home)</span>
+          <span className="text-[color:var(--adm-accent)] text-sm uppercase tracking-widest">About / Approach band (bottom of Home)</span>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <TextInput label="Eyebrow" value={data.home.aboutEyebrow} onChange={(v) => updateHome({ aboutEyebrow: v })} />
             <TextInput label="Heading" value={data.home.aboutHeading} onChange={(v) => updateHome({ aboutHeading: v })} />

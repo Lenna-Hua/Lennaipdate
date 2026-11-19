@@ -14,5 +14,6 @@
   "workCardShowSubtitle": true,
   "workCardShowDescription": true,
   "workCardDetailsPlacement": "below",
-  "workCardShowMetadataStrip": true
+  "workCardShowMetadataStrip": true,
+  "workCardColumns": 3
 }

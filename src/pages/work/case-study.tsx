@@ -759,7 +759,7 @@ function CaseStudyCover({ project, onExpand }: { project: Project; onExpand: () 
       initial={{ opacity: 0, scale: 1.02 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ delay: 0.2, duration: 1, ease: BRAND_EASE }}
-      style={{ aspectRatio: "16/7" }}
+      style={{ aspectRatio: "16/9" }}
     >
       {embed ? (
         <EmbedCover
@@ -1425,6 +1425,9 @@ function ImageSlideshow({
   );
 }
 
+/** Portrait single images taller than 4:5 are capped so they don't dominate the page. */
+const PORTRAIT_MAX_ASPECT = 5 / 4; // height / width for 4:5
+
 function ImageSection({
   section,
   expanded,
@@ -1436,6 +1439,7 @@ function ImageSection({
 }) {
   const floatIn = useFloatIn();
   const [errored, setErrored] = useState(false);
+  const [imgMeta, setImgMeta] = useState<{ w: number; h: number } | null>(null);
   const body = pickExpanded(Boolean(expanded), section.body, section.bodyDetail);
   const bullets = pickExpanded(Boolean(expanded), section.bullets, section.bulletsDetail);
   const videoEmbed = section.src ? parseVideoEmbed(section.src) : null;
@@ -1448,6 +1452,32 @@ function ImageSection({
   const isSlideshow = !isVideo && (!!section.slideshow || (Array.isArray(section.images) && section.images.length > 1));
   const rawSlides = section.images && section.images.length > 0 ? section.images : (section.src ? [section.src] : []);
   const slides = rawSlides.map((s) => s.trim()).filter(Boolean);
+
+  const rendersAsSlideshow = isSlideshow && slides.length > 1;
+
+  useEffect(() => {
+    setImgMeta(null);
+    if (!section.src || isVideo || rendersAsSlideshow) return;
+    let alive = true;
+    const img = new Image();
+    img.onload = () => {
+      if (!alive) return;
+      const w = img.naturalWidth || 0;
+      const h = img.naturalHeight || 0;
+      if (w > 0 && h > 0) setImgMeta({ w, h });
+    };
+    img.onerror = () => {
+      if (alive) setImgMeta(null);
+    };
+    img.src = section.src;
+    return () => {
+      alive = false;
+    };
+  }, [section.src, isVideo, rendersAsSlideshow]);
+
+  const isPortrait = !!imgMeta && imgMeta.h > imgMeta.w;
+  const portraitNeedsCap =
+    isPortrait && !!imgMeta && imgMeta.h / imgMeta.w > PORTRAIT_MAX_ASPECT;
 
   if (isSlideshow && slides.length > 1) {
     return (
@@ -1532,7 +1562,10 @@ function ImageSection({
         </h2>
       )}
       <div
-        className={`w-fit max-w-full mx-auto overflow-hidden group relative flex items-center justify-center bg-transparent ${clickable ? "cursor-zoom-in" : ""}`}
+        className={`w-full max-w-full overflow-hidden group relative bg-transparent ${
+          portraitNeedsCap ? "flex items-center justify-center" : ""
+        } ${clickable ? "cursor-zoom-in" : ""}`}
+        style={portraitNeedsCap ? { aspectRatio: "4 / 5" } : undefined}
         onClick={() => clickable && onImageClick(section.src!, section.caption)}
         role={clickable ? "button" : undefined}
         tabIndex={clickable ? 0 : undefined}
@@ -1542,9 +1575,13 @@ function ImageSection({
         <SafeImage
           src={section.src}
           alt={section.caption || section.title || ""}
-          className="block max-w-full max-h-[40vh] md:max-h-[55vh] w-auto h-auto object-contain transition-transform duration-500 group-hover:scale-[1.015]"
+          className={
+            portraitNeedsCap
+              ? "block w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.015]"
+              : "block w-full h-auto object-contain transition-transform duration-500 group-hover:scale-[1.015]"
+          }
           loading="lazy"
-          fallbackAspect="16 / 5"
+          fallbackAspect={isPortrait ? "4 / 5" : "16 / 9"}
           onError={() => setErrored(true)}
         />
         {clickable && (
@@ -1762,7 +1799,7 @@ export default function CaseStudy({ full = false }: { full?: boolean }) {
           <div className="h-14 w-3/4 bg-muted" />
           <div className="h-4 w-full bg-muted" />
           <div className="h-4 w-5/6 bg-muted" />
-          <div className="w-full bg-muted" style={{ aspectRatio: "16/7" }} />
+          <div className="w-full bg-muted" style={{ aspectRatio: "16/9" }} />
         </div>
         <span className="sr-only">Loading case study…</span>
       </div>

@@ -1,13 +1,5 @@
 import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Columns4,
-  Columns3,
-  Columns2,
-  Square,
-  Eye,
-  EyeOff,
-} from "lucide-react";
 import projectsSeed from "@/data/projects.json";
 import gallerySeed from "@/data/gallery.json";
 import studioSeed from "@/data/studio.json";
@@ -30,7 +22,6 @@ import type {
   Appearance,
 } from "@/components/admin/types";
 import {
-  BRAND,
   BRAND_DECK,
   BRAND_TEXT,
 } from "@/lib/brand";
@@ -39,53 +30,31 @@ const ACCENTS = BRAND_DECK;
 const FILTERS = ["All", "UX Research", "Product Design", "Analysis", "Studio"];
 
 type ColumnCount = 1 | 2 | 3 | 4;
-const COLUMNS_STORAGE_KEY = "work-columns";
-const CARD_DETAILS_STORAGE_KEY = "work-card-details";
-
-function readStoredCardDetails(): boolean | null {
-  if (typeof window === "undefined") return null;
-  const v = window.localStorage.getItem(CARD_DETAILS_STORAGE_KEY);
-  if (v === "true") return true;
-  if (v === "false") return false;
-  return null;
-}
 
 /* Each choice is a maximum: narrower screens step down automatically.
-   Class strings stay literal so Tailwind can see them. */
-const COLUMN_LAYOUTS: Record<
-  ColumnCount,
-  { grid: string; aspect: string; label: string; Icon: typeof Square }
-> = {
+   Class strings stay literal so Tailwind can see them.
+   Column count is admin-only (Appearance → Work Page Project Cards). */
+const COLUMN_LAYOUTS: Record<ColumnCount, { grid: string; aspect: string }> = {
   4: {
     grid: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4",
     aspect: "aspect-[4/5]",
-    label: "4 columns",
-    Icon: Columns4,
   },
   3: {
     grid: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
     aspect: "aspect-[4/5]",
-    label: "3 columns",
-    Icon: Columns3,
   },
   2: {
     grid: "grid-cols-1 sm:grid-cols-2",
     aspect: "aspect-[4/5] lg:aspect-square 2xl:aspect-[5/4]",
-    label: "2 columns",
-    Icon: Columns2,
   },
   1: {
     grid: "grid-cols-1",
     aspect: "aspect-[4/5] sm:aspect-auto sm:h-[min(80vh,56vw)]",
-    label: "1 column",
-    Icon: Square,
   },
 };
 
-function readStoredColumns(): ColumnCount {
-  if (typeof window === "undefined") return 4;
-  const n = Number(window.localStorage.getItem(COLUMNS_STORAGE_KEY));
-  return n === 1 || n === 2 || n === 3 || n === 4 ? n : 4;
+function resolveColumns(value: unknown): ColumnCount {
+  return value === 1 || value === 2 || value === 3 || value === 4 ? value : 3;
 }
 
 type Project = (typeof projectsSeed)[number] & { archived?: boolean };
@@ -152,35 +121,10 @@ export default function WorkIndex() {
     [studio, galleryData, projectsData],
   );
   const [filter, setFilter] = useState("All");
-  const [columns, setColumns] = useState<ColumnCount>(readStoredColumns);
-  const [showCardDetails, setShowCardDetails] = useState<boolean>(() => {
-    const stored = readStoredCardDetails();
-    if (stored !== null) return stored;
-    return appearanceData?.workCardDetailsMode !== "hide";
-  });
-
-  const toggleCardDetails = () => {
-    setShowCardDetails((prev) => {
-      const next = !prev;
-      try {
-        window.localStorage.setItem(CARD_DETAILS_STORAGE_KEY, String(next));
-      } catch {
-        /* storage unavailable */
-      }
-      return next;
-    });
-  };
+  const columns = resolveColumns(appearanceData?.workCardColumns);
+  const showCardDetails = appearanceData?.workCardDetailsMode !== "hide";
   const layout = COLUMN_LAYOUTS[columns];
   const motionProfile = useMotionProfile();
-
-  const chooseColumns = (n: ColumnCount) => {
-    setColumns(n);
-    try {
-      window.localStorage.setItem(COLUMNS_STORAGE_KEY, String(n));
-    } catch {
-      /* storage unavailable */
-    }
-  };
   const { theme } = useTheme();
   const isDark = theme === "dark";
 
@@ -252,7 +196,7 @@ export default function WorkIndex() {
           </motion.h1>
 
           <motion.div
-            className="flex flex-wrap items-center justify-between gap-4"
+            className="flex flex-wrap items-center gap-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.18, duration: 0.6, ease: SOFT_EASE }}
@@ -281,59 +225,6 @@ export default function WorkIndex() {
                   </button>
                 );
               })}
-            </div>
-
-            <div
-              className="flex items-center gap-2 flex-wrap"
-            >
-              <button
-                type="button"
-                onClick={toggleCardDetails}
-                aria-pressed={showCardDetails}
-                aria-label={showCardDetails ? "Hide project card details" : "Show project card details"}
-                title={showCardDetails ? "Card details are currently showing (click to hide)" : "Card details are not showing (click to show)"}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-mono transition-all duration-300 border ${
-                  showCardDetails
-                    ? "bg-foreground text-background border-foreground font-semibold shadow-sm"
-                    : "text-muted-foreground hover:text-foreground hover:bg-foreground/5 border-foreground/15"
-                }`}
-              >
-                {showCardDetails ? (
-                  <Eye size={13} strokeWidth={2} aria-hidden />
-                ) : (
-                  <EyeOff size={13} strokeWidth={2} aria-hidden />
-                )}
-                <span>Details: {showCardDetails ? "Show" : "Not Showing"}</span>
-              </button>
-
-              <div
-                className="hidden sm:inline-flex items-center gap-1 p-1 rounded-md border border-foreground/15"
-              role="group"
-              aria-label="Cards per row"
-            >
-              {([4, 3, 2, 1] as const).map((n) => {
-                const { Icon, label } = COLUMN_LAYOUTS[n];
-                const isActive = columns === n;
-                return (
-                  <button
-                    key={n}
-                    type="button"
-                    onClick={() => chooseColumns(n)}
-                    aria-pressed={isActive}
-                    aria-label={label}
-                    title={label}
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-mono transition-colors duration-300 ${
-                      isActive
-                        ? "bg-foreground text-background"
-                        : "text-muted-foreground hover:text-foreground hover:bg-foreground/5"
-                    }`}
-                  >
-                    <Icon size={14} strokeWidth={1.8} aria-hidden />
-                    {n}
-                  </button>
-                );
-              })}
-            </div>
             </div>
           </motion.div>
         </section>

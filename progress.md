@@ -506,3 +506,88 @@ Shared language for every page: square corners, ruled sections (`border-t`), sma
 3. Commit Step 3 on `redesign/editorial-ui`, push → check the new preview (desktop + phone), incl. the Studio-detail lightbox and a Framer-image case study.
 4. Update the Studio artworks blurb in admin (production admin — preview shares the DB).
 5. When approved: merge `redesign/editorial-ui` → `main`, push, verify production (hard-refresh a Framer-image case study per the CSP rule).
+
+---
+
+## 2026-11-19 — Case study single-image full-width layout (ready to push, not pushed)
+
+### Problem
+On case study pages (e.g. `/work/the-third` → Designs For Event), single images used `w-fit` + `max-h-[40vh]/[55vh]`, so landscape frames shrank to different widths and sat centered with uneven gutters. Slideshows were fine; only single-image sections were wrong.
+
+### Fix
+- `src/pages/work/case-study.tsx` — `ImageSection` single images:
+  - Always `w-full` of the content column (same width/left edge for every single image).
+  - Landscape: `h-auto` from natural aspect (no viewport height cap).
+  - Portrait taller than 4:5: frame capped at `aspect-ratio: 4 / 5` with `object-cover` so tall assets don’t run the full page.
+- `vite.config.ts` — local `/api/assets` proxy to `https://www.lennahua.ca` so case-study media loads in `vite` without Blob/DB.
+
+### Verify
+- Local preview: Designs For Event booth / 2.5D Map / Outside Event Zone all measured **1278px** wide (matched column); captions align with image left edge.
+- After push: hard-refresh `/work/the-third` § Designs For Event; confirm three singles share one width; spot-check a tall portrait single stays ≤ 4:5.
+
+### Git / push
+- **Status:** logged here only — **not committed, not pushed.**
+- Suggested commit (when ready): `fix: make case study single images full column width with portrait 4:5 cap`
+- Scope for that commit: `src/pages/work/case-study.tsx`, `vite.config.ts`, this `progress.md` entry.
+- Note: working tree may also have unrelated homepage/showreel edits — keep them out of this commit unless intentionally bundling.
+
+---
+
+## 2026-11-19 — Homepage Showreel band (before Approach; admin toggle)
+
+### Goal
+Add a dedicated **Showreel** section on Home under the Lenna Hua column / Selected Work, **before Approach**, so Lenna can upload or link a year showreel and turn the band on/off from admin.
+
+### What shipped locally
+- New `ShowreelSection` on Home (`src/components/ShowreelSection.tsx`) — 16:9 player for uploaded MP4/WebM or YouTube / Vimeo embed; uses `EditorialSection` so it aligns with Approach.
+- Home order: Selected Work → **Showreel** (if on + has media) → Approach (`src/pages/home.tsx`).
+- Homepage content fields: `showShowreel`, `showreelEyebrow`, `showreelHeading`, `showreelDescription`, `showreelSrc`, `showreelMime`, `showreelPoster`, `showreelAlt` (`src/data/homepage.json`, `src/components/admin/types.ts`).
+- Admin → Home & Entry → **Showreel band**: toggle, copy fields, upload / library pick / paste URL, optional poster + alt (`src/components/admin/HomepageEditor.tsx`).
+- Media guideline usage `showreel` (16:9, longer reel than card hero) in `src/lib/media-guidelines.ts`.
+- Preflight warns on inline `data:` for `showreelSrc` / `showreelPoster` (`src/components/admin/PreflightCheck.tsx`).
+
+### Preview note
+- Temporarily enabled in seed with existing Vimeo `https://vimeo.com/875454327` so layout could be checked at `http://127.0.0.1:5174/`. Replace with real reel (or clear + toggle off) in admin before publish.
+
+### Verify
+- Local: scroll Home past Selected Work → Showreel heading + player → Approach below.
+- Admin: toggle off → band disappears; clear video with toggle on → band stays hidden until media is set again.
+
+### Git / push
+- **Status:** logged here only — **not committed, not pushed.**
+- Suggested commit (when ready): `feat: add homepage showreel band with admin toggle`
+- Scope: `src/components/ShowreelSection.tsx`, `src/pages/home.tsx`, `src/data/homepage.json`, `src/components/admin/{HomepageEditor,types,PreflightCheck}.tsx`, `src/lib/media-guidelines.ts`, this `progress.md` entry.
+
+---
+
+## 2026-11-19 — Homepage Selected Work 16:9 + Work toolbar admin-only (not pushed)
+
+### Context
+- Earlier push `9cd8b408` set homepage Selected Work cards to **4:5** (matching Work `PinterestCard`). That was the wrong target: Lenna wants **widescreen 16:9**, with a 2-column grid OK for three projects (2 + 1).
+- Public `/work` still exposed a visitor toolbar: **Details: Show/Hide** + **4 / 3 / 2 / 1 columns**. Those belong in admin only.
+
+### Homepage Selected Work — 16:9 + 2 columns
+- Default `cardAspect` → **`16/9`** (`aspect-video`); admin option list updated (16:9 first; 4:5 kept as optional).
+- Default card grid size → **`lg`** (2 columns on desktop) so three featured projects read as row of 2 then 1.
+- Files: `src/components/ParallaxMasonry.tsx`, `src/pages/home.tsx`, `src/components/admin/HomepageEditor.tsx`, `src/components/admin/types.ts`.
+
+### Work page — hide Details + column controls from public
+- Removed visitor toolbar from `src/pages/work/index.tsx` (kept category filters only).
+- Details visibility now follows **Appearance** `workCardDetailsMode` only (no localStorage visitor override).
+- Added **`workCardColumns`** (`1 | 2 | 3 | 4`, default **3**) on Appearance; Work page reads it for grid layout.
+- Admin UI: **Appearance → Work Page Project Cards** — Cards Per Row + Details Visibility (copy no longer says visitors can toggle).
+- Seed: `src/data/appearance.json` → `"workCardColumns": 3`.
+- Files: `src/pages/work/index.tsx`, `src/components/admin/AppearanceEditor.tsx`, `src/components/admin/types.ts`, `src/data/appearance.json`.
+
+### Verify
+- Local `http://127.0.0.1:5174/` — Selected Work cards are widescreen 16:9 in 2 columns.
+- Local `http://127.0.0.1:5174/work` — no Details button / column picker; only All / UX Research / … filters.
+- Admin Appearance — change columns / details and confirm Work page updates after save/content load.
+
+### Git / push
+- **Status:** logged here only — **not committed, not pushed** (per Lenna).
+- Already on remote (do not re-ship as the final look): `9cd8b408` (4:5 homepage default) — superseded locally by 16:9.
+- Suggested commit(s) when ready to push:
+  1. `fix: use 16:9 homepage Selected Work cards with 2-column default`
+  2. `fix: move Work page details/columns controls to Appearance admin only`
+- Or one combined commit if preferred. Include this `progress.md` entry with either.

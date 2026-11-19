@@ -12,6 +12,7 @@ import type { CoverPlayback } from "@/components/CoverMedia";
 import { ParallaxMasonry, type MasonryItem } from "@/components/ParallaxMasonry";
 import { MediaLightbox, type LightboxItem } from "@/components/MediaLightbox";
 import { BigCount, SplitShowcase } from "@/components/layout/SplitShowcase";
+import { ShowreelSection } from "@/components/ShowreelSection";
 import { DEFAULT_PROCESS_STEPS, ProcessStack, type ProcessLayout, type ProcessStep } from "@/components/ProcessStack";
 
 type Project = (typeof projectsSeed)[number] & {
@@ -26,7 +27,7 @@ type HomeCopy = (typeof homepageSeed)["home"] & {
   heroMediaAlt?: string;
   heroMediaMime?: string;
   selectedWorkCardSize?: "md" | "lg" | "xl";
-  selectedWorkCardAspect?: "4/5" | "4/3" | "16/10" | "1/1" | "auto";
+  selectedWorkCardAspect?: "16/9" | "4/5" | "4/3" | "16/10" | "1/1" | "auto";
   selectedWorkCardRoleTag?: "hover" | "hidden" | "always";
   selectedWorkTitleDisplay?: "always" | "hover";
   selectedWorkTitleFont?: string;
@@ -37,6 +38,14 @@ type HomeCopy = (typeof homepageSeed)["home"] & {
   selectedWorkShowSubtitle?: boolean;
   selectedWorkShowDescription?: boolean;
   selectedWorkShowMetadataStrip?: boolean;
+  showShowreel?: boolean;
+  showreelEyebrow?: string;
+  showreelHeading?: string;
+  showreelDescription?: string;
+  showreelSrc?: string;
+  showreelMime?: string;
+  showreelPoster?: string;
+  showreelAlt?: string;
 };
 
 const HERO_MEDIA_ID = "hero-media";
@@ -64,6 +73,8 @@ export default function Home() {
   const homepageData = useContent("homepage", homepageSeed) as typeof homepageSeed;
   const hp = homepageData.home as HomeCopy;
   const heroMedia = hp.heroMedia?.trim() ?? "";
+  const showreelSrc = hp.showreelSrc?.trim() ?? "";
+  const showShowreel = hp.showShowreel === true && Boolean(showreelSrc);
   const [openId, setOpenId] = useState<string | null>(null);
 
   const featuredWork = useMemo((): MasonryItem[] => {
@@ -153,8 +164,8 @@ export default function Home() {
               items={gridItems}
               onOpen={setOpenId}
               variant="case-study"
-              size={hp.selectedWorkCardSize ?? "md"}
-              cardAspect={hp.selectedWorkCardAspect ?? "4/5"}
+              size={hp.selectedWorkCardSize ?? "lg"}
+              cardAspect={hp.selectedWorkCardAspect ?? "16/9"}
               cardRoleTagMode={hp.selectedWorkCardRoleTag ?? "hidden"}
               titleDisplayMode={hp.selectedWorkTitleDisplay ?? "always"}
               titleFont={hp.selectedWorkTitleFont}
@@ -187,6 +198,20 @@ export default function Home() {
           </div>
         </SplitShowcase>
       </div>
+
+      {showShowreel && (
+        <motion.div {...floatSection}>
+          <ShowreelSection
+            eyebrow={hp.showreelEyebrow}
+            heading={hp.showreelHeading}
+            description={hp.showreelDescription}
+            src={showreelSrc}
+            mime={hp.showreelMime}
+            poster={hp.showreelPoster}
+            alt={hp.showreelAlt}
+          />
+        </motion.div>
+      )}
 
       <motion.section
         {...floatSection}

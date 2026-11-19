@@ -476,13 +476,36 @@ export function AppearanceEditor({
         </div>
 
         <p className="text-[color:var(--adm-muted)] text-xs leading-relaxed -mt-1">
-          Control whether the description below the project card, subtitle, and metadata strip (Role, Users, Methods, Year) are displayed. Visitors on the Work page can also toggle this with the “Details” button in the toolbar.
+          Admin-only controls for the public Work page: card details and how many cards per row. Visitors only see category filters.
         </p>
+
+        {/* Cards per row */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-[color:var(--adm-text)] text-xs font-medium">
+            Cards Per Row
+          </label>
+          <div className="grid grid-cols-4 gap-2">
+            {([4, 3, 2, 1] as const).map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => onChange({ ...data, workCardColumns: n })}
+                className={`py-2 px-3 rounded border text-xs text-center transition-colors ${
+                  (data.workCardColumns ?? 3) === n
+                    ? "border-[color:var(--adm-accent)] bg-[color:var(--adm-accent)]/10 text-[color:var(--adm-text)] font-semibold"
+                    : "border-[color:var(--adm-line-strong)] text-[color:var(--adm-muted)] hover:border-[color:var(--adm-accent)]"
+                }`}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+        </div>
 
         {/* Master Details Toggle */}
         <div className="flex flex-col gap-1.5">
           <label className="text-[color:var(--adm-text)] text-xs font-medium">
-            Card Details Visibility (Default state on site)
+            Card Details Visibility
           </label>
           <div className="grid grid-cols-2 gap-2">
             {[

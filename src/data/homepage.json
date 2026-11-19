@@ -10,7 +10,15 @@
     "secondaryCtaHref": "/about",
     "secondaryCtaLabel": "About Me",
     "selectedWorkHeading": "Selected Work",
-    "selectedWorkLinkLabel": "View All →"
+    "selectedWorkLinkLabel": "View All →",
+    "showShowreel": true,
+    "showreelEyebrow": "Reel",
+    "showreelHeading": "Showreel 2026",
+    "showreelDescription": "A short cut of selected product and visual work from the year.",
+    "showreelSrc": "https://vimeo.com/875454327",
+    "showreelMime": "",
+    "showreelPoster": "",
+    "showreelAlt": "Showreel of the year"
   },
   "entry": {
     "artCard": {

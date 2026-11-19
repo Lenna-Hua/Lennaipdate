@@ -162,6 +162,14 @@ export default defineConfig({
   server: {
     port: 5173,
     host: "localhost",
+    proxy: {
+      // Local vite has no Blob/DB — proxy uploaded case-study media to production.
+      "/api/assets": {
+        target: "https://www.lennahua.ca",
+        changeOrigin: true,
+        secure: true,
+      },
+    },
     watch: {
       // Prevent data-file writes from triggering a full server restart
       ignored: [

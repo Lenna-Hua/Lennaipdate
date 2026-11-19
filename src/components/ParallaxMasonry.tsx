@@ -60,7 +60,7 @@ function useColumnCount(size: string = "md") {
 }
 
 export type CardCustomProps = {
-  cardAspect?: "4/5" | "4/3" | "16/10" | "1/1" | "auto" | (string & {});
+  cardAspect?: "16/9" | "4/5" | "4/3" | "16/10" | "1/1" | "auto" | (string & {});
   cardRoleTagMode?: "hover" | "hidden" | "always" | (string & {});
   titleDisplayMode?: "always" | "hover" | (string & {});
   titleFont?: string;
@@ -79,7 +79,7 @@ export function ParallaxMasonry({
   size = "md",
   variant = "case-study",
   className = "",
-  cardAspect = "4/5",
+  cardAspect = "16/9",
   cardRoleTagMode = "hidden",
   titleDisplayMode = "always",
   titleFont = "display",
@@ -183,7 +183,7 @@ function Tile({
   item,
   variant = "case-study",
   onOpen,
-  cardAspect = "4/5",
+  cardAspect = "16/9",
   cardRoleTagMode = "hidden",
   titleDisplayMode = "always",
   titleFont = "display",
@@ -219,7 +219,7 @@ function Tile({
     }
   }, [hover, hasHoverVideo]);
 
-  // Dynamic Aspect Ratio — default 4/5 matches Work page PinterestCard
+  // Dynamic Aspect Ratio — default 16/9 widescreen
   const aspectClass =
     cardAspect === "16/10"
       ? "aspect-[16/10]"
@@ -227,9 +227,11 @@ function Tile({
       ? "aspect-square"
       : cardAspect === "4/3"
       ? "aspect-[4/3]"
+      : cardAspect === "4/5"
+      ? "aspect-[4/5]"
       : cardAspect === "auto"
       ? ""
-      : "aspect-[4/5]";
+      : "aspect-video"; // 16/9
 
   // Dynamic Typeface Styling for Title
   const titleFontClass =

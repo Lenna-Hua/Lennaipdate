@@ -103,6 +103,24 @@ function findAllInlineMedia(data: ContentData): { section: string; itemLabel: st
     });
   }
 
+  const showreelSrc = data.homepage?.home?.showreelSrc;
+  if (typeof showreelSrc === "string" && showreelSrc.startsWith("data:")) {
+    found.push({
+      section: "homepage",
+      itemLabel: "Home page",
+      field: "showreelSrc",
+    });
+  }
+
+  const showreelPoster = data.homepage?.home?.showreelPoster;
+  if (typeof showreelPoster === "string" && showreelPoster.startsWith("data:")) {
+    found.push({
+      section: "homepage",
+      itemLabel: "Home page",
+      field: "showreelPoster",
+    });
+  }
+
   return found;
 }
 

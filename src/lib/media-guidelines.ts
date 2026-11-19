@@ -4,6 +4,7 @@ import { maxAssetBytesForFileType, formatMaxMb } from "@/lib/asset-limits";
 export type MediaUsage =
   | "general"
   | "hero"
+  | "showreel"
   | "project-cover"
   | "hover-video"
   | "section-image"
@@ -53,20 +54,27 @@ export const MEDIA_GUIDELINES: Record<MediaUsage, MediaGuideline> = {
     video: { width: 1920, height: 1080, targetBytes: 15 * MB, maxSeconds: 60, format: MP4 },
   },
   hero: {
-    label: "Homepage showreel",
+    label: "Homepage hero tile",
     aspect: [16, 9],
     recommendedCrops: { horizontal: [16, 9], vertical: [9, 16] },
     image: { width: 2400, height: 1350, targetBytes: 800 * KB, format: `${PHOTO} or WebP` },
     video: { width: 1920, height: 1080, targetBytes: 8 * MB, maxSeconds: 15, format: MP4 },
-    note: "Selected Work cards default to 4:5 (same as Work page). Crop horizontal for landscape showreels, vertical for portrait.",
+    note: "Optional first Selected Work tile. Cards default to 4:5 — crop horizontal for landscape, vertical for portrait.",
+  },
+  showreel: {
+    label: "Homepage showreel",
+    aspect: [16, 9],
+    recommendedCrops: { horizontal: [16, 9] },
+    video: { width: 1920, height: 1080, targetBytes: 40 * MB, maxSeconds: 90, format: MP4 },
+    note: "Full-width band under Selected Work. Prefer MP4 H.264, or paste a YouTube / Vimeo link instead of uploading a huge file.",
   },
   "project-cover": {
     label: "Project cover",
     aspect: [4, 5],
-    recommendedCrops: { horizontal: [16, 7], vertical: [4, 5] },
+    recommendedCrops: { horizontal: [16, 9], vertical: [4, 5] },
     image: { width: 1600, height: 2000, targetBytes: 700 * KB, format: PHOTO },
     video: { width: 1080, height: 1350, targetBytes: 6 * MB, maxSeconds: 10, format: MP4 },
-    note: "Work cards are 4:5. The case study hero crops the same image to 16:7, so keep the subject centered.",
+    note: "Work cards are 4:5. The case study hero crops the same image to 16:9, so keep the subject centered.",
   },
   "hover-video": {
     label: "Card hover video",
