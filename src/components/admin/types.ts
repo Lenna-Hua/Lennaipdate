@@ -336,8 +336,8 @@ export type Homepage = {
     selectedWorkLinkLabel: string;
     /** Card size for homepage Selected Work. "md" = 3 cols, "lg" = 2 cols, "xl" = 1-2 cols. */
     selectedWorkCardSize?: "md" | "lg" | "xl";
-    /** Aspect ratio for cards on homepage. Defaults to "4/3". */
-    selectedWorkCardAspect?: "4/3" | "16/10" | "1/1" | "auto";
+    /** Aspect ratio for cards on homepage. Defaults to "4/5" (matches Work page). */
+    selectedWorkCardAspect?: "4/5" | "4/3" | "16/10" | "1/1" | "auto";
     /** Role tag visibility on card. "hover" = visible on hover, "hidden" = completely off, "always" = static. */
     selectedWorkCardRoleTag?: "hover" | "hidden" | "always";
     /** Title visibility: "always" = always visible below, "hover" = reveals smoothly on hover (pure visual gallery at rest). */

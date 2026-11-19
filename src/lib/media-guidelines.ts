@@ -58,7 +58,7 @@ export const MEDIA_GUIDELINES: Record<MediaUsage, MediaGuideline> = {
     recommendedCrops: { horizontal: [16, 9], vertical: [9, 16] },
     image: { width: 2400, height: 1350, targetBytes: 800 * KB, format: `${PHOTO} or WebP` },
     video: { width: 1920, height: 1080, targetBytes: 8 * MB, maxSeconds: 15, format: MP4 },
-    note: "Selected Work cards crop to the homepage aspect (often 4:3 or 16:9). Crop horizontal for landscape showreels, vertical for portrait.",
+    note: "Selected Work cards default to 4:5 (same as Work page). Crop horizontal for landscape showreels, vertical for portrait.",
   },
   "project-cover": {
     label: "Project cover",

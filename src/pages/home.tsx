@@ -26,7 +26,7 @@ type HomeCopy = (typeof homepageSeed)["home"] & {
   heroMediaAlt?: string;
   heroMediaMime?: string;
   selectedWorkCardSize?: "md" | "lg" | "xl";
-  selectedWorkCardAspect?: "4/3" | "16/10" | "1/1" | "auto";
+  selectedWorkCardAspect?: "4/5" | "4/3" | "16/10" | "1/1" | "auto";
   selectedWorkCardRoleTag?: "hover" | "hidden" | "always";
   selectedWorkTitleDisplay?: "always" | "hover";
   selectedWorkTitleFont?: string;
@@ -154,7 +154,7 @@ export default function Home() {
               onOpen={setOpenId}
               variant="case-study"
               size={hp.selectedWorkCardSize ?? "md"}
-              cardAspect={hp.selectedWorkCardAspect}
+              cardAspect={hp.selectedWorkCardAspect ?? "4/5"}
               cardRoleTagMode={hp.selectedWorkCardRoleTag ?? "hidden"}
               titleDisplayMode={hp.selectedWorkTitleDisplay ?? "always"}
               titleFont={hp.selectedWorkTitleFont}

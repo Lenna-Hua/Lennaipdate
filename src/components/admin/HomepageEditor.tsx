@@ -258,11 +258,12 @@ export function HomepageEditor({
               <div className="flex flex-col gap-1.5">
                 <label className="text-[color:var(--adm-text)] text-xs font-medium">Card Image Aspect Ratio</label>
                 <select
-                  value={data.home.selectedWorkCardAspect ?? "4/3"}
-                  onChange={(e) => updateHome({ selectedWorkCardAspect: e.target.value as "4/3" | "16/10" | "1/1" | "auto" })}
+                  value={data.home.selectedWorkCardAspect ?? "4/5"}
+                  onChange={(e) => updateHome({ selectedWorkCardAspect: e.target.value as "4/5" | "4/3" | "16/10" | "1/1" | "auto" })}
                   className="bg-[color:var(--adm-input)] border border-[color:var(--adm-line-strong)] rounded-md text-[color:var(--adm-text)] px-3 py-2 text-xs focus:outline-none focus:border-[color:var(--adm-accent)]"
                 >
-                  <option value="4/3">4:3 (Classic Editorial - Alex Boland)</option>
+                  <option value="4/5">4:5 (Matches Work page)</option>
+                  <option value="4/3">4:3 (Classic Editorial)</option>
                   <option value="16/10">16:10 (Cinematic / Wide)</option>
                   <option value="1/1">1:1 (Square)</option>
                   <option value="auto">Auto (Natural image proportion)</option>
